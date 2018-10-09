@@ -1,4 +1,4 @@
-from ImageProcessing.SpatialMaps import *
+from SensorAbstraction.SpatialMaps import *
 
 # Initial Pos Vector serves as origin vector, every other vector is in respect to this
 

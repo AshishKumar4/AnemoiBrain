@@ -1,0 +1,19 @@
+OnBoard Systems 
+- Control Abstractions 
+    -- MotorBrain.py : Middle Layer between Raw Control and Kernel, Contains Emergency Reflexes, All control commands pass throughs this
+
+        --- RawControl.py :  Abstraction Layer to actually forward control signals to Flight Controller
+    
+
+- Sensor Abstractions 
+    -- SpatialMaps.py : Contains Code to generate and process spatial maps of surroundings based on visual data
+
+        --- VirtualSensors.py : Abstraction API to provide Sensory Data in a reliable way to Upper Layers + Scalablity to 
+                                provide to all 
+
+- Purpose Abstractions : Highest Level of abstraction
+    -- VideoClassification : Contains programs to run Video Classification algorithms for e.g, Surviellance
+
+- Navigation.py : Contains Code for Auto Navigation and Obstacle Avoidance
+
+- Kernel.py : Contains Actual Kernel Initialization And Management Code. The Heart of this OS.
