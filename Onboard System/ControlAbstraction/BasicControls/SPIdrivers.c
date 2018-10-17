@@ -7,6 +7,8 @@
 #include "stdio.h"
 #include "stdlib.h"
 
+#define SPI_SPEED 1000000
+
 /*
     SPI Drivers, to send and recieve data packets over SPI
 */
@@ -14,26 +16,26 @@
 int SPI_init(char* file)
 {
     int fd = (int)open(file, O_RDWR);
-    unsigned int speed = 1000000;
+    unsigned int speed = SPI_SPEED;
     ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
 
     return fd;
 }
 
-int SPI_ReadWrite(int fd, uintptr_t buffer, size_t len)
+int SPI_ReadWrite(int fd, uintptr_t readbuff, uintptr_t writebuff, size_t len)
 {
-    uintptr_t tmp = (uintptr_t)malloc(len);
+    //uintptr_t tmp = (uintptr_t)malloc(len);
     struct spi_ioc_transfer spi;
     memset(&spi, 0, sizeof(spi));
-    spi.tx_buf = (unsigned long)buffer;
-    spi.rx_buf = (unsigned long)buffer;//tmp;
+    spi.tx_buf = (unsigned long)writebuff;
+    spi.rx_buf = (unsigned long)readbuff;
     spi.len    = len;
-    spi.speed_hz = 1000000;
+    spi.speed_hz = SPI_SPEED;
     spi.bits_per_word = 8;
     ioctl(fd, SPI_IOC_MESSAGE(1), &spi);
     //memcpy((void*)buffer, (void*)tmp, len);
-    free((void*)tmp);
-    return buffer;
+    //free((void*)tmp);
+    return readbuff;
 }
 
 int SPI_send(int fd, uintptr_t buffer, size_t len)
