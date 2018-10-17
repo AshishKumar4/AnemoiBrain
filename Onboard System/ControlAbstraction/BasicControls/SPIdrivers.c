@@ -5,6 +5,7 @@
 #include "stdint.h"
 #include "string.h"
 #include "stdio.h"
+#include "stdlib.h"
 
 /*
     SPI Drivers, to send and recieve data packets over SPI
@@ -29,6 +30,7 @@ int SPI_ReadWrite(int fd, uintptr_t buffer, size_t len)
     spi.len    = len;
     ioctl(fd, SPI_IOC_MESSAGE(1), &spi);
     memcpy((void*)buffer, (void*)tmp, len);
+    free((void*)tmp);
     return buffer;
 }
 
