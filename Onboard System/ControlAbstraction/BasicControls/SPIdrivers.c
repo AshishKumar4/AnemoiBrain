@@ -26,10 +26,12 @@ int SPI_ReadWrite(int fd, uintptr_t buffer, size_t len)
     struct spi_ioc_transfer spi;
     memset(&spi, 0, sizeof(spi));
     spi.tx_buf = (unsigned long)buffer;
-    spi.rx_buf = (unsigned long)tmp;
+    spi.rx_buf = (unsigned long)buffer;//tmp;
     spi.len    = len;
+    spi.speed_hz = 1000000;
+    spi.bits_per_word = 8;
     ioctl(fd, SPI_IOC_MESSAGE(1), &spi);
-    memcpy((void*)buffer, (void*)tmp, len);
+    //memcpy((void*)buffer, (void*)tmp, len);
     free((void*)tmp);
     return buffer;
 }
