@@ -22,7 +22,7 @@ int SPI_init(char* file)
     return fd;
 }
 
-int SPI_ReadWrite(int fd, uintptr_t readbuff, uintptr_t writebuff, size_t len)
+int SPI_ReadWrite(int fd, uintptr_t writebuff, uintptr_t readbuff, size_t len)
 {
     //uintptr_t tmp = (uintptr_t)malloc(len);
     struct spi_ioc_transfer spi;

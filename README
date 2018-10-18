@@ -17,3 +17,7 @@ OnBoard Systems
 - Navigation.py : Contains Code for Auto Navigation and Obstacle Avoidance
 
 - Kernel.py : Contains Actual Kernel Initialization And Management Code. The Heart of this OS.
+
+
+PORTS =>
+    8194 -> Controls Server, For Manual Control, sets throttle, yaw, pitch etc.

@@ -5,40 +5,19 @@
 #include <cstring>
 #include <iostream>
 #include <unistd.h>
-#include <wiringPiSPI.h>
+//#include <wiringPiSPI.h>
 #include <string>
+#include <thread> // std::thread
+
+#include <pthread.h>
+
+#include "BasicControls.h"
 
 using namespace std;
 
-#define CP_MAGIC 110
-
-int checksum(char *buf, int len)
-{
-    char tt = 0;
-    for (int i = 0; i < len - 1; i++)
-    {
-        tt ^= buf[i];
-    }
-    return tt;
-}
-
-struct ControlPackets
-{
-    unsigned char magic;
-    unsigned char throttle;
-    unsigned char pitch;
-    unsigned char roll;
-    unsigned char yaw;
-    unsigned char aux1;
-    unsigned char aux2;
-    unsigned char switches;
-    unsigned char random[9];
-    unsigned char checksum;
-};
-
 ControlPackets defCp;
-ControlPackets ref;
-ControlPackets *pp=&defCp;
+ControlPackets rff;
+ControlPackets *pp = &defCp;
 
 void setThrottle(int throttle)
 {
@@ -61,29 +40,44 @@ void setRoll(int roll)
     pp->magic = CP_MAGIC;
 }
 
-void setYar(int yaw)
+void setYaw(int yaw)
 {
     unsigned char t = (unsigned char)yaw;
     pp->yaw = t;
     pp->magic = CP_MAGIC;
 }
 
-int main()
-{
-    //int fd = wiringPiSPISetup(0, SPI_IOC_WR_MAX_SPEED_HZ);//SPI_init("/dev/spidev0.0");
-    int fd = SPI_init("/dev/spidev0.0");
+int fd;
 
-    pp->magic = 110;
-    pp->throttle = 255;
-    pp->pitch = 230;
-    pp->roll = 20;
-    pp->yaw = 40;
+void *SPI_Updater(void *threadid)
+{
+    cout<<"\nSPI Updater Initialized...";
     while (1)
     {
-        setThrottle(240);
-        //pp->checksum = checksum((char*)pp, sizeof(ControlPackets));
-        SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&ref, sizeof(ControlPackets));
+        SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
         //wiringPiSPIDataRW(0, (unsigned char*)pp, sizeof(ControlPackets));
-        usleep(200);
+        usleep(10);
     }
+}
+
+int BasicControls_init()
+{
+    //int fd = wiringPiSPISetup(0, SPI_IOC_WR_MAX_SPEED_HZ);//SPI_init("/dev/spidev0.0");
+    fd = SPI_init("/dev/spidev0.0");
+
+    pp->magic = 110;
+    pp->throttle = 0;
+    pp->pitch = 0;
+    pp->roll = 0;
+    pp->yaw = 0;
+
+    pthread_t thread;
+    
+    //thread SPI_Updater_thread(SPI_Updater);
+    if(pthread_create(&thread, NULL, SPI_Updater, 0))
+    {
+        cout<<"\nError creating threads...";
+    }
+    
+    return 0;
 }

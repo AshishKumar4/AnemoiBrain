@@ -12,16 +12,16 @@ int checksum(char* buf, int len)
 
 struct ControlPackets
 {
-  char magic;
-  char throttle;
-  char pitch;
-  char roll;
-  char yaw;
-  char aux1;
-  char aux2;
-  char switches;
-  char random[9];
-  char checksum;
+  unsigned char magic;
+  unsigned char throttle;
+  unsigned char pitch;
+  unsigned char roll;
+  unsigned char yaw;
+  unsigned char aux1;
+  unsigned char aux2;
+  unsigned char switches;
+  unsigned char random[9];
+  unsigned char checksum;
 };
 
 ControlPackets cp;
@@ -65,7 +65,8 @@ void loop()
    SPI_transfer(tt, sizeof(ControlPackets));*/
   if(process)
   {
-    if(cp.magic == 110)// && cp.checksum == checksum(buff, sizeof(ControlPackets)))
+    index = 0;
+    //if(cp.magic == 110)// && cp.checksum == checksum(buff, sizeof(ControlPackets)))
     {
       //Serial.print((int)sizeof(ControlPackets));
       //Serial.print("->");
@@ -81,7 +82,6 @@ void loop()
       Serial.print("\n");
     }
     process = false;
-    index = 0;
   }//*/
   /*char val=0, tmp;
   while(1)
