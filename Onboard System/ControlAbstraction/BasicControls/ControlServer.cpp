@@ -88,27 +88,33 @@ int main(int argc, char const *argv[])
 
             while (std::getline(input_stringstream, parsed, ' '))
             {
-                string val;
+		cout<<"["<<parsed<<"]";
+                string par, val;
                 std::stringstream parsed_stream(parsed);
-                std::getline(parsed_stream, val, ':');
-                switch (parsed[0])
+                std::getline(parsed_stream, par, ':');
+		std::getline(parsed_stream, val, ':');
+		cout<<par<<" "<<val<<" ("<<stoi(val)<<")"<<endl;
+                switch (par[0])
                 {
                 case 'T':
-                    std::cout << val;
+                    //std::cout << stoi(val);
                     setThrottle(stoi(val));
                     break;
                 case 'R':
-                    std::cout << val;
+                    //std::cout << stoi(;
                     setRoll(stoi(val));
                     break;
                 case 'Y':
-                    std::cout << val;
+                    //std::cout << val;
                     setYaw(stoi(val));
                     break;
                 case 'P':
-                    std::cout << val;
+                    //std::cout << val;
                     setPitch(stoi(val));
                     break;
+		case 'C':
+			cout<<"\nDone...\n";
+		    break;
                 default:
                     std::cout << "Not Recognized!";
                 }
