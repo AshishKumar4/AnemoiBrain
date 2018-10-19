@@ -60,7 +60,7 @@ int main(int argc, char const *argv[])
 {
     char *buff = new char[1024];
     BasicControls_init();
-    ResponsePackets *resbuff = getResponse();
+    //ResponsePackets *resbuff = getResponse();
     std::cout << "\nSPI Threads Initialized...\n";
 
     Server_start();

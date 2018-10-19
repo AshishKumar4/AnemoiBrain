@@ -47,6 +47,11 @@ void setYaw(int yaw)
     pp->magic = CP_MAGIC;
 }
 
+ControlPackets* getResponse()
+{
+    return &rff;
+}
+
 int fd;
 
 void *SPI_Updater(void *threadid)
