@@ -60,8 +60,8 @@ int main(int argc, char const *argv[])
 {
     char *buff = new char[1024];
     BasicControls_init();
-    ResponsePackets* resbuff = getResponse();
-    std::cout<<"\nSPI Threads Initialized...\n";
+    ResponsePackets *resbuff = getResponse();
+    std::cout << "\nSPI Threads Initialized...\n";
 
     Server_start();
     std::cout << "\n\nServer Initialized at port " << PORT << " Successfully...";
@@ -81,17 +81,18 @@ int main(int argc, char const *argv[])
         }
 
         valread = read(new_socket, buff, 1024);
-        if (valread == 0) continue;
+        if (valread == 0)
+            continue;
 
-        if(strncmp(buff, HANDSHAKE_IN_MSG, strlen(HANDSHAKE_IN_MSG)))
+        if (strncmp(buff, HANDSHAKE_IN_MSG, strlen(HANDSHAKE_IN_MSG)))
         {
-            std::cout<<"Overloard Could not establish Connection / Handshake Failure...\n";
+            std::cout << "Overloard Could not establish Connection / Handshake Failure...\n";
             continue;
         }
-        else 
+        else
         {
             send(new_socket, HANDSHAKE_OUT_MSG, strlen(HANDSHAKE_OUT_MSG), 0);
-            std::cout<<"Overloard Connected Successfully...\n";
+            std::cout << "Overloard Connected Successfully...\n";
         }
 
         while (1)
@@ -106,27 +107,32 @@ int main(int argc, char const *argv[])
 
             while (std::getline(input_stringstream, parsed, ' '))
             {
+                cout << "[" << parsed << "]";
                 string par, val;
                 std::stringstream parsed_stream(parsed);
                 std::getline(parsed_stream, par, ':');
                 std::getline(parsed_stream, val, ':');
+                cout << par << " " << val << " (" << stoi(val) << ")" << endl;
                 switch (par[0])
                 {
                 case 'T':
-                    std::cout << val;
+                    //std::cout << stoi(val);
                     setThrottle(stoi(val));
                     break;
                 case 'R':
-                    std::cout << val;
+                    //std::cout << stoi(;
                     setRoll(stoi(val));
                     break;
                 case 'Y':
-                    std::cout << val;
+                    //std::cout << val;
                     setYaw(stoi(val));
                     break;
                 case 'P':
-                    std::cout << val;
+                    //std::cout << val;
                     setPitch(stoi(val));
+                    break;
+                case 'C':
+                    cout << "\nDone...\n";
                     break;
                 default:
                     std::cout << "Not Recognized!";
