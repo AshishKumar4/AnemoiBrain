@@ -107,12 +107,12 @@ int main(int argc, char const *argv[])
 
             while (std::getline(input_stringstream, parsed, ' '))
             {
-                cout << "[" << parsed << "]";
+                std::cout << "[" << parsed << "]";
                 string par, val;
                 std::stringstream parsed_stream(parsed);
                 std::getline(parsed_stream, par, ':');
                 std::getline(parsed_stream, val, ':');
-                cout << par << " " << val << " (" << stoi(val) << ")" << endl;
+                std::cout << par << " " << val << " (" << stoi(val) << ")" << endl;
                 switch (par[0])
                 {
                 case 'T':
@@ -132,7 +132,7 @@ int main(int argc, char const *argv[])
                     setPitch(stoi(val));
                     break;
                 case 'C':
-                    cout << "\nDone...\n";
+                    std::cout << "\nDone...\n";
                     break;
                 default:
                     std::cout << "Not Recognized!";
@@ -142,7 +142,7 @@ int main(int argc, char const *argv[])
             send(new_socket, "Done", strlen("Done"), 0);
             printf("[message sent]\n");
         }
-        cout << "Broken Pipe, Waiting for incoming Connections...";
+        std::cout << "Broken Pipe, Waiting for incoming Connections...";
     }
     return 0;
 }

@@ -42,12 +42,12 @@ void setup(void)
 
 ISR (SPI_STC_vect)
 {
+      Serial.print("HH");
   if(!process)// && (SPSR & (1<<SPIF)) != 0)
   {
     if(index < sizeof(ControlPackets))
     {
       buff[index++] = SPDR;
-      Serial.print("HH");
     }
     else 
     {
