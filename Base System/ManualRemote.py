@@ -6,10 +6,9 @@ class RemoteControl:
         self.s.connect((ip, port))
         self.s.send(b'Hello Gardien!') # The Handshake Message
         if(self.s.recv(1024) != b'Hello Overloard!'):
-            raise Exception("Could Not Connect to the Drone Control Server!")
-            
+            raise Exception("Could Not Connect to the Drone Control Server!")        
         self.s.send(b'T:0 Y:0 R:0 P:0 C:0') # Set everything to 0
-        print(self.s.recv(1024))
+        #print(self.s.recv(1024))
         self.s.send(b'T:255 Y:255: R:255 P:255 C:0')
         self.s.send(b'T:0 Y:0 R:127 P:127 C:0')
         self.y = 0

@@ -138,7 +138,8 @@ int main(int argc, char const *argv[])
                     std::cout << "Not Recognized!";
                 }
             }
-            send(new_socket, resbuff, sizeof(ResponsePackets), 0);
+            //send(new_socket, resbuff, sizeof(ResponsePackets), 0);
+            send(new_socket, "Done", strlen("Done"), 0);
             printf("[message sent]\n");
         }
         cout << "Broken Pipe, Waiting for incoming Connections...";

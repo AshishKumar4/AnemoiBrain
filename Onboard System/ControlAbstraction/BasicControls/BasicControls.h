@@ -22,13 +22,13 @@ struct ControlPackets
 struct ResponsePackets
 {
     unsigned char magic;
-    unsigned char altitude;
+    unsigned char alt;
     unsigned char pitch;
     unsigned char roll;
     unsigned char yaw;
-    unsigned char aux1;
-    unsigned char aux2;
-    unsigned char switches;
+    unsigned char lat;
+    unsigned char lon;
+    unsigned char heading;
     unsigned char random[9];
     unsigned char checksum;
 };
