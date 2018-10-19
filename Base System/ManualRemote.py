@@ -33,4 +33,5 @@ class RemoteControl:
     def cmd(self, c):
         self.s.send(c)
         f = self.s.recv(1024)
+        print(f)
         return f

@@ -61,7 +61,7 @@ void *SPI_Updater(void *threadid)
     {
         SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
         //wiringPiSPIDataRW(0, (unsigned char*)pp, sizeof(ControlPackets));
-        usleep(10);
+        usleep(5);
     }
 }
 

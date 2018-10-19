@@ -60,7 +60,7 @@ int main(int argc, char const *argv[])
 {
     char *buff = new char[1024];
     BasicControls_init();
-    //ResponsePackets *resbuff = getResponse();
+    ResponsePackets *resbuff = getResponse();
     std::cout << "\nSPI Threads Initialized...\n";
 
     Server_start();
@@ -139,7 +139,7 @@ int main(int argc, char const *argv[])
                 }
             }
             //send(new_socket, resbuff, sizeof(ResponsePackets), 0);
-            send(new_socket, "Done", strlen("Done"), 0);
+            send(new_socket, resbuff, sizeof(ResponsePackets), 0);
             printf("[message sent]\n");
         }
         std::cout << "Broken Pipe, Waiting for incoming Connections...";
