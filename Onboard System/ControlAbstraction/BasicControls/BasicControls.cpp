@@ -16,7 +16,7 @@
 using namespace std;
 
 ControlPackets defCp;
-ResponsePackets rff;
+ControlPackets rff;
 ControlPackets *pp = &defCp;
 
 void setThrottle(int throttle)
@@ -47,11 +47,6 @@ void setYaw(int yaw)
     pp->magic = CP_MAGIC;
 }
 
-ResponsePackets* getResponse()
-{
-    return &rff;
-}
-
 int fd;
 
 void *SPI_Updater(void *threadid)
@@ -60,9 +55,8 @@ void *SPI_Updater(void *threadid)
     while (1)
     {
         SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
-        //strcpy((char*)rff, "[Done]");
         //wiringPiSPIDataRW(0, (unsigned char*)pp, sizeof(ControlPackets));
-        usleep(5);
+        usleep(10);
     }
 }
 
