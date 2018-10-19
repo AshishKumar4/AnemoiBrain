@@ -55,7 +55,7 @@ ResponsePackets* getResponse()
 int fd;
 
 void *SPI_Updater(void *threadid)
-{=
+{
     cout<<"\nSPI Updater Initialized...";
     while (1)
     {
