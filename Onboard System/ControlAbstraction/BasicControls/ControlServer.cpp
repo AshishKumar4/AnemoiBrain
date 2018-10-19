@@ -22,6 +22,9 @@ struct sockaddr_in address;
 int opt = 1;
 int addrlen = sizeof(address);
 
+const char HANDSHAKE_IN_MSG[] = "Hello Gardien!";
+const char HANDSHAKE_OUT_MSG[] = "Hello Overloard!";
+
 int Server_start()
 {
 
@@ -57,6 +60,7 @@ int main(int argc, char const *argv[])
 {
     char *buff = new char[1024];
     BasicControls_init();
+    ResponsePackets* resbuff = getResponse();
     std::cout<<"\nSPI Threads Initialized...\n";
 
     Server_start();
@@ -76,6 +80,20 @@ int main(int argc, char const *argv[])
             exit(EXIT_FAILURE);
         }
 
+        valread = read(new_socket, buff, 1024);
+        if (valread == 0) continue;
+
+        if(strncmp(buff, HANDSHAKE_IN_MSG, strlen(HANDSHAKE_IN_MSG)))
+        {
+            std::cout<<"Overloard Could not establish Connection / Handshake Failure...\n";
+            continue;
+        }
+        else 
+        {
+            send(new_socket, HANDSHAKE_OUT_MSG, strlen(HANDSHAKE_OUT_MSG), 0);
+            std::cout<<"Overloard Connected Successfully...\n";
+        }
+
         while (1)
         {
             valread = read(new_socket, buff, 1024);
@@ -88,10 +106,11 @@ int main(int argc, char const *argv[])
 
             while (std::getline(input_stringstream, parsed, ' '))
             {
-                string val;
+                string par, val;
                 std::stringstream parsed_stream(parsed);
+                std::getline(parsed_stream, par, ':');
                 std::getline(parsed_stream, val, ':');
-                switch (parsed[0])
+                switch (par[0])
                 {
                 case 'T':
                     std::cout << val;
@@ -113,8 +132,7 @@ int main(int argc, char const *argv[])
                     std::cout << "Not Recognized!";
                 }
             }
-
-            send(new_socket, "Hello Client!!!", strlen("Hello Client!!!"), 0);
+            send(new_socket, resbuff, sizeof(ResponsePackets), 0);
             printf("[message sent]\n");
         }
         cout << "Broken Pipe, Waiting for incoming Connections...";
