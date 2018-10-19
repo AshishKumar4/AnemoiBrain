@@ -47,6 +47,7 @@ ISR (SPI_STC_vect)
     if(index < sizeof(ControlPackets))
     {
       buff[index++] = SPDR;
+      Serial.print("HH");
     }
     else 
     {

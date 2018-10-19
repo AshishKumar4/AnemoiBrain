@@ -16,7 +16,7 @@
 using namespace std;
 
 ControlPackets defCp;
-ControlPackets rff;
+ResponsePackets rff;
 ControlPackets *pp = &defCp;
 
 void setThrottle(int throttle)
@@ -47,7 +47,7 @@ void setYaw(int yaw)
     pp->magic = CP_MAGIC;
 }
 
-ControlPackets* getResponse()
+ResponsePackets* getResponse()
 {
     return &rff;
 }
