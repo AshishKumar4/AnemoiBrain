@@ -22,6 +22,8 @@
 
 using namespace std;
 
+int fd;
+
 ControlPackets defCp;
 ResponsePackets rff;
 ControlPackets *pp = &defCp;
@@ -30,9 +32,9 @@ int SPI_handshake()
 {
     unsigned char ht = REQ_SIGNAL;
     SPI_ReadWrite(fd, (uintptr_t)&ht, (uintptr_t)&ht, 1);
-    while(ht != ACCEPT_SIGNAL)
+    if(ht != ACCEPT_SIGNAL)
     {
-        cout<<"Waiting for handshake with flight controller...\n";
+        cout<<"Waiting for handshake with flight controller..."<<ht<<"\n";
     }
     return 1;
 }
@@ -80,7 +82,6 @@ ResponsePackets* getResponse()
     return &rff;
 }
 
-int fd;
 
 void *SPI_Updater(void *threadid)
 {
@@ -103,6 +104,8 @@ int BasicControls_init()
     pp->pitch = 0;
     pp->roll = 0;
     pp->yaw = 0;
+
+    IssueCommand();
 
     /*pthread_t thread;
     

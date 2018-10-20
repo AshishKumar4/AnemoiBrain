@@ -1,4 +1,13 @@
 #include <SPI.h>
+
+
+
+#define CPACKET_MAGIC 110
+#define REQ_SIGNAL     251
+#define ACCEPT_SIGNAL    252
+#define RPACKET_MAGIC  120
+#define FALSE_PACKET   145
+
 struct ControlPackets
 {
   unsigned char magic;
@@ -33,7 +42,7 @@ char *buff = (char *)&rfCusData;
 char *rbuff = (char *)&rfResData;
 
 volatile int index = 0;
-volatile boolean process = false;
+volatile boolean process = true;
 
 void setup(void)
 {
@@ -42,44 +51,27 @@ void setup(void)
   // SPI.begin();
   index = 0;
   SPI.attachInterrupt();
-  Serial.begin(19200);
+  Serial.begin(115200);
+  process = true;
 }
 
 ISR(SPI_STC_vect)
 {
+  unsigned char g = SPDR;
+  Serial.println(g);
   if (!process) // && (SPSR & (1<<SPIF)) != 0)
   {
-    Serial.println((SPSR & (1<<SPIF)));
     if (index < sizeof(ControlPackets))
     {
-      buff[index++] = SPDR;
+      buff[index++] = g;
     }
     else
     {
       //if(buff[0] == 110)
       process = true;
-      
-          /*
-      rfResData.lat = 35.62;
-      rfResData.lon = 139.68;
-      rfResData.heading = 0;//att.heading;
-      rfResData.pitch = 0;//att.angle[PITCH];
-      rfResData.roll = 0;//att.angle[ROLL];
-      rfResData.alt = 0;//alt.EstAlt;
-          
-      for (int i = 0; i < index; i++)
+
+      if (rfCusData.magic == CPACKET_MAGIC)
       {
-        SPDR = rbuff[i];
-      }*/
-      
-     /* if (rfCusData.magic == 110)
-      {
-        /*nrf24_rcData[THROTTLE] = map(rfCusData.throttle, 0, 255, 1000, 2000);
-        nrf24_rcData[YAW] = map(rfCusData.yaw, 0, 255, 1000, 2000);
-        nrf24_rcData[PITCH] = map(rfCusData.pitch, 0, 255, 1000, 2000);
-        nrf24_rcData[ROLL] = map(rfCusData.roll, 0, 255, 1000, 2000);
-        nrf24_rcData[AUX1] = map(rfCusData.aux1, 0, 255, 1000, 2000);
-        nrf24_rcData[AUX2] = map(rfCusData.aux2, 0, 255, 1000, 2000);
         Serial.print((int)rfCusData.magic);
         Serial.print(" ");
         Serial.print((int)rfCusData.throttle);
@@ -90,14 +82,28 @@ ISR(SPI_STC_vect)
         Serial.print(" ");
         Serial.print((int)rfCusData.yaw);
         Serial.print("\n");
-      }*/
-      process = false;
-      index = 0;
+      }
+      else 
+      {
+        /*for (int i = 0; i < index; i++)
+        {
+          SPDR = FALSE_PACKET;
+        }*/
+      }
+      //process = false;
+      // index = 0;
       // index = 0;
     }
   }
+  else if(g == REQ_SIGNAL)  // Handshake
+  {
+    Serial.println("Got...");
+    //buff[0] = g;
+    SPDR = ACCEPT_SIGNAL;  // Recieved Signal
+    index = 0;
+    process = false;
+  }
 }
-
 void loop()
 {
   analogRead(A2);
