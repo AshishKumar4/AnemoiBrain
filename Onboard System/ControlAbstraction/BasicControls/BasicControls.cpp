@@ -30,13 +30,14 @@ ControlPackets *pp = &defCp;
 
 int SPI_handshake()
 {
-    unsigned char ht = REQ_SIGNAL;
+    int ht = REQ_SIGNAL;
     SPI_ReadWrite(fd, (uintptr_t)&ht, (uintptr_t)&ht, 1);
     if(ht != ACCEPT_SIGNAL)
     {
         cout<<"Waiting for handshake with flight controller..."<<ht<<"\n";
+        return 1;
     }
-    return 1;
+    return 0;
 }
 
 int IssueCommand()
@@ -105,6 +106,7 @@ int BasicControls_init()
     pp->roll = 0;
     pp->yaw = 0;
 
+    SPI_handshake();
     IssueCommand();
 
     /*pthread_t thread;
