@@ -37,6 +37,7 @@ int SPI_handshake()
         cout<<"Waiting for handshake with flight controller..."<<ht<<"\n";
         return 1;
     }
+    cout<<"Got Handshake Successfully...\n";
     return 0;
 }
 
@@ -106,7 +107,7 @@ int BasicControls_init()
     pp->roll = 0;
     pp->yaw = 0;
 
-    SPI_handshake();
+    //SPI_handshake();
     IssueCommand();
 
     /*pthread_t thread;

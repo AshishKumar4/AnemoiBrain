@@ -35,11 +35,11 @@ class RemoteControl:
         print('Disarmed Successfully...')
         return True
     def throttle(self, val):
-        self.cmd(b'T:' + val + ' Y:' + self.y + ' R:' + self.r + ' P:' + self.p + ' C:0')
+        self.cmd(b'T:' + val + b' Y:' + self.y + b' R:' + self.r + b' P:' + self.p + b' C:0')
     def balance(self):
-        self.cmd(b'R:255 Y:255 C:0')
+        self.cmd(b'R:255 P:255 C:0')
         sleep(0.01)
-        self.cmd(b'R:127 Y:127 C:0')
+        self.cmd(b'R:127 P:127 C:0')
     def cmd(self, c):
         self.s.send(c)
         f = self.s.recv(1024)
