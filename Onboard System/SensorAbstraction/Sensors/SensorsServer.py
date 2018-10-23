@@ -1,5 +1,5 @@
 from socket import *
 
-class SensorsClient:
+class SensorsServer:
     def __init__(self):
         

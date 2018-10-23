@@ -9,7 +9,6 @@ class CameraFeed:
         self.ip = ip
         self.s = socket(AF_INET, SOCK_STREAM)
         self.s.connect((ip, port))
-        
     def getStream(self):
         while True:
             p = self.s.recv(8194)
@@ -18,7 +17,6 @@ class CameraFeed:
             img = np.fromstring(p)
             cv2.imshow("Frame", img)
             key = cv2.waitKey(1) & 0xFF
-
             if key == ord("q"):
                 break
 

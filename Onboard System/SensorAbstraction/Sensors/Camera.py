@@ -27,7 +27,6 @@ class Camera:
         self.s = socket(AF_INET, SOCK_STREAM)
         self.s.bind((self.ip, port))
         self.s.listen(5)
-        self.ss, self.a = self.s.accept()   # Wait for a Client
 
     def streamReverseTCP(self, ip = "", port = 8195):   
         # Drone Camera is the Client
@@ -37,7 +36,9 @@ class Camera:
         self.s.connect((streamip, port))
         self.ss = self.s
 
-    def startStream(self):
+    def startStream(self, startDelay = 1):
+        self.ss, self.a = self.s.accept()   # Wait for a Client
+        time.sleep(startDelay)   # To ensure the Server is ready
         # capture frames from the camera
         for frame in self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True):
             # grab the raw NumPy array representing the image, then initialize the timestamp
@@ -46,7 +47,7 @@ class Camera:
             
             # Send this data over to Base via sockets
             print(type(image))
-            print(image.shape)
+            print(len(image.tostring()))
             self.ss.send(image.tostring())
             # show the frame
             #cv2.imshow("Frame", image)
