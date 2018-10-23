@@ -43,8 +43,8 @@ class Camera:
         self.ss, self.a = self.s.accept()   # Wait for a Client
 
         # Send a sample image size to the client as handshake
-        self.camera.capture(self.rawCapture, format="bgr")
-        self.ss.send(struct.pack("L", len(pickle.dumps(self.rawCapture.array)))
+        #self.camera.capture(self.rawCapture, format="bgr")
+        #self.ss.send(struct.pack("L", 921764))#len(pickle.dumps(self.rawCapture.array))))
 
         time.sleep(startDelay)   # To ensure the Server is ready
         # capture frames from the camera
