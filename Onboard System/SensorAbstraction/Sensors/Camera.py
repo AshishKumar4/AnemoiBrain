@@ -7,6 +7,7 @@ import cv2
 from socket import *
 
 import pickle
+import struct
 
 class Camera:
     def __init__(self):
@@ -40,6 +41,11 @@ class Camera:
 
     def startStream(self, startDelay = 1):
         self.ss, self.a = self.s.accept()   # Wait for a Client
+
+        # Send a sample image size to the client as handshake
+        self.camera.capture(self.rawCapture, format="bgr")
+        self.ss.send(struct.pack("L", len(pickle.dumps(self.rawCapture.array)))
+
         time.sleep(startDelay)   # To ensure the Server is ready
         # capture frames from the camera
         for frame in self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True):
