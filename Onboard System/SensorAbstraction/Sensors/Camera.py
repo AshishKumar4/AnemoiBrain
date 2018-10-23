@@ -6,6 +6,8 @@ import cv2
 
 from socket import *
 
+import pickle
+
 class Camera:
     def __init__(self):
         
@@ -46,9 +48,9 @@ class Camera:
             image = frame.array
             
             # Send this data over to Base via sockets
-            print(type(image))
-            print(len(image.tostring()))
-            self.ss.send(image.tostring())
+            #print(type(image))
+            #print(len(image.tostring()))
+            self.ss.send(pickle.dumps(image))
             # show the frame
             #cv2.imshow("Frame", image)
             #key = cv2.waitKey(1) & 0xFF

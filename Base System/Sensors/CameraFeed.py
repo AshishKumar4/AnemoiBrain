@@ -1,6 +1,7 @@
 from socket import *
 import numpy as np
 import cv2
+import pickle
 
 class CameraFeed:
     def __init__(self, ip = "", port = 8195, mode = 0):
@@ -9,12 +10,12 @@ class CameraFeed:
         self.ip = ip
         self.s = socket(AF_INET, SOCK_STREAM)
         self.s.connect((ip, port))
-    def getStream(self):
+    def getStream(self, res = [480, 640, 3]):
         while True:
-            p = self.s.recv(8194)
+            p = self.s.recv(res[0]*res[1]*res[2])
             if p == 0:
                 break
-            img = np.fromstring(p)
+            img = pickle.loads(p)
             cv2.imshow("Frame", img)
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
