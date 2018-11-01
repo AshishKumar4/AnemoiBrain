@@ -9,6 +9,8 @@ from socket import *
 import pickle
 import struct
 
+# TODO: Re Write this code in C/C++ For efficiency!!!
+
 class Camera:
     def __init__(self):
         
