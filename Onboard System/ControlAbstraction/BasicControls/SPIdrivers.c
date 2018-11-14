@@ -22,6 +22,30 @@ int SPI_init(char* file)
     return fd;
 }
 
+int SPI_handshake()
+{
+    int ht = REQ_SIGNAL;
+    SPI_ReadWrite(fd, (uintptr_t)&ht, (uintptr_t)&ht, 1);
+    if(ht != ACCEPT_SIGNAL)
+    {
+        cout<<"Waiting for handshake with flight controller..."<<ht<<"\n";
+        return 1;
+    }
+    cout<<"Got Handshake Successfully...\n";
+    return 0;
+}
+
+void *SPI_Updater(void *threadid)
+{
+    cout<<"\nSPI Updater Initialized...";
+    while (1)
+    {
+        SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
+        //wiringPiSPIDataRW(0, (unsigned char*)pp, sizeof(ControlPackets));
+        usleep(5);
+    }
+}
+
 int SPI_ReadWrite(int fd, uintptr_t writebuff, uintptr_t readbuff, size_t len)
 {
     //uintptr_t tmp = (uintptr_t)malloc(len);

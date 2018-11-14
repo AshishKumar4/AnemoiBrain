@@ -1,6 +1,5 @@
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
-#include "SPIdrivers.c"
 #include <fcntl.h>
 #include <cstring>
 #include <iostream>
@@ -13,6 +12,21 @@
 
 #include "BasicControls.h"
 
+/*
+    There are two possible configurations, 
+    1) RPI unit is on board the drone and communicates with 
+        flight controller through SPI, and so the telemetry unit is connected to RPI directly.
+    2) RPI unit is off board the drone and communicates with the flight controller through Radio (wifi/ Xbee)
+*/
+//#define ONBOARD_SPI
+#define OFFBOARD_RADIO
+
+/*
+    Telemetry Type
+*/
+#define NRF24
+//#define WIFI 
+//#define XBEE
 
 #define CPACKET_MAGIC 110
 #define REQ_SIGNAL     251
@@ -22,30 +36,45 @@
 
 using namespace std;
 
-int fd;
-
 ControlPackets defCp;
 ResponsePackets rff;
 ControlPackets *pp = &defCp;
 
-int SPI_handshake()
-{
-    int ht = REQ_SIGNAL;
-    SPI_ReadWrite(fd, (uintptr_t)&ht, (uintptr_t)&ht, 1);
-    if(ht != ACCEPT_SIGNAL)
-    {
-        cout<<"Waiting for handshake with flight controller..."<<ht<<"\n";
-        return 1;
-    }
-    cout<<"Got Handshake Successfully...\n";
-    return 0;
-}
+#ifdef defined ONBOARD_SPI 
+
+#include "SPIdrivers.c"
+
+int fd;
 
 int IssueCommand()
 {
     SPI_handshake();
     SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
 }
+
+void Raw_Init()
+{
+    fd = SPI_init("/dev/spidev0.0");
+}
+
+#elif defined OFFBOARD_RADIO
+
+#include "RadioDrivers.cpp"
+
+    #if defined NRF24
+int IssueCommand()
+{
+    NRF24_Send((uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
+}
+
+void Raw_Init()
+{
+    
+}
+    #endif
+#endif 
+
+
 
 void setThrottle(int throttle)
 {
@@ -84,22 +113,10 @@ ResponsePackets* getResponse()
     return &rff;
 }
 
-
-void *SPI_Updater(void *threadid)
-{
-    cout<<"\nSPI Updater Initialized...";
-    while (1)
-    {
-        SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
-        //wiringPiSPIDataRW(0, (unsigned char*)pp, sizeof(ControlPackets));
-        usleep(5);
-    }
-}
-
 int BasicControls_init()
 {
     //int fd = wiringPiSPISetup(0, SPI_IOC_WR_MAX_SPEED_HZ);//SPI_init("/dev/spidev0.0");
-    fd = SPI_init("/dev/spidev0.0");
+    Raw_Init();
 
     pp->magic = 110;
     pp->throttle = 0;
