@@ -43,11 +43,13 @@ int fd;
 
 int SPI_handshake()
 {
+    back:
     int ht = REQ_SIGNAL;
     SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
     if(ht != ACCEPT_SIGNAL)
     {
         printf("Waiting for handshake with flight controller...%d\n", ht);
+        goto back;
         return 1;
     }
     cout<<"Got Handshake Successfully...\n";

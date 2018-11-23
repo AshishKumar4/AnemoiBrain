@@ -16,7 +16,16 @@
 
 using namespace std;
 
+#define DRONELESS_LOCAL_TEST
+
 #define PORT_BASE 8400
+
+#define PORT_THROTTLE PORT_BASE + 0
+#define PORT_PITCH PORT_BASE + 1
+#define PORT_ROLL PORT_BASE + 2
+#define PORT_YAW PORT_BASE + 3
+#define PORT_AUX1 PORT_BASE + 4
+#define PORT_AUX2 PORT_BASE + 5
 
 //int server_fd, new_socket, valread;
 //struct sockaddr_in address;
@@ -60,12 +69,12 @@ class ControlServer
     ControlServer()
     {
         // We would first create several sockets and store their fds
-        CreateChannel(8400, 0); //  Throttle is         0
-        CreateChannel(8401, 1); //  Pitch is            1
-        CreateChannel(8402, 2); //  Roll is             2
-        CreateChannel(8403, 3); //  Yaw is              3
-        CreateChannel(8404, 4); //  Aux1 is             4
-        CreateChannel(8405, 5); //  Aux2 is             5*/
+        CreateChannel(PORT_THROTTLE, 0); //  Throttle is         0
+        CreateChannel(PORT_PITCH, 1);    //  Pitch is            1
+        CreateChannel(PORT_ROLL, 2);     //  Roll is             2
+        CreateChannel(PORT_YAW, 3);      //  Yaw is              3
+        CreateChannel(PORT_AUX1, 4);     //  Aux1 is             4
+        CreateChannel(PORT_AUX2, 5);     //  Aux2 is             5*/
         // We Create six channels, each corresponding to six basic controls of drone
 
         // We would then create serveral threads, which would in turn listen to sockets
@@ -152,19 +161,22 @@ void ControlServer::ChannelListeners(int i)
                     std::getline(parsed_stream, par1, ':');
                     std::getline(parsed_stream, val, ':'); // Extract the x
 
-                    std::cout << par1 << " " << val << " (" << atoi(val.c_str()) << ") "<<par2<<"\n";
+                    std::cout << par1 << " " << val << " (" << atoi(val.c_str()) << ") " << par2 << "\n";
 
                     // We Now issue our command
+
+#ifndef DRONELESS_LOCAL_TEST
                     CHANNEL_HANDLER_TABLES[i](atoi(val.c_str()));
+#endif
                 }
 
                 //send(new_socket, resbuff, sizeof(ResponsePackets), 0);
                 //send(new_socket, resbuff, sizeof(ResponsePackets), 0);
                 printf("[message sent]\n");
             }
-            catch(exception &e)
+            catch (exception &e)
             {
-                cout<<"Some ERROR!!!"<<e.what()<<"\n";
+                cout << "Some ERROR!!!" << e.what() << "\n";
             }
         }
         std::cout << "Broken Pipe, Waiting for incoming Connections...";
@@ -223,7 +235,9 @@ int ControlServer::CreateChannel(int port, int channel) // This would create a p
 int main(int argc, char const *argv[])
 {
     char *buff = new char[1024];
-    //BasicControls_init();
+#ifndef DRONELESS_LOCAL_TEST
+    BasicControls_init();
+#endif
     //resbuff = getResponse();
     //std::cout << "\nSPI Threads Initialized...\n";
 
