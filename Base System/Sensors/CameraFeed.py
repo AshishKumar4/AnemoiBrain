@@ -86,8 +86,12 @@ class AirSimCameraFeed:
         self.thread = Thread(target = self.Stream, kwargs = {"buffer":buffer, "disp":disp, "camera":camera, "res":res})
         self.thread.start()
         return self.thread
-    def startStereoStream(self, res = [480, 640, 3], camera = "0", buffer = queue.Queue(), disp = True):
-        self.thread = Thread(target = self.StereoStream, kwargs = {"buffer":buffer, "disp":disp, "camera":camera, "res":res})
+    def startStereoStream(self, res = [480, 640, 3], cameras = ("2", "1"), buffer = queue.Queue(), disp = True):
+        self.thread = Thread(target = self.StereoStream, kwargs = {"buffer":buffer, "disp":disp, "cameras":cameras, "res":res})
+        self.thread.start()
+        return self.thread
+    def startDisparityStream(self, res = [480, 640, 3], cameras = ("2", "1"), buffer = queue.Queue(), disp = True, numDisparities = 16, blockSize = 19):
+        self.thread = Thread(target = self.DisparityStream, kwargs = {"buffer":buffer, "disp":disp, "cameras":cameras, "res":res, "numDisparities":numDisparities, "blockSize":blockSize})
         self.thread.start()
         return self.thread
     def Stream(self, res = [480, 640, 3], camera = "0", buffer = queue.Queue(), disp = True):
@@ -103,13 +107,15 @@ class AirSimCameraFeed:
                 if key == ord("q"):
                     break
             time.sleep(self.delay)
-    def StereoStream(self, res = [480, 640, 3], cameras = ("2", "1"), buffer = queue.Queue(4096), disp = True):
+    def StereoStream(self, res = [480, 640, 3], cameras = ("2", "1"), buffer = queue.Queue(), disp = True):
         while True:
             left = self.getView(cameras[0])
             right = self.getView(cameras[1])
             try:
-                buffer.put_nowait((left,right))
-            except:
+                buffer.put_nowait(list([left,right]))
+                #buffer.put_nowait(left)
+            except Exception as e:
+                print(e)
                 pass
             img = cv2.hconcat((left, right))
             if(disp):
@@ -118,6 +124,37 @@ class AirSimCameraFeed:
                 if key == ord("q"):
                     break
             time.sleep(self.delay)
+    def DisparityStream(self, res = [480, 640, 3], cameras = ("2", "1"), buffer = queue.Queue(), disp = True,  numDisparities = 16, blockSize = 19):
+        s = cv2.StereoBM_create(numDisparities, blockSize)
+        while True:
+            left = self.getView(cameras[0])
+            right = self.getView(cameras[1])
+            img = None
+            try:
+                gl = cv2.cvtColor(left, cv2.COLOR_BGR2GRAY)
+                gr = cv2.cvtColor(right, cv2.COLOR_BGR2GRAY)
+                d = s.compute(gl, gr)
+                #buffer.put_nowait(list([left,right]))
+                buffer.put_nowait(d)
+            except Exception as e:
+                print(e)
+                pass
+            #img = cv2.hconcat((left, right))
+            img = d
+            if(disp):
+                cv2.imshow("Frame", img)
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord("q"):
+                    break
+            time.sleep(self.delay)
+    def getDisparity(self, numDisparities = 16, blockSize = 19, cameras = ("2", "1")):
+        s = cv2.StereoBM_create(numDisparities, blockSize)
+        left = self.getView(cameras[0])
+        right = self.getView(cameras[1])
+        gl = cv2.cvtColor(left, cv2.COLOR_BGR2GRAY)
+        gr = cv2.cvtColor(right, cv2.COLOR_BGR2GRAY)
+        d = s.compute(gl, gr)
+        return d
     def capture(self,res=[480, 640, 3]):
         img = self.getView("0")
         return img
@@ -153,8 +190,8 @@ class UnrealCameraFeed:
         self.thread = Thread(target = self.Stream, kwargs = {"buffer":buffer, "disp":disp, "camera":camera, "res":res})
         self.thread.start()
         return self.thread
-    def startStereoStream(self, res = [480, 640, 3], camera = "0", buffer = queue.Queue(), disp = True):
-        self.thread = Thread(target = self.StereoStream, kwargs = {"buffer":buffer, "disp":disp, "camera":camera, "res":res})
+    def startStereoStream(self, res = [480, 640, 3], cameras = ("2", "1"), buffer = queue.Queue(), disp = True):
+        self.thread = Thread(target = self.StereoStream, kwargs = {"buffer":buffer, "disp":disp, "cameras":cameras, "res":res})
         self.thread.start()
         return self.thread
     def Stream(self, res = [480, 640, 3], camera = "0", buffer = queue.Queue(), disp = True):

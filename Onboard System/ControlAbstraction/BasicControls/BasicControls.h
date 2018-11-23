@@ -1,9 +1,15 @@
-#pragma once
+#ifndef BASICCONTROLS_H
+#define BASICCONTROLS_H
 #include "stdint.h"
 
 #define CP_MAGIC 110
 
 int checksum(char *buf, int len);
+#define CPACKET_MAGIC 110
+#define REQ_SIGNAL     251
+#define ACCEPT_SIGNAL    252
+#define RPACKET_MAGIC  120
+#define FALSE_PACKET   145
 
 struct ControlPackets
 {
@@ -33,8 +39,16 @@ struct ResponsePackets
     unsigned char checksum;
 };
 
+
 void setThrottle(int throttle);
 void setPitch(int pitch);
 void setRoll(int roll);
 void setYaw(int yaw);
+void setAux1(int val);
+void setAux2(int val);
+
+int BasicControls_init();
+
 ResponsePackets* getResponse();
+
+#endif

@@ -10,62 +10,91 @@
 #include <vector>
 #include <iterator>
 #include <sstream>
+#include <thread> // std::thread
 
-#include "BasicControls.cpp"
+#include "BasicControls.h"
 
 using namespace std;
 
-#define PORT 8194
+#define PORT_BASE 8400
 
-int server_fd, new_socket, valread;
-struct sockaddr_in address;
+//int server_fd, new_socket, valread;
+//struct sockaddr_in address;
 int opt = 1;
-int addrlen = sizeof(address);
 
 const char HANDSHAKE_IN_MSG[] = "Hello Gardien!";
 const char HANDSHAKE_OUT_MSG[] = "Hello Overloard!";
+typedef void (*func_t)(int); //void function pointer
+ResponsePackets *resbuff;
+func_t CHANNEL_HANDLER_TABLES[] = {&setThrottle, &setPitch, &setRoll, &setYaw, &setAux1, &setAux2};
 
-int Server_start()
+class ControlServer
 {
+    static vector<int> server_fd;
+    static vector<int> socket_num;
+    vector<thread *> ListenerThreads;
+    static vector<struct sockaddr_in *> addresses;
 
-    // Creating socket file descriptor
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+  protected:
+    int LaunchListenerThreads()
     {
-        perror("socket failed");
-        exit(EXIT_FAILURE);
+    back:
+        ListenerThreads.empty();
+        ListenerThreads.push_back(new thread(ChannelListeners, 0));
+        ListenerThreads.push_back(new thread(ChannelListeners, 1));
+        ListenerThreads.push_back(new thread(ChannelListeners, 2));
+        ListenerThreads.push_back(new thread(ChannelListeners, 3));
+        ListenerThreads.push_back(new thread(ChannelListeners, 4));
+        ListenerThreads.push_back(new thread(ChannelListeners, 5));
+
+        ListenerThreads[0]->join();
+        ListenerThreads[1]->join();
+        ListenerThreads[2]->join();
+        ListenerThreads[3]->join();
+        ListenerThreads[4]->join();
+        ListenerThreads[5]->join();
+        //std::cout << "Broken Pipe, Waiting for incoming Connections...";
     }
 
-    // Forcefully attaching socket to the port
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT,
-                   &opt, sizeof(opt)))
+  public:
+    ControlServer()
     {
-        perror("setsockopt");
-        exit(EXIT_FAILURE);
-    }
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
+        // We would first create several sockets and store their fds
+        CreateChannel(8400, 0); //  Throttle is         0
+        CreateChannel(8401, 1); //  Pitch is            1
+        CreateChannel(8402, 2); //  Roll is             2
+        CreateChannel(8403, 3); //  Yaw is              3
+        CreateChannel(8404, 4); //  Aux1 is             4
+        CreateChannel(8405, 5); //  Aux2 is             5*/
+        // We Create six channels, each corresponding to six basic controls of drone
 
-    // Forcefully attaching socket to the port 8080
-    if (bind(server_fd, (struct sockaddr *)&address,
-             sizeof(address)) < 0)
+        // We would then create serveral threads, which would in turn listen to sockets
+        LaunchListenerThreads();
+    }
+    ~ControlServer()
     {
-        perror("bind failed");
-        exit(EXIT_FAILURE);
+        // TODO: Release all the sockets here
     }
-    return 0;
-}
 
-int main(int argc, char const *argv[])
+    static int CreateChannel(int port, int channel); // This would create a port for a particular channel
+    static void ChannelListeners(int i);
+};
+
+vector<int> ControlServer::server_fd;
+vector<int> ControlServer::socket_num;
+vector<struct sockaddr_in *> ControlServer::addresses;
+
+void ControlServer::ChannelListeners(int i)
 {
-    char *buff = new char[1024];
-    BasicControls_init();
-    ResponsePackets *resbuff = getResponse();
-    std::cout << "\nSPI Threads Initialized...\n";
+    int PORT = i + PORT_BASE;
+    int sfd = server_fd[i];
+    struct sockaddr_in *address = addresses[i];
+    int new_socket;
+    ssize_t valread = 0;
+    char *buff = new char[4096];
 
-    Server_start();
     std::cout << "\n\nServer Initialized at port " << PORT << " Successfully...";
-    if (listen(server_fd, 5) < 0)
+    if (listen(sfd, 5) < 0)
     {
         perror("listen");
         exit(EXIT_FAILURE);
@@ -74,7 +103,8 @@ int main(int argc, char const *argv[])
     while (1)
     {
         std::cout << "\nGot an incoming request...\n";
-        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
+        int addrlen = sizeof(struct sockaddr);
+        if ((new_socket = accept(sfd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
         {
             perror("accept");
             exit(EXIT_FAILURE);
@@ -95,54 +125,111 @@ int main(int argc, char const *argv[])
             std::cout << "Overloard Connected Successfully...\n";
         }
 
+        // The Control Loop -->
         while (1)
         {
-            valread = read(new_socket, buff, 1024);
-            if (valread == 0)
-                break;
-
-            std::string parsed, cmd(buff);
-            std::cout << cmd << endl;
-            std::stringstream input_stringstream(cmd);
-
-            while (std::getline(input_stringstream, parsed, ' '))
+            try
             {
-                std::cout << "[" << parsed << "]";
-                string par, val;
-                std::stringstream parsed_stream(parsed);
-                std::getline(parsed_stream, par, ':');
-                std::getline(parsed_stream, val, ':');
-                std::cout << par << " " << val << " (" << stoi(val) << ")" << endl;
-                switch (par[0])
+                memset(buff, 0, strlen(buff));
+                valread = read(new_socket, buff, 1024);
+                if (valread == 0)
+                    break;
+
+                std::string parsed, cmd(buff);
+                std::cout << cmd << endl;
+
+                /*
+                Format of the input command ->
+                .[:x:].
+            */
+                std::stringstream input_stringstream(cmd);
+                // Split the input line into several [:x:]
+                while (std::getline(input_stringstream, parsed, '.'))
                 {
-                case 'T':
-                    //std::cout << stoi(val);
-                    setThrottle(stoi(val));
-                    break;
-                case 'R':
-                    //std::cout << stoi(;
-                    setRoll(stoi(val));
-                    break;
-                case 'Y':
-                    //std::cout << val;
-                    setYaw(stoi(val));
-                    break;
-                case 'P':
-                    //std::cout << val;
-                    setPitch(stoi(val));
-                    break;
-                case 'C':
-                    std::cout << "\nDone...\n";
-                    break;
-                default:
-                    std::cout << "Not Recognized!";
+                    std::cout << "Parsed: [" << parsed << "],\n";
+                    std::string par1, par2, val;
+                    std::stringstream parsed_stream(parsed);
+                    std::getline(parsed_stream, par1, ':');
+                    std::getline(parsed_stream, val, ':'); // Extract the x
+
+                    std::cout << par1 << " " << val << " (" << atoi(val.c_str()) << ") "<<par2<<"\n";
+
+                    // We Now issue our command
+                    CHANNEL_HANDLER_TABLES[i](atoi(val.c_str()));
                 }
+
+                //send(new_socket, resbuff, sizeof(ResponsePackets), 0);
+                //send(new_socket, resbuff, sizeof(ResponsePackets), 0);
+                printf("[message sent]\n");
             }
-            //send(new_socket, resbuff, sizeof(ResponsePackets), 0);
-            send(new_socket, resbuff, sizeof(ResponsePackets), 0);
-            printf("[message sent]\n");
+            catch(exception &e)
+            {
+                cout<<"Some ERROR!!!"<<e.what()<<"\n";
+            }
         }
         std::cout << "Broken Pipe, Waiting for incoming Connections...";
     }
+}
+
+int ControlServer::CreateChannel(int port, int channel) // This would create a port for a particular channel
+{
+    int sfd;
+    struct sockaddr_in *address = new struct sockaddr_in;
+    // Creating socket file descriptor
+    if ((sfd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+    {
+        perror("socket failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Forcefully attaching socket to the port
+    if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)))
+    {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
+    }
+    address->sin_family = AF_INET;
+    address->sin_addr.s_addr = INADDR_ANY;
+    address->sin_port = htons(port);
+
+    // Forcefully attaching socket to the given port
+    if (bind(sfd, (struct sockaddr *)address, sizeof(struct sockaddr_in)) < 0)
+    {
+        perror("bind failed");
+        exit(EXIT_FAILURE);
+    }
+    try
+    {
+        if (server_fd.size() <= channel)
+        {
+            server_fd.push_back(sfd);
+            addresses.push_back(address);
+        }
+        else
+        {
+            // TODO: Free up the existing sockets
+            server_fd[channel] = sfd;
+            addresses[channel] = address;
+        }
+    }
+    catch (...)
+    {
+        perror("Error while Saving the Socket Memory Structures");
+        exit(EXIT_FAILURE);
+    }
+    cout << "Socket for port " << port << " Created Successfully!" << endl;
+    return 0;
+}
+int main(int argc, char const *argv[])
+{
+    char *buff = new char[1024];
+    //BasicControls_init();
+    //resbuff = getResponse();
+    //std::cout << "\nSPI Threads Initialized...\n";
+
+    //Server_start();
+    ControlServer *server = new ControlServer;
+    while (1)
+        ;
     return 0;
 }

@@ -18,21 +18,16 @@
         flight controller through SPI, and so the telemetry unit is connected to RPI directly.
     2) RPI unit is off board the drone and communicates with the flight controller through Radio (wifi/ Xbee)
 */
-//#define ONBOARD_SPI
-#define OFFBOARD_RADIO
+#define ONBOARD_SPI
+//#define OFFBOARD_RADIO
 
 /*
     Telemetry Type
 */
-#define NRF24
+//#define NRF24
 //#define WIFI 
 //#define XBEE
 
-#define CPACKET_MAGIC 110
-#define REQ_SIGNAL     251
-#define ACCEPT_SIGNAL    252
-#define RPACKET_MAGIC  120
-#define FALSE_PACKET   145
 
 using namespace std;
 
@@ -40,11 +35,35 @@ ControlPackets defCp;
 ResponsePackets rff;
 ControlPackets *pp = &defCp;
 
-#ifdef defined ONBOARD_SPI 
+#ifdef ONBOARD_SPI 
 
-#include "SPIdrivers.c"
+#include "SPI/SPIdrivers.h"
 
 int fd;
+
+int SPI_handshake()
+{
+    int ht = REQ_SIGNAL;
+    SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
+    if(ht != ACCEPT_SIGNAL)
+    {
+        printf("Waiting for handshake with flight controller...%d\n", ht);
+        return 1;
+    }
+    cout<<"Got Handshake Successfully...\n";
+    return 0;
+}
+
+void *SPI_Updater(void *threadid)
+{
+    cout<<"\nSPI Updater Initialized...";
+    while (1)
+    {
+        SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
+        //wiringPiSPIDataRW(0, (unsigned char*)pp, sizeof(ControlPackets));
+        usleep(5);
+    }
+}
 
 int IssueCommand()
 {
@@ -104,6 +123,22 @@ void setYaw(int yaw)
 {
     unsigned char t = (unsigned char)yaw;
     pp->yaw = t;
+    pp->magic = CP_MAGIC;
+    IssueCommand();
+}
+
+void setAux1(int val)
+{
+    unsigned char t = (unsigned char)val;
+    pp->aux1 = t;
+    pp->magic = CP_MAGIC;
+    IssueCommand();
+}
+
+void setAux2(int val)
+{
+    unsigned char t = (unsigned char)val;
+    pp->aux2 = t;
     pp->magic = CP_MAGIC;
     IssueCommand();
 }
