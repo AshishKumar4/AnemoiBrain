@@ -16,7 +16,7 @@
 
 using namespace std;
 
-//#define DRONELESS_LOCAL_TEST
+#define DRONELESS_LOCAL_TEST
 
 //int server_fd, new_socket, valread;
 //struct sockaddr_in address;

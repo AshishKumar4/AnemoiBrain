@@ -13,8 +13,8 @@ CPP_OBJ_FILES := $(patsubst ./%.cpp, $(OBJ_DIR)/%.o,$(wildcard ./*.cpp)) \
 			$(patsubst ./$(SERIALRX)/%.cpp,./$(SERIALRX)/%.o,$(wildcard ./$(SERIALRX)/*.cpp)) 
 obj = $(CPP_OBJ_FILES) #$(libs)
 
-MAIN:=RemoteDemo.o
-OUTPUT:=RemoteDemo
+MAIN:=ManualController.o
+OUTPUT:=ManualController
 
 INCLUDED:=	#-I$(LIBRARY) -I$(SOURCE)
 

@@ -18,6 +18,7 @@ class DirectController : public Controller
   int channelBuffs[6] = {0, 0, 0, 0, 0, 0};
 
 protected:
+  void sendCommand(int val, int channel);
 public:
   void InitSequence();
   int ConnectChannel(char *ip, int port, int channel);

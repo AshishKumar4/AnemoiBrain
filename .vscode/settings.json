@@ -50,5 +50,13 @@
         "utility": "cpp",
         "algorithm": "cpp"
     },
-    "python.formatting.provider": "black"
+    "python.formatting.provider": "black",
+    // Files excluded from counting.
+    "line-counter.excludes": [
+        "**/.vscode/**"
+    ],
+    // 
+    "line-counter.includes": [
+        "**/*"
+    ]
 }
