@@ -28,8 +28,3 @@ char* getSerialLine()
 {
 
 }
-
-int main()
-{
-
-}

@@ -2,14 +2,16 @@ OBJ:=objs
 CC:=gcc
 CPP:=g++
 LD:=ld
-DIRECTCONTROL:=DirectControls
+DIRECTCONTROL:=../Controls/DirectControls
+SERIALRX:= Indirect
 
 libs:= *.so
 
 OBJ_DIR:=./
 CPP_OBJ_FILES := $(patsubst ./%.cpp, $(OBJ_DIR)/%.o,$(wildcard ./*.cpp)) \
-			$(patsubst ./$(DIRECTCONTROL)/%.cpp,./$(DIRECTCONTROL)/%.o,$(wildcard ./$(DIRECTCONTROL)/*.cpp)) 
-obj = $(CPP_OBJ_FILES) $(libs)
+			$(patsubst ./$(DIRECTCONTROL)/%.cpp,./$(DIRECTCONTROL)/%.o,$(wildcard ./$(DIRECTCONTROL)/*.cpp)) \
+			$(patsubst ./$(SERIALRX)/%.cpp,./$(SERIALRX)/%.o,$(wildcard ./$(SERIALRX)/*.cpp)) 
+obj = $(CPP_OBJ_FILES) #$(libs)
 
 MAIN:=RemoteDemo.o
 OUTPUT:=RemoteDemo

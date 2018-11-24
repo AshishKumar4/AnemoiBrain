@@ -49,5 +49,6 @@
         "typeinfo": "cpp",
         "utility": "cpp",
         "algorithm": "cpp"
-    }
+    },
+    "python.formatting.provider": "black"
 }

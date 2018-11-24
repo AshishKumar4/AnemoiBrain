@@ -21,7 +21,7 @@ protected:
 public:
   void InitSequence();
   int ConnectChannel(char *ip, int port, int channel);
-  DirectController(char *ip = "0.0.0.0");
+  DirectController(char *ip = "0.0.0.0", int portBase = 8400);
   ~DirectController();
   void arm();
   void disarm();

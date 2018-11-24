@@ -16,16 +16,7 @@
 
 using namespace std;
 
-#define DRONELESS_LOCAL_TEST
-
-#define PORT_BASE 8400
-
-#define PORT_THROTTLE PORT_BASE + 0
-#define PORT_PITCH PORT_BASE + 1
-#define PORT_ROLL PORT_BASE + 2
-#define PORT_YAW PORT_BASE + 3
-#define PORT_AUX1 PORT_BASE + 4
-#define PORT_AUX2 PORT_BASE + 5
+//#define DRONELESS_LOCAL_TEST
 
 //int server_fd, new_socket, valread;
 //struct sockaddr_in address;
@@ -36,6 +27,7 @@ const char HANDSHAKE_OUT_MSG[] = "Hello Overloard!";
 typedef void (*func_t)(int); //void function pointer
 ResponsePackets *resbuff;
 func_t CHANNEL_HANDLER_TABLES[] = {&setThrottle, &setPitch, &setRoll, &setYaw, &setAux1, &setAux2};
+char* CHANNEL_NAME_TABLES[] = {"throttle", "pitch", "roll", "yaw", "aux1", "aux2"};
 
 class ControlServer
 {
@@ -43,6 +35,8 @@ class ControlServer
     static vector<int> socket_num;
     vector<thread *> ListenerThreads;
     static vector<struct sockaddr_in *> addresses;
+
+    static int PORT_BASE;
 
   protected:
     int LaunchListenerThreads()
@@ -66,15 +60,16 @@ class ControlServer
     }
 
   public:
-    ControlServer()
+    ControlServer(int portBase = 8400)
     {
+        PORT_BASE = portBase;
         // We would first create several sockets and store their fds
-        CreateChannel(PORT_THROTTLE, 0); //  Throttle is         0
-        CreateChannel(PORT_PITCH, 1);    //  Pitch is            1
-        CreateChannel(PORT_ROLL, 2);     //  Roll is             2
-        CreateChannel(PORT_YAW, 3);      //  Yaw is              3
-        CreateChannel(PORT_AUX1, 4);     //  Aux1 is             4
-        CreateChannel(PORT_AUX2, 5);     //  Aux2 is             5*/
+        CreateChannel(portBase + 0, 0); //  Throttle is         0
+        CreateChannel(portBase + 1, 1);    //  Pitch is            1
+        CreateChannel(portBase + 2, 2);     //  Roll is             2
+        CreateChannel(portBase + 3, 3);      //  Yaw is              3
+        CreateChannel(portBase + 4, 4);     //  Aux1 is             4
+        CreateChannel(portBase + 5, 5);     //  Aux2 is             5*/
         // We Create six channels, each corresponding to six basic controls of drone
 
         // We would then create serveral threads, which would in turn listen to sockets
@@ -92,6 +87,8 @@ class ControlServer
 vector<int> ControlServer::server_fd;
 vector<int> ControlServer::socket_num;
 vector<struct sockaddr_in *> ControlServer::addresses;
+
+int ControlServer::PORT_BASE;
 
 void ControlServer::ChannelListeners(int i)
 {
@@ -140,7 +137,7 @@ void ControlServer::ChannelListeners(int i)
             try
             {
                 memset(buff, 0, strlen(buff));
-                valread = read(new_socket, buff, 1024);
+                valread = read(new_socket, buff, 4096);
                 if (valread == 0)
                     break;
 
@@ -161,9 +158,10 @@ void ControlServer::ChannelListeners(int i)
                     std::getline(parsed_stream, par1, ':');
                     std::getline(parsed_stream, val, ':'); // Extract the x
 
-                    std::cout << par1 << " " << val << " (" << atoi(val.c_str()) << ") " << par2 << "\n";
+                    //std::cout << par1 << " " << val << " (" << atoi(val.c_str()) << ") " << par2 << "\n";
 
                     // We Now issue our command
+                    printf("\n [%s] Command Issued ", CHANNEL_NAME_TABLES[i]);
 
 #ifndef DRONELESS_LOCAL_TEST
                     CHANNEL_HANDLER_TABLES[i](atoi(val.c_str()));

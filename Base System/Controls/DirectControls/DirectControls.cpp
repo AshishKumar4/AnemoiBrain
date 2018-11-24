@@ -20,15 +20,15 @@ using namespace std;
 const char HANDSHAKE_IN_MSG[] = "Hello Gardien!";
 const char HANDSHAKE_OUT_MSG[] = "Hello Overloard!";
 int opt = 1;
-
-#define PORT_BASE 8400
+/*
+#define PORT_BASE 8300
 
 #define PORT_THROTTLE PORT_BASE + 0
 #define PORT_PITCH PORT_BASE + 1
 #define PORT_ROLL PORT_BASE + 2
 #define PORT_YAW PORT_BASE + 3
 #define PORT_AUX1 PORT_BASE + 4
-#define PORT_AUX2 PORT_BASE + 5
+#define PORT_AUX2 PORT_BASE + 5*/
 
 void DirectController::InitSequence()
 {
@@ -36,6 +36,14 @@ void DirectController::InitSequence()
   {
     send(server_fd[i], HANDSHAKE_IN_MSG, strlen(HANDSHAKE_IN_MSG), 0);
     // TODO: Place mechanism to recieve back handshake and if not matching, Panic!
+    char * buff = (char*)malloc(1024);
+    int valread = read(server_fd[i], buff, 1024);
+    if (strncmp(buff, HANDSHAKE_OUT_MSG, strlen(HANDSHAKE_OUT_MSG)))
+    {
+        std::cout << "Gardien Could not establish Connection / Handshake Failure...\n";
+        throw "Handshake Failed!";
+    }
+    printf("Handshake Successfull, Connection Established!\n");
   }
   disarm();
   balance();
@@ -43,14 +51,14 @@ void DirectController::InitSequence()
   cout << "Initialization Sequence Completed...\n";
 }
 
-DirectController::DirectController(char *ip)
+DirectController::DirectController(char *ip, int portBase)
 {
-  ConnectChannel(ip, PORT_THROTTLE, 0);
-  ConnectChannel(ip, PORT_PITCH, 1);
-  ConnectChannel(ip, PORT_ROLL, 2);
-  ConnectChannel(ip, PORT_YAW, 3);
-  ConnectChannel(ip, PORT_AUX1, 4);
-  ConnectChannel(ip, PORT_AUX2, 5);
+  ConnectChannel(ip, portBase + 0, 0);      //PORT_THROTTLE
+  ConnectChannel(ip, portBase + 1, 1);      //PORT_PITCH
+  ConnectChannel(ip, portBase + 2, 2);      //PORT_ROLL
+  ConnectChannel(ip, portBase + 3, 3);      //PORT_YAW
+  ConnectChannel(ip, portBase + 4, 4);      //PORT_AUX1
+  ConnectChannel(ip, portBase + 5, 5);      //PORT_AUX2
 
   InitSequence();
 }
@@ -183,22 +191,6 @@ void DirectController::setYaw(int val)
 {
   if (val == -1)
   {
-    val = channelBuffs[2];
-  }
-  else
-  {
-    channelBuffs[2] = val;
-  }
-  stringstream ss;
-  ss << ".[:" << val << ":]";
-  string msg = ss.str();
-  send(server_fd[2], msg.c_str(), msg.size(), 0);
-}
-
-void DirectController::setRoll(int val)
-{
-  if (val == -1)
-  {
     val = channelBuffs[3];
   }
   else
@@ -209,6 +201,22 @@ void DirectController::setRoll(int val)
   ss << ".[:" << val << ":]";
   string msg = ss.str();
   send(server_fd[3], msg.c_str(), msg.size(), 0);
+}
+
+void DirectController::setRoll(int val)
+{
+  if (val == -1)
+  {
+    val = channelBuffs[2];
+  }
+  else
+  {
+    channelBuffs[2] = val;
+  }
+  stringstream ss;
+  ss << ".[:" << val << ":]";
+  string msg = ss.str();
+  send(server_fd[2], msg.c_str(), msg.size(), 0);
 }
 
 void DirectController::setAux1(int val)

@@ -12,7 +12,7 @@ using namespace std;
 
 int main()
 {
-    DirectController controller("0.0.0.0");
+    DirectController controller("0.0.0.0", 8400);
     int a = 0;
     while (1)
     {
