@@ -13,7 +13,8 @@
 #include <sstream>
 #include <thread> // std::thread
 
-#include "../Controls/DirectControl/DirectControls.h"
+#include "../Controls/DirectControls/DirectControls.h"
+//#include "../Controls/AirSimControls/AirSimControls.h"
 
 #include "Indirect/SerialRX.h"
 
@@ -101,8 +102,9 @@ class ManualController
 
 int main()
 {
-    DirectController control("0.0.0.0");
-    ManualController remote(&control);
+    DirectController droneControl("0.0.0.0");
+    //AirSimController droneControl("0.0.0.0");
+    ManualController remote(&droneControl);
     remote.Executor();
     return 0;
 }

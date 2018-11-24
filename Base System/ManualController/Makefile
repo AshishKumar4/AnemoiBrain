@@ -2,7 +2,7 @@ OBJ:=objs
 CC:=gcc
 CPP:=g++
 LD:=ld
-DIRECTCONTROL:=DirectControl
+DIRECTCONTROL:=DirectControls
 
 libs:= *.so
 

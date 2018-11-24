@@ -1,23 +1,25 @@
-OnBoard Systems 
-- Control Abstractions 
-    -- MotorBrain.py : Middle Layer between Raw Control and Kernel, Contains Emergency Reflexes, All control commands pass throughs this
+Well, This is, in a way, an Operating System for Multicopters and UAVs.
+This consists of the software stack, I have been developing for a hobby project 
+to achieve a level 5 Autonomous UAV System.
 
-        --- RawControl.py :  Abstraction Layer to actually forward control signals to Flight Controller
-    
+The Base System consists of code and abstractions for systems that would run
+on a local offboard machine. It also contains code for manual control and intervention 
+using a physical remote to control the craft.
 
-- Sensor Abstractions 
-    -- SpatialMaps.py : Contains Code to generate and process spatial maps of surroundings based on visual data
+The Onboard System contains code and abstractions for systems that would operate 
+on a remote computer attached to the drone's flight controller directly, inturn 
+dictating the flight controller to behave as the base system and onboard systems 
+decides. This also consists of sensor servers to relay the data back to the base 
+station.
 
-        --- VirtualSensors.py : Abstraction API to provide Sensory Data in a reliable way to Upper Layers + Scalablity to 
-                                provide to all 
+There is also an 'Onboard' implementation for the AirSim Simulator, to test the 
+system and software stack in a virtual enviornment, safely and accurately.
+Microsoft AirSim is an Unreal Engine 4 based Simulation enviornment for research 
+and testing purposes for UAVs and cars.
 
-- Purpose Abstractions : Highest Level of abstraction
-    -- VideoClassification : Contains programs to run Video Classification algorithms for e.g, Surviellance
+After basic ground work is done and foundations are layed out, We would move on 
+to experiment with Machine Learning Models (Both, Supervised and Reinforcement Learning based)
+to help achieve the level of automation that we desire.
 
-- Navigation.py : Contains Code for Auto Navigation and Obstacle Avoidance
-
-- Kernel.py : Contains Actual Kernel Initialization And Management Code. The Heart of this OS.
-
-
-PORTS =>
-    8194 -> Controls Server, For Manual Control, sets throttle, yaw, pitch etc.
+This project is in a nut shell, an attempt to make a complete software stack for 
+a fully autonomous UAV System.

@@ -1,5 +1,5 @@
-#ifndef DIRECT_CONTROLS_H
-#define DIRECT_CONTROLS_H 
+#ifndef AIRSIM_CONTROLS_H
+#define AIRSIM_CONTROLS_H 
 
 #include <string>
 #include <iostream>
@@ -10,7 +10,7 @@
 
 #include "../AbstractControls/Controls.hpp"
 
-class DirectController : public Controller
+class AirSimController : public Controller
 {
   vector<int> server_fd;
   vector<int> socket_num;
@@ -21,8 +21,8 @@ protected:
 public:
   void InitSequence();
   int ConnectChannel(char *ip, int port, int channel);
-  DirectController(char *ip = "0.0.0.0");
-  ~DirectController();
+  AirSimController(char *ip = "0.0.0.0");
+  ~AirSimController();
   void arm();
   void disarm();
   void balance();

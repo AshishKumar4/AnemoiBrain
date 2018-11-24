@@ -1,3 +1,5 @@
+#pragma once
+
 #include "iostream" 
 #include "vector"
 
@@ -22,7 +24,5 @@ public:
     virtual void setYaw(int val)  =   0;
     virtual void setRoll(int val)  =   0;
     virtual void setAux1(int val)  =   0;
-    virtual void setAux2(int val)  =   0;
-
-    
+    virtual void setAux2(int val)  =   0;    
 };

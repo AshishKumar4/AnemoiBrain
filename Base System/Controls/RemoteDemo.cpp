@@ -1,4 +1,4 @@
-#include "DirectControl/DirectControls.h"
+#include "DirectControls/DirectControls.h"
 
 #include "iostream"
 #include "vector"
