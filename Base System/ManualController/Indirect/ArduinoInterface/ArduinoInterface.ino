@@ -23,10 +23,10 @@ void loop()
   pwm_value = pulseIn(channel3, HIGH);      // Channel 3 is throttle
   Serial.print(pwm_value);
   Serial.print(" ");
-  pwm_value = pulseIn(channel4, HIGH);      // Channel 4 is Pitch
+  pwm_value = pulseIn(channel4, HIGH);      // Channel 4 is Yaw
   Serial.print(pwm_value);
   Serial.print(" ");
-  pwm_value = pulseIn(channel2, HIGH);      // Channel 2 is Yaw
+  pwm_value = pulseIn(channel2, HIGH);      // Channel 2 is Pitch
   Serial.print(pwm_value);
   Serial.print(" ");
   pwm_value = pulseIn(channel1, HIGH);      // Channel 1 is Roll

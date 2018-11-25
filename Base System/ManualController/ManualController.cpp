@@ -157,6 +157,18 @@ class ManualController
         mids[YAW] = y_val;
         printf("\n{%d %d %d %d}", t_val, p_val, r_val, y_val);
 
+        /* In case you just decided to switch your controls to be mapped in opposite ways -_- */
+        for(int i = 0; i < 4; i++)
+        {
+            if(mins[i] > maxs[i])
+            {
+                // Swap them 
+                int tmp = mins[i];
+                mins[i] = maxs[i];
+                maxs[i] = tmp;
+            }
+        }
+
         /* Calibration Computation */
         for(int i = 0; i < 4; i++)
         {
@@ -205,7 +217,7 @@ class ManualController
             controls->setThrottle(filter(t_val, THROTTLE)); // (double(t_val - t_min) * t_factor)));
             controls->setYaw(filter(y_val, YAW));           //(double(y_val - y_min) * y_factor)));
             controls->setPitch(filter(p_val, PITCH));       //(double(p_val - p_min) * p_factor)));
-            controls->setRoll(filter(r_val, ROLL));         //(double(r_val - r_min) * r_factor)));
+            controls->setRoll(127);//filter(r_val, ROLL));         //(double(r_val - r_min) * r_factor)));
             controls->setAux1((a1_val));
             controls->setAux2((a2_val));
             cout << "\n";
