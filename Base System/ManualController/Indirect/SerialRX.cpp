@@ -13,7 +13,7 @@ using namespace std;
 
 SerialRX::SerialRX(char* portName)
 {
-    buffer = new char[1024];
+    buffer = new char[8192];
     serialFile = fopen(portName, "r");
     //fread(buffer, 1000, 1, file);
 }
