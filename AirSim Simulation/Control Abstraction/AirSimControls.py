@@ -55,15 +55,15 @@ class AirSimControls:
         client.enableApiControl(True)
         client.armDisarm(True)
         # Some Parameter Definitions, tweak them for realistic behavior
-        self.timeSlice = 0.1
+        self.timeSlice = 0.01
         self.rmin = -1
         self.rmax = 1
         self.pmin = -1
         self.pmax = 1
-        self.ymin = -1
-        self.ymax = 1
+        self.ymin = -2
+        self.ymax = 2
         self.tmin = 0
-        self.tmax = 1
+        self.tmax = 3
         self.t = self.r = self.y = self.p = self.a1 = self.a2 = 0
         # moveByAngleThrottleAsync --> pitch, roll, throttle, yaw_rate
         ###########################################################################################
@@ -123,31 +123,31 @@ class AirSimControls:
                     if len(cmd) == 3:  # We recieved the command properly
                         # print("Got Request nicely...")
                         val = float(int(cmd[1]))
-                        print("Got Request "+ self.channelTable[id]["name"] + " :"+ str(val))
+                        #print("Got Request "+ self.channelTable[id]["name"] + " :"+ str(val))
                         self.channelTable[id]["func"](val)
         return None
     def setThrottle(self, val):
-        print("Set Value to " + str(val))
+        #print("Set Value to " + str(val))
         self.t = valMap(val, 0, 255, self.tmin, self.tmax)
         return None
     def setPitch(self, val):
-        print("Set Value to " + str(val))
+        #print("Set Value to " + str(val))
         self.p = valMap(val, 0, 255, self.pmin, self.pmax)
         return None
     def setRoll(self, val):
-        print("Set Value to " + str(val))
+        #print("Set Value to " + str(val))
         self.r = valMap(val, 0, 255, self.rmin, self.rmax)
         return None
     def setYaw(self, val):
-        print("Set Value to " + str(val))
+        #print("Set Value to " + str(val))
         self.y = valMap(val, 0, 255, self.ymin, self.ymax)
         return None
     def setAux1(self, val):
-        print("Set Value to " + str(val))
+        #print("Set Value to " + str(val))
         # self.t = valMap(val, 0, 255, self.tmin, self.tmax)
         return None
     def setAux2(self, val):
-        print("Set Value to " + str(val))
+        #print("Set Value to " + str(val))
         # self.t = valMap(val, 0, 255, self.tmin, self.tmax)
         return None
 

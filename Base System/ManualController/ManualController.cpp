@@ -217,7 +217,7 @@ class ManualController
             controls->setThrottle(filter(t_val, THROTTLE)); // (double(t_val - t_min) * t_factor)));
             controls->setYaw(filter(y_val, YAW));           //(double(y_val - y_min) * y_factor)));
             controls->setPitch(filter(p_val, PITCH));       //(double(p_val - p_min) * p_factor)));
-            controls->setRoll(127);//filter(r_val, ROLL));         //(double(r_val - r_min) * r_factor)));
+            controls->setRoll(filter(r_val, ROLL));         //(double(r_val - r_min) * r_factor)));
             controls->setAux1((a1_val));
             controls->setAux2((a2_val));
             cout << "\n";
