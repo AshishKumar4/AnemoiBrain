@@ -17,6 +17,7 @@
 #include "../Controls/DirectControls/DirectControls.h"
 //#include "../Controls/AirSimControls/AirSimControls.h"
 
+//#include "Indirect/SerialRX.h"
 #include "Indirect/SerialRX.h"
 
 #define THROTTLE 0
@@ -24,6 +25,22 @@
 #define ROLL 2
 #define YAW 3
 
+float volatile delay_dump=0;
+
+void delay1(uint32_t ms)
+{
+    float volatile k=0;
+    for(uint32_t i=0; i<ms*102400;i++)
+      {
+        srand(i+100);
+        for(int j=0; j<500; j++)
+        {
+          k=rand();
+          k/=57377;
+        }
+      }//k+=( k/1000 - 50 + k*5);
+      delay_dump+=k/737;
+}
 using namespace std;
 
 /*
@@ -117,40 +134,49 @@ class ManualController
         cout << "\n\n***Calibration in progress***\n";
         // TODO: Instead of taking simple values, take in average
         cout << "\n\tPlease push the throttle and pitch to their minimum levels within 2 seconds";
-        //delay(5);
-        parseSerialData(1500, 48);
+        sleep(2);
+        parseSerialData_syncd(600, 15);
+        //delay1(5);
         mins[THROTTLE] = t_val;
         mins[PITCH] = p_val;
         printf("\n{%d %d}", t_val, p_val);
         cout << "\n\t\tLets hope it done rightly, Calibrated accordingly";
+        sleep(2);
 
         cout << "\n\tPlease push the throttle and pitch to their maximum levels within 2 seconds";
-        //sleep(5);
-        parseSerialData(1500, 48);
+        sleep(2);
+        parseSerialData_syncd(600, 15);
+        //delay1(5);
         maxs[THROTTLE] = t_val;
         maxs[PITCH] = p_val;
         printf("\n{%d %d}", t_val, p_val);
         cout << "\n\t\tLets hope it done rightly, Calibrated accordingly";
+        sleep(2);
 
         cout << "\n\tPlease push the yaw and roll to their minimum levels within 2 seconds";
-        //sleep(5);
-        parseSerialData(1500, 48);
+        sleep(2);
+        parseSerialData_syncd(600, 15);
+        //delay1(5);
         mins[ROLL] = r_val;
         mins[YAW] = y_val;
         printf("\n{%d %d}", r_val, y_val);
         cout << "\n\t\tLets hope it done rightly, Calibrated accordingly";
+        sleep(2);
 
         cout << "\n\tPlease push the yaw and roll to their maximum levels within 2 seconds";
-        //sleep(5);
-        parseSerialData(1500, 48);
+        sleep(2);
+        parseSerialData_syncd(600, 15);
+        //delay1(5);
         maxs[ROLL] = r_val;
         maxs[YAW] = y_val;
         printf("\n{%d %d}", r_val, y_val);
         cout << "\n\t\tLets hope it done rightly, Calibrated accordingly";
+        sleep(2);
 
         cout << "\n\tPlease leave the throttle and place them in the middle positions within 2 seconds";
-        //sleep(5);
-        parseSerialData(1500, 48);
+        sleep(2);
+        parseSerialData_syncd(600, 15);
+        //delay1(5);
         mids[THROTTLE] = t_val;
         mids[PITCH] = p_val;
         mids[ROLL] = r_val;
@@ -204,13 +230,15 @@ class ManualController
     void ExecutorSerial()
     {
         int jj = 0;
-        int sz = 60;
+        int sz = 90;
         int scn_max = 1; //(sz / 30); // We would discard sections of data from start and end, for sanity
         // Basically Take in values from the remote over Serial, Probably via an Arduino as middleware
         // and filter it and send it over to the API layer for Controller, to control the drone.
+        
+        //serial->openSerial();
         while (1)
         {
-            parseSerialData(sz, scn_max);
+            parseSerialData_syncd(sz, scn_max);
 
             cout << "Data: ";
 
@@ -221,6 +249,59 @@ class ManualController
             controls->setAux1((a1_val));
             controls->setAux2((a2_val));
             cout << "\n";
+        }
+        //serial->closeSerial();
+    }
+
+    void parseSerialData_syncd(int sz, int scn_max)
+    {
+        try
+        {
+            string pparsed;
+            stringstream input_stringstream(serial->getBuff_synced(sz));
+            getline(input_stringstream, throttle, '\n'); // Discard the first entry
+            int scn = 0;
+            while (scn < scn_max && getline(input_stringstream, pparsed, '\n'))
+            {
+                try
+                {
+                    // Still allow only those lines to influence which have complete sets of characters
+                    if (count(pparsed.begin(), pparsed.end(), ' ') == 5)
+                    {
+                        ++scn;
+                        string buff(pparsed);
+                        //cout << " Got Data [" << pparsed << "]\n";
+                        stringstream input_stringstream(buff);
+                        getline(input_stringstream, throttle, ' ');
+                        getline(input_stringstream, yaw, ' ');
+                        getline(input_stringstream, pitch, ' ');
+                        getline(input_stringstream, roll, ' ');
+                        getline(input_stringstream, aux1, ' ');
+                        getline(input_stringstream, aux2, ' ');
+
+                        t_val = atoi(throttle.c_str());
+                        y_val = atoi(yaw.c_str());
+                        r_val = atoi(roll.c_str());
+                        p_val = atoi(pitch.c_str());
+                        a1_val = atoi(aux1.c_str());
+                        a2_val = atoi(aux2.c_str());
+
+                        t_val = channelFilters[0]->ExpFilter(t_val);
+                        y_val = channelFilters[1]->ExpFilter(y_val);
+                        r_val = channelFilters[2]->ExpFilter(r_val);
+                        p_val = channelFilters[3]->ExpFilter(p_val);
+                    }
+                }
+                catch (exception &e)
+                {
+                    cout << "Error! " << e.what();
+                    break;
+                }
+            }
+        }
+        catch (exception &e)
+        {
+            cout << e.what();
         }
     }
 
@@ -307,7 +388,7 @@ int main()
 {
     DirectController droneControl("0.0.0.0");
     //AirSimController droneControl("0.0.0.0");
-    ManualController remote(&droneControl);
+    ManualController remote(&droneControl, "/dev/ttyUSB0");
     remote.ExecutorSerial();
     return 0;
 }

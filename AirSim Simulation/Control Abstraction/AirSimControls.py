@@ -55,7 +55,7 @@ class AirSimControls:
         client.enableApiControl(True)
         client.armDisarm(True)
         # Some Parameter Definitions, tweak them for realistic behavior
-        self.timeSlice = 0.01
+        self.timeSlice = 0.001
         self.rmin = -1
         self.rmax = 1
         self.pmin = -1
@@ -103,7 +103,7 @@ class AirSimControls:
             while True:
                 try:
                     g = c.recv(4096)
-                    if g == 0:
+                    if len(g) == 0:
                         print("Connection Broken...")
                         del self.connections[id]
                         del c

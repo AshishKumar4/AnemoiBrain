@@ -13,7 +13,7 @@ class AirSimEnv(gym.Env):
 
         # For now, for simplicity, I am just taking two arrays of float numbers, 
         # storing the direction of the target.
-        self.observation_space = spaces.Box(low = 0, high = 1, shape = (1, 2), dtype=float) # 2 numbers to represent a coordinate in 2D projection space of the plane perpendicular to the movement.
+        self.observation_space = spaces.Box(low = 0, high = 1, shape = (1, 3), dtype=float) # 2 numbers to represent a coordinate in space of the plane perpendicular to the movement.
         
         # Then we create our Action Space. Our Action space is a continuous 1D vector space, 
         # 4 vectors for throttle, pitch, roll, yaw; range from -1 to 1. Throttle would be converted to 0 to 2 by the engine later.
