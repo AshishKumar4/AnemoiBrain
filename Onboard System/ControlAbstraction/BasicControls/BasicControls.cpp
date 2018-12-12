@@ -45,17 +45,18 @@ int SPI_handshake()
 {
     int ht = REQ_SIGNAL;
     SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
+    usleep(20);
     if(ht != ACCEPT_SIGNAL)
     {
         printf("Waiting for handshake with flight controller...%d\n", ht);
-        usleep(5); // just to ensure safety.
+        //usleep(5); // just to ensure safety.
         //goto back;
         return 1;
     }
     cout<<"Got Handshake Successfully...\n";
     //ht = REQ2_SIGNAL;
     //SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
-    usleep(1); // just to ensure safety.
+    //usleep(1); // just to ensure safety.
     return 0;
 }
 
@@ -63,11 +64,15 @@ int IssueCommand()
 {
     if(!SPI_handshake())
     {
+        char* ht = ((char*)pp);
+        char* hr = ((char*)&rff);
         //SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
         for(int i = 0; i < sizeof(ControlPackets); i++)
         {
-            char ht = ((char*)pp)[i];
-            SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
+            SPI_ReadWrite((int)fd, (uintptr_t)ht, (uintptr_t)hr, (size_t)1);
+            usleep(20);
+            ++ht;
+            ++hr;
         }
     }
 }
@@ -80,7 +85,7 @@ void *SPI_Updater(void *threadid)
         IssueCommand();
         //SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
         //wiringPiSPIDataRW(0, (unsigned char*)pp, sizeof(ControlPackets));
-        usleep(20);
+        usleep(50);
     }
 }
 
