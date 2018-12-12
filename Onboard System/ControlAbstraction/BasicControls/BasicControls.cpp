@@ -62,7 +62,14 @@ int SPI_handshake()
 int IssueCommand()
 {
     if(!SPI_handshake())
-        SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
+    {
+        //SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
+        for(int i = 0; i < sizeof(ControlPackets); i++)
+        {
+            char ht = ((char*)pp)[i];
+            SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
+        }
+    }
 }
 
 void *SPI_Updater(void *threadid)
@@ -73,7 +80,7 @@ void *SPI_Updater(void *threadid)
         IssueCommand();
         //SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
         //wiringPiSPIDataRW(0, (unsigned char*)pp, sizeof(ControlPackets));
-        usleep(5);
+        usleep(20);
     }
 }
 
