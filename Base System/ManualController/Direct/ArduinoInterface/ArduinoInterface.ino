@@ -1,9 +1,9 @@
-int channel1 = A7;
-int channel2 = A0;
-int channel3 = A6;
-int channel4 = A1;
-int channel5 = A2;
-int channel6 = A3;
+int channel1 = A0;
+int channel2 = A1;
+int channel3 = A2;
+int channel4 = A3;
+int channel5 = A4;
+int channel6 = A5;
 
 int pwm_value;
 

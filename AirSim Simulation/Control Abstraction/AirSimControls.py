@@ -55,15 +55,15 @@ class AirSimControls:
         client.enableApiControl(True)
         client.armDisarm(True)
         # Some Parameter Definitions, tweak them for realistic behavior
-        self.timeSlice = 0.001
+        self.timeSlice = 0.005
         self.rmin = -1
         self.rmax = 1
         self.pmin = -1
         self.pmax = 1
-        self.ymin = -2
-        self.ymax = 2
+        self.ymin = -6
+        self.ymax = 6
         self.tmin = 0
-        self.tmax = 3
+        self.tmax = 10
         self.t = self.r = self.y = self.p = self.a1 = self.a2 = 0
         # moveByAngleThrottleAsync --> pitch, roll, throttle, yaw_rate
         ###########################################################################################
@@ -73,6 +73,7 @@ class AirSimControls:
         self.MainThread.start()
         for i in range(0, 6):
             self.threads[i].join()
+        self.MainThread.join()
         return None
     def ChannelSyncToSim(self):
         # Now we Sync the data and send it over to the simulator
@@ -87,44 +88,47 @@ class AirSimControls:
         s.bind((self.ip, lport))
         s.listen(5)
         while True:
-            c, a = s.accept()
-            self.connections.append(c)
-            # Handshake Message ->  IN: "Hello Gardien!"
-            buff = c.recv(1024).decode("utf-8")
-            if buff == "Hello Gardien!":
-                print("Connection to overlord successfull!")
-                c.send(b"Hello Overloard!")  # Handshake
-            else:
-                print("Connection Failed!, Got Back this handshake -->")
-                print(buff)
-                exit()
-            # Go into an infinite while loop and look for command requests
-            bb = b""
-            while True:
-                try:
-                    g = c.recv(4096)
-                    if len(g) == 0:
-                        print("Connection Broken...")
+            try:
+                c, a = s.accept()
+                self.connections.append(c)
+                # Handshake Message ->  IN: "Hello Gardien!"
+                buff = c.recv(1024).decode("utf-8")
+                if buff == "Hello Gardien!":
+                    print("Connection to overlord successfull!")
+                    c.send(b"Hello Overloard!")  # Handshake
+                else:
+                    print("Connection Failed!, Got Back this handshake -->")
+                    print(buff)
+                    exit()
+                # Go into an infinite while loop and look for command requests
+                bb = b""
+                while True:
+                    try:
+                        g = c.recv(4096)
+                        if len(g) == 0:
+                            print("Connection Broken...")
+                            del self.connections[id]
+                            del c
+                            raise Exception('Connection Broken')
+                        tmp = bb + g
+                        a = tmp.decode("utf-8")
+                        bb = bytes(a[tmp.rfind(b".") :], "utf-8")  # Get the index of the last dot and store it for future
+                        b = str(a).split(".")
+                    except ValueError as e:
+                        print("Error in Recieving and parsing...")
                         del self.connections[id]
                         del c
-                        break
-                    tmp = bb + g
-                    a = tmp.decode("utf-8")
-                    bb = bytes(a[tmp.rfind(b".") :], "utf-8")  # Get the index of the last dot and store it for future
-                    b = str(a).split(".")
-                except Exception as e:
-                    print("Error in Recieving and parsing...")
-                    del self.connections[id]
-                    del c
-                    break
-                print(b)
-                for i in b:  # For multiple logged commands
-                    cmd = i.split(":")
-                    if len(cmd) == 3:  # We recieved the command properly
-                        # print("Got Request nicely...")
-                        val = float(int(cmd[1]))
-                        #print("Got Request "+ self.channelTable[id]["name"] + " :"+ str(val))
-                        self.channelTable[id]["func"](val)
+                        raise Exception('Unknown Error in parsing')
+                    print(b)
+                    for i in b:  # For multiple logged commands
+                        cmd = i.split(":")
+                        if len(cmd) == 3:  # We recieved the command properly
+                            # print("Got Request nicely...")
+                            val = float(int(cmd[1]))
+                            #print("Got Request "+ self.channelTable[id]["name"] + " :"+ str(val))
+                            self.channelTable[id]["func"](val)
+            except Exception as e:
+                print(e)
         return None
     def setThrottle(self, val):
         #print("Set Value to " + str(val))
