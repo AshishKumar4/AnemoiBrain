@@ -43,21 +43,26 @@ int fd;
 
 int SPI_handshake()
 {
-    back:
     int ht = REQ_SIGNAL;
     SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
     if(ht != ACCEPT_SIGNAL)
     {
         printf("Waiting for handshake with flight controller...%d\n", ht);
         usleep(5); // just to ensure safety.
-        goto back;
+        //goto back;
         return 1;
     }
     cout<<"Got Handshake Successfully...\n";
-    ht = REQ2_SIGNAL;
-    SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
+    //ht = REQ2_SIGNAL;
+    //SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
     usleep(1); // just to ensure safety.
     return 0;
+}
+
+int IssueCommand()
+{
+    if(!SPI_handshake())
+        SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
 }
 
 void *SPI_Updater(void *threadid)
@@ -65,16 +70,11 @@ void *SPI_Updater(void *threadid)
     cout<<"\nSPI Updater Initialized...";
     while (1)
     {
-        SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
+        IssueCommand();
+        //SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
         //wiringPiSPIDataRW(0, (unsigned char*)pp, sizeof(ControlPackets));
         usleep(5);
     }
-}
-
-int IssueCommand()
-{
-    SPI_handshake();
-    SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
 }
 
 void Raw_Init()
@@ -106,7 +106,7 @@ void setThrottle(int throttle)
     unsigned char t = (unsigned char)throttle;
     pp->throttle = t;
     pp->magic = CP_MAGIC;
-    IssueCommand();
+    //IssueCommand();
 }
 
 void setPitch(int pitch)
@@ -114,7 +114,7 @@ void setPitch(int pitch)
     unsigned char t = (unsigned char)pitch;
     pp->pitch = t;
     pp->magic = CP_MAGIC;
-    IssueCommand();
+    //IssueCommand();
 }
 
 void setRoll(int roll)
@@ -122,7 +122,7 @@ void setRoll(int roll)
     unsigned char t = (unsigned char)roll;
     pp->roll = t;
     pp->magic = CP_MAGIC;
-    IssueCommand();
+    //IssueCommand();
 }
 
 void setYaw(int yaw)
@@ -130,7 +130,7 @@ void setYaw(int yaw)
     unsigned char t = (unsigned char)yaw;
     pp->yaw = t;
     pp->magic = CP_MAGIC;
-    IssueCommand();
+    //IssueCommand();
 }
 
 void setAux1(int val)
@@ -138,7 +138,7 @@ void setAux1(int val)
     unsigned char t = (unsigned char)val;
     pp->aux1 = t;
     pp->magic = CP_MAGIC;
-    IssueCommand();
+    //IssueCommand();
 }
 
 void setAux2(int val)
@@ -146,7 +146,7 @@ void setAux2(int val)
     unsigned char t = (unsigned char)val;
     pp->aux2 = t;
     pp->magic = CP_MAGIC;
-    IssueCommand();
+    //IssueCommand();
 }
 
 ResponsePackets* getResponse()
@@ -166,15 +166,15 @@ int BasicControls_init()
     pp->yaw = 0;
 
     //SPI_handshake();
-    IssueCommand();
+    //IssueCommand();
 
-    /*pthread_t thread;
+    pthread_t thread;
     
     //thread SPI_Updater_thread(SPI_Updater);
     if(pthread_create(&thread, NULL, SPI_Updater, 0))
     {
         cout<<"\nError creating threads...";
-    }*/
+    }
     
     return 0;
 }

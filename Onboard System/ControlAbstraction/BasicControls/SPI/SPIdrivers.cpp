@@ -32,7 +32,7 @@ int SPI_ReadWrite(int fd, uintptr_t writebuff, uintptr_t readbuff, size_t len)
     spi.len    = len;
     spi.speed_hz = SPI_SPEED;
     spi.bits_per_word = 8;
-    ioctl(fd, SPI_IOC_MESSAGE(1), &spi);
+    ioctl(fd, SPI_IOC_MESSAGE(len), &spi);
     //memcpy((void*)buffer, (void*)tmp, len);
     //free((void*)tmp);
     return readbuff;
