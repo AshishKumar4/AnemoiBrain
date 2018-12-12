@@ -16,7 +16,7 @@
 
 using namespace std;
 
-#define DRONELESS_LOCAL_TEST
+//#define DRONELESS_LOCAL_TEST
 
 //int server_fd, new_socket, valread;
 //struct sockaddr_in address;
@@ -108,13 +108,13 @@ void ControlServer::ChannelListeners(int i)
     std::cout << "\nwaiting for incoming Connections...";
     while (1)
     {
-        std::cout << "\nGot an incoming request...\n";
         int addrlen = sizeof(struct sockaddr);
         if ((new_socket = accept(sfd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
         {
             perror("accept");
             exit(EXIT_FAILURE);
         }
+        std::cout << "\nGot an incoming request...\n";
 
         valread = read(new_socket, buff, 1024);
         if (valread == 0)

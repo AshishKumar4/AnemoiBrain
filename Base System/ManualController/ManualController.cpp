@@ -384,11 +384,18 @@ class ManualController
     }
 };
 
-int main()
+int main(int argc, char **argv)
 {
-    DirectController droneControl("0.0.0.0");
-    //AirSimController droneControl("0.0.0.0");
-    ManualController remote(&droneControl, "/dev/ttyUSB0");
+    DirectController* droneControl;
+    if(argc == 1)
+        droneControl = new DirectController("0.0.0.0");
+    else if(argc == 2)
+        droneControl = new DirectController(argv[1]);
+    else if(argc == 3)
+        droneControl = new DirectController(argv[1], atoi(argv[2]));
+
+    //DirectController droneControl("0.0.0.0");
+    ManualController remote(droneControl, "/dev/ttyUSB0");
     remote.ExecutorSerial();
     return 0;
 }

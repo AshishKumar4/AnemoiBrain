@@ -7,7 +7,7 @@
 //#include <wiringPiSPI.h>
 #include <string>
 #include <thread> // std::thread
-
+#include <unistd.h>
 #include <pthread.h>
 
 #include "BasicControls.h"
@@ -49,10 +49,14 @@ int SPI_handshake()
     if(ht != ACCEPT_SIGNAL)
     {
         printf("Waiting for handshake with flight controller...%d\n", ht);
+        usleep(5); // just to ensure safety.
         goto back;
         return 1;
     }
     cout<<"Got Handshake Successfully...\n";
+    ht = REQ2_SIGNAL;
+    SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
+    usleep(1); // just to ensure safety.
     return 0;
 }
 
