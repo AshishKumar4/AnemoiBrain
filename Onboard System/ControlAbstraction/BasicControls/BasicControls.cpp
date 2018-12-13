@@ -129,6 +129,7 @@ int IssueCommand()
             ++ht;
             ++hr;
         }
+        cout<<"Successfully Issued Command\n";
         return 0;
     }
     return 1;
@@ -189,7 +190,7 @@ void setThrottle(int throttle)
     unsigned char t = (unsigned char)throttle;
     pp->throttle = t;
     pp->magic = CP_MAGIC;
-    //IssueCommand();
+    IssueCommand();
 }
 
 void setPitch(int pitch)
@@ -197,7 +198,7 @@ void setPitch(int pitch)
     unsigned char t = (unsigned char)pitch;
     pp->pitch = t;
     pp->magic = CP_MAGIC;
-    //IssueCommand();
+    IssueCommand();
 }
 
 void setRoll(int roll)
@@ -205,7 +206,7 @@ void setRoll(int roll)
     unsigned char t = (unsigned char)roll;
     pp->roll = t;
     pp->magic = CP_MAGIC;
-    //IssueCommand();
+    IssueCommand();
 }
 
 void setYaw(int yaw)
@@ -213,7 +214,7 @@ void setYaw(int yaw)
     unsigned char t = (unsigned char)yaw;
     pp->yaw = t;
     pp->magic = CP_MAGIC;
-    //IssueCommand();
+    IssueCommand();
 }
 
 void setAux1(int val)
@@ -221,7 +222,7 @@ void setAux1(int val)
     unsigned char t = (unsigned char)val;
     pp->aux1 = t;
     pp->magic = CP_MAGIC;
-    //IssueCommand();
+    IssueCommand();
 }
 
 void setAux2(int val)
@@ -229,7 +230,7 @@ void setAux2(int val)
     unsigned char t = (unsigned char)val;
     pp->aux2 = t;
     pp->magic = CP_MAGIC;
-    //IssueCommand();
+    IssueCommand();
 }
 
 ResponsePackets *getResponse()
@@ -263,7 +264,7 @@ int BasicControls_init()
     pthread_t thread;
 
     //thread SPI_Updater_thread(SPI_Updater);
-    if (pthread_create(&thread, NULL, SPI_Updater, 0))
+    //if (pthread_create(&thread, NULL, SPI_Updater, 0))
     {
         cout << "\nError creating threads...";
     }

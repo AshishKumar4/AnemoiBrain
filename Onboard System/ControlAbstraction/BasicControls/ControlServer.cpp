@@ -142,7 +142,7 @@ void ControlServer::ChannelListeners(int i)
                     break;
 
                 std::string parsed, cmd(buff);
-                std::cout << cmd << endl;
+                //std::cout << cmd << endl;
 
                 /*
                 Format of the input command ->
@@ -152,7 +152,7 @@ void ControlServer::ChannelListeners(int i)
                 // Split the input line into several [:x:]
                 while (std::getline(input_stringstream, parsed, '.'))
                 {
-                    std::cout << "Parsed: [" << parsed << "],\n";
+                    //std::cout << "Parsed: [" << parsed << "],\n";
                     std::string par1, par2, val;
                     std::stringstream parsed_stream(parsed);
                     std::getline(parsed_stream, par1, ':');
@@ -170,7 +170,7 @@ void ControlServer::ChannelListeners(int i)
 
                 //send(new_socket, resbuff, sizeof(ResponsePackets), 0);
                 //send(new_socket, resbuff, sizeof(ResponsePackets), 0);
-                printf("[message sent]\n");
+                //printf("[message sent]\n");
             }
             catch (exception &e)
             {

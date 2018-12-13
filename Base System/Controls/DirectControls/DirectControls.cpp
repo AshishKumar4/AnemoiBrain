@@ -163,6 +163,10 @@ void DirectController::sendCommand(int val, int channel)
     {
       val = channelBuffs[channel];
     }
+    else if (channelBuffs[channel] == val) // Why send the same data again? waste of time
+    {
+      return;
+    }
     else
     {
       channelBuffs[channel] = val;
