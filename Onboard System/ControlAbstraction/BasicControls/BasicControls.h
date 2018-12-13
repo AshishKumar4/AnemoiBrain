@@ -4,7 +4,7 @@
 
 #define CP_MAGIC 110
 
-int checksum(char *buf, int len);
+uint8_t checksum(uint8_t *buf, int len);
 #define CPACKET_MAGIC 110
 #define REQ_SIGNAL     251
 #define REQ2_SIGNAL     101

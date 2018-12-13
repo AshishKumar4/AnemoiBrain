@@ -249,6 +249,7 @@ class ManualController
             controls->setAux1((a1_val));
             controls->setAux2((a2_val));
             cout << "\n";
+            usleep(200);
         }
         //serial->closeSerial();
     }
@@ -395,7 +396,7 @@ int main(int argc, char **argv)
         droneControl = new DirectController(argv[1], atoi(argv[2]));
 
     //DirectController droneControl("0.0.0.0");
-    ManualController remote(droneControl, "/dev/ttyUSB0");
+    ManualController remote(droneControl, "/dev/ttyUSB1");
     remote.ExecutorSerial();
     return 0;
 }

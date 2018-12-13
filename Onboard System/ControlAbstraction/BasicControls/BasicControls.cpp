@@ -25,67 +25,141 @@
     Telemetry Type
 */
 //#define NRF24
-//#define WIFI 
+//#define WIFI
 //#define XBEE
-
 
 using namespace std;
 
 ControlPackets defCp;
+ControlPackets oldDefCp;
 ResponsePackets rff;
 ControlPackets *pp = &defCp;
+ControlPackets *ppold = &oldDefCp;
 
-#ifdef ONBOARD_SPI 
+timespec *t100n = new timespec;
+timespec *t1000n = new timespec;
+timespec *t10000n = new timespec;
+timespec *t100000n = new timespec;
+
+#ifdef ONBOARD_SPI
 
 #include "SPI/SPIdrivers.h"
 
 int fd;
 
+#define TIMEOUT_VAL 1000
+
+/*
+    The new handshake mechanism works like this ->
+    Send a special msg, then wait for an amount of time for it to arrive. 
+    if it arrives, validate, else print handshake failed or timed out
+*/
 int SPI_handshake()
 {
-    int ht = REQ_SIGNAL;
+back:
+    int ht = REQ2_SIGNAL;
+    int hb = ht;
     SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
-    usleep(20);
-    if(ht != ACCEPT_SIGNAL)
+    for (int i = 0; i < TIMEOUT_VAL; i++)
+    {
+        if (ht != hb) // Value was actually Successfully updated
+        {
+            if (ht == ACCEPT_SIGNAL)
+            {
+                return 0;
+            }
+            cout << "Handshake Failed, wrong value recieved [" << ht << "]";
+            return 1;
+        }
+        nanosleep(t10000n, NULL);
+    }
+    cout << "Handshake Timed out...";
+    return 1;
+    /*if(ht != ACCEPT_SIGNAL)
     {
         printf("Waiting for handshake with flight controller...%d\n", ht);
         //usleep(5); // just to ensure safety.
-        //goto back;
+        goto back;
         return 1;
     }
-    cout<<"Got Handshake Successfully...\n";
-    //ht = REQ2_SIGNAL;
-    //SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
-    //usleep(1); // just to ensure safety.
-    return 0;
+    cout << "Got Handshake Successfully...\n";
+    ht = REQ2_SIGNAL;
+    SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
+    usleep(10); // just to ensure safety.
+    return 0;*/
 }
+
+unsigned char checksum(unsigned char *buf, int len)
+{
+  unsigned char tt = 0;
+  for (int i = 0; i < len - 1; i++)
+  {
+    tt ^= buf[i];
+  }
+  return tt;
+}
+
 
 int IssueCommand()
 {
-    if(!SPI_handshake())
+    if (!SPI_handshake())
     {
-        char* ht = ((char*)pp);
-        char* hr = ((char*)&rff);
-        //SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
-        for(int i = 0; i < sizeof(ControlPackets); i++)
+        uint8_t *ht = ((uint8_t *)pp);
+        uint8_t *hr = ((uint8_t *)&rff);
+        pp->checksum = checksum(ht, sizeof(ControlPackets));
+        uint8_t tb = 0;
+        for (int i = 0; i < sizeof(ControlPackets); i++)
         {
+            back:
+            *hr = 0;
+            tb = *hr;
             SPI_ReadWrite((int)fd, (uintptr_t)ht, (uintptr_t)hr, (size_t)1);
-            usleep(20);
+            for (int j = 0; j < TIMEOUT_VAL; j++)
+            {
+                if (*hr != tb) // Value was actually Successfully updated
+                {
+                    goto suc;
+                }
+                nanosleep(t10000n, NULL);
+            }
+            cout<<"[NOP "<<i<<"]";
+            goto back;
+            suc:
+            nanosleep(t10000n, NULL);
             ++ht;
             ++hr;
         }
+        return 0;
     }
+    return 1;
 }
 
 void *SPI_Updater(void *threadid)
 {
-    cout<<"\nSPI Updater Initialized...";
+    cout << "\nSPI Updater Initialized...";
+    uint8_t *tbo = (uint8_t *)ppold;
+    uint8_t *tb = (uint8_t *)pp;
     while (1)
     {
-        IssueCommand();
+        /*
+            Well, Basically, Firstly, check if the new data that we are gonna send is identical to the older, we don't need to send anything!
+        */
+        for (int i = 0; i < sizeof(ControlPackets); i++)
+        {
+            if (tb[i] != tbo[i])
+                goto update;
+        }
+        goto skip;
+    update:
+        memcpy((void *)tbo, (void *)tb, sizeof(ControlPackets));
+        if(IssueCommand())
+        {
+            cout<<"Couldn't Issue the command\n";
+        }
         //SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
         //wiringPiSPIDataRW(0, (unsigned char*)pp, sizeof(ControlPackets));
-        usleep(50);
+    skip:
+        nanosleep(t10000n, NULL);
     }
 }
 
@@ -98,7 +172,7 @@ void Raw_Init()
 
 #include "RadioDrivers.cpp"
 
-    #if defined NRF24
+#if defined NRF24
 int IssueCommand()
 {
     NRF24_Send((uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
@@ -106,12 +180,9 @@ int IssueCommand()
 
 void Raw_Init()
 {
-    
 }
-    #endif
-#endif 
-
-
+#endif
+#endif
 
 void setThrottle(int throttle)
 {
@@ -161,7 +232,7 @@ void setAux2(int val)
     //IssueCommand();
 }
 
-ResponsePackets* getResponse()
+ResponsePackets *getResponse()
 {
     return &rff;
 }
@@ -177,16 +248,25 @@ int BasicControls_init()
     pp->roll = 0;
     pp->yaw = 0;
 
+    t100n->tv_sec = 0;
+    t100n->tv_nsec = 100;
+    t1000n->tv_sec = 0;
+    t1000n->tv_nsec = 1000;
+    t10000n->tv_sec = 0;
+    t10000n->tv_nsec = 10000;
+    t100000n->tv_sec = 0;
+    t100000n->tv_nsec = 100000;
+
     //SPI_handshake();
     //IssueCommand();
 
     pthread_t thread;
-    
+
     //thread SPI_Updater_thread(SPI_Updater);
-    if(pthread_create(&thread, NULL, SPI_Updater, 0))
+    if (pthread_create(&thread, NULL, SPI_Updater, 0))
     {
-        cout<<"\nError creating threads...";
+        cout << "\nError creating threads...";
     }
-    
+
     return 0;
 }
