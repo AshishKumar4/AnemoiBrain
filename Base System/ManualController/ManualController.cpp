@@ -246,8 +246,8 @@ class ManualController
             controls->setYaw(filter(y_val, YAW));           //(double(y_val - y_min) * y_factor)));
             controls->setPitch(filter(p_val, PITCH));       //(double(p_val - p_min) * p_factor)));
             controls->setRoll(filter(r_val, ROLL));         //(double(r_val - r_min) * r_factor)));
-            controls->setAux1((a1_val));
-            controls->setAux2((a2_val));
+            //controls->setAux1((a1_val));
+            //controls->setAux2((a2_val));
             cout << "\n";
             usleep(200);
         }

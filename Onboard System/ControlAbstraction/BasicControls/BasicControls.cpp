@@ -47,7 +47,7 @@ timespec *t100000n = new timespec;
 
 int fd;
 
-#define TIMEOUT_VAL 1000
+#define TIMEOUT_VAL 20
 
 /*
     The new handshake mechanism works like this ->
@@ -57,48 +57,41 @@ int fd;
 int SPI_handshake()
 {
 back:
-    int ht = REQ2_SIGNAL;
+    int ht = REQ_SIGNAL;
     int hb = ht;
     SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
+    // We first need to tell the FC that we are ready to send handshake!
     for (int i = 0; i < TIMEOUT_VAL; i++)
     {
         if (ht != hb) // Value was actually Successfully updated
         {
-            if (ht == ACCEPT_SIGNAL)
+            /*if (ht == ACCEPT_SIGNAL)
             {
-                return 0;
+                goto proceed;
             }
             cout << "Handshake Failed, wrong value recieved [" << ht << "]";
-            return 1;
+            return 1;*/
         }
-        nanosleep(t10000n, NULL);
+        nanosleep(t100n, NULL);
     }
     cout << "Handshake Timed out...";
     return 1;
-    /*if(ht != ACCEPT_SIGNAL)
-    {
-        printf("Waiting for handshake with flight controller...%d\n", ht);
-        //usleep(5); // just to ensure safety.
-        goto back;
-        return 1;
-    }
-    cout << "Got Handshake Successfully...\n";
+
+proceed:
     ht = REQ2_SIGNAL;
     SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
-    usleep(10); // just to ensure safety.
-    return 0;*/
+    return 0;
 }
 
 unsigned char checksum(unsigned char *buf, int len)
 {
-  unsigned char tt = 0;
-  for (int i = 0; i < len - 1; i++)
-  {
-    tt ^= buf[i];
-  }
-  return tt;
+    unsigned char tt = 0;
+    for (int i = 0; i < len - 1; i++)
+    {
+        tt ^= buf[i];
+    }
+    return tt;
 }
-
 
 int IssueCommand()
 {
@@ -110,7 +103,7 @@ int IssueCommand()
         uint8_t tb = 0;
         for (int i = 0; i < sizeof(ControlPackets); i++)
         {
-            back:
+        back:
             *hr = 0;
             tb = *hr;
             SPI_ReadWrite((int)fd, (uintptr_t)ht, (uintptr_t)hr, (size_t)1);
@@ -120,16 +113,16 @@ int IssueCommand()
                 {
                     goto suc;
                 }
-                nanosleep(t10000n, NULL);
+                nanosleep(t100n, NULL);
             }
-            cout<<"[NOP "<<i<<"]";
+            cout << "[NOP " << i << "]";
             goto back;
-            suc:
-            nanosleep(t10000n, NULL);
+        suc:
+            nanosleep(t100n, NULL);
             ++ht;
             ++hr;
         }
-        cout<<"Successfully Issued Command\n";
+        cout << "Successfully Issued Command\n";
         return 0;
     }
     return 1;
@@ -153,9 +146,9 @@ void *SPI_Updater(void *threadid)
         goto skip;
     update:
         memcpy((void *)tbo, (void *)tb, sizeof(ControlPackets));
-        if(IssueCommand())
+        if (IssueCommand())
         {
-            cout<<"Couldn't Issue the command\n";
+            cout << "Couldn't Issue the command\n";
         }
         //SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
         //wiringPiSPIDataRW(0, (unsigned char*)pp, sizeof(ControlPackets));
@@ -190,7 +183,7 @@ void setThrottle(int throttle)
     unsigned char t = (unsigned char)throttle;
     pp->throttle = t;
     pp->magic = CP_MAGIC;
-    IssueCommand();
+    //IssueCommand();
 }
 
 void setPitch(int pitch)
@@ -198,7 +191,7 @@ void setPitch(int pitch)
     unsigned char t = (unsigned char)pitch;
     pp->pitch = t;
     pp->magic = CP_MAGIC;
-    IssueCommand();
+    //IssueCommand();
 }
 
 void setRoll(int roll)
@@ -206,7 +199,7 @@ void setRoll(int roll)
     unsigned char t = (unsigned char)roll;
     pp->roll = t;
     pp->magic = CP_MAGIC;
-    IssueCommand();
+    //IssueCommand();
 }
 
 void setYaw(int yaw)
@@ -214,7 +207,7 @@ void setYaw(int yaw)
     unsigned char t = (unsigned char)yaw;
     pp->yaw = t;
     pp->magic = CP_MAGIC;
-    IssueCommand();
+    //IssueCommand();
 }
 
 void setAux1(int val)
@@ -222,7 +215,7 @@ void setAux1(int val)
     unsigned char t = (unsigned char)val;
     pp->aux1 = t;
     pp->magic = CP_MAGIC;
-    IssueCommand();
+    //IssueCommand();
 }
 
 void setAux2(int val)
@@ -230,7 +223,7 @@ void setAux2(int val)
     unsigned char t = (unsigned char)val;
     pp->aux2 = t;
     pp->magic = CP_MAGIC;
-    IssueCommand();
+    //IssueCommand();
 }
 
 ResponsePackets *getResponse()
@@ -264,7 +257,7 @@ int BasicControls_init()
     pthread_t thread;
 
     //thread SPI_Updater_thread(SPI_Updater);
-    //if (pthread_create(&thread, NULL, SPI_Updater, 0))
+    if (pthread_create(&thread, NULL, SPI_Updater, 0))
     {
         cout << "\nError creating threads...";
     }
