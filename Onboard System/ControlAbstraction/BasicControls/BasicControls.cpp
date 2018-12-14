@@ -68,6 +68,7 @@ back:
     {
         if (ht != hb) // Value was actually Successfully updated
         {
+            cout<<"[Got "<<hb<<"]";
             goto proceed;
             /*if (ht == ACCEPT_SIGNAL)
             {
@@ -85,7 +86,23 @@ proceed:
     ht = REQ2_SIGNAL;
     wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
     nanosleep(t100000n, NULL);
-    return 0;
+    for (int i = 0; i < TIMEOUT_VAL; i++)
+    {
+        if (ht != hb) // Value was actually Successfully updated
+        {
+            cout<<"[Final Got "<<hb<<"]";
+            return 0;
+            /*if (ht == ACCEPT_SIGNAL)
+            {
+                goto proceed;
+            }
+            cout << "Handshake Failed, wrong value recieved [" << ht << "]";
+            return 1;*/
+        }
+        nanosleep(t10000n, NULL);
+    }
+    cout << "Handshake Timed out at stage 2...";
+    return 1;
 }
 
 unsigned char checksum(unsigned char *buf, int len)
@@ -109,11 +126,10 @@ int IssueCommand()
         for (int i = 0; i < sizeof(ControlPackets); i++)
         {
         back:
-            *hr = 0;
-            tb = *hr;
-            wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
+            //tb = *hr;
+            wiringPiSPIDataRW(0, (unsigned char*)ht, 1);
             nanosleep(t100000n, NULL);
-            for (int j = 0; j < TIMEOUT_VAL; j++)
+            /*for (int j = 0; j < TIMEOUT_VAL; j++)
             {
                 if (*hr != tb) // Value was actually Successfully updated
                 {
@@ -122,9 +138,9 @@ int IssueCommand()
                 nanosleep(t100000n, NULL);
             }
             cout << "[NOP " << i << "]";
-            goto back;
+            goto back;*/
         suc:
-            nanosleep(t100000n, NULL);
+            //nanosleep(t100000n, NULL);
             ++ht;
             ++hr;
         }

@@ -396,7 +396,7 @@ int main(int argc, char **argv)
         droneControl = new DirectController(argv[1], atoi(argv[2]));
 
     //DirectController droneControl("0.0.0.0");
-    ManualController remote(droneControl, "/dev/ttyUSB1");
+    ManualController remote(droneControl, "/dev/ttyUSB0");
     remote.ExecutorSerial();
     return 0;
 }
