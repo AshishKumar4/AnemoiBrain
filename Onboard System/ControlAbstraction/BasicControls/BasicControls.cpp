@@ -43,7 +43,8 @@ timespec *t100000n = new timespec;
 
 #ifdef ONBOARD_SPI
 
-#include "SPI/SPIdrivers.h"
+//#include "SPI/SPIdrivers.h"
+#include "wiringPiSPI.h"
 
 int fd;
 
@@ -59,12 +60,15 @@ int SPI_handshake()
 back:
     int ht = REQ_SIGNAL;
     int hb = ht;
-    SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
+    //SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
+    wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
+    nanosleep(t100000n, NULL);
     // We first need to tell the FC that we are ready to send handshake!
     for (int i = 0; i < TIMEOUT_VAL; i++)
     {
         if (ht != hb) // Value was actually Successfully updated
         {
+            goto proceed;
             /*if (ht == ACCEPT_SIGNAL)
             {
                 goto proceed;
@@ -72,14 +76,15 @@ back:
             cout << "Handshake Failed, wrong value recieved [" << ht << "]";
             return 1;*/
         }
-        nanosleep(t100n, NULL);
+        nanosleep(t10000n, NULL);
     }
     cout << "Handshake Timed out...";
     return 1;
 
 proceed:
     ht = REQ2_SIGNAL;
-    SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
+    wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
+    nanosleep(t100000n, NULL);
     return 0;
 }
 
@@ -106,19 +111,20 @@ int IssueCommand()
         back:
             *hr = 0;
             tb = *hr;
-            SPI_ReadWrite((int)fd, (uintptr_t)ht, (uintptr_t)hr, (size_t)1);
+            wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
+            nanosleep(t100000n, NULL);
             for (int j = 0; j < TIMEOUT_VAL; j++)
             {
                 if (*hr != tb) // Value was actually Successfully updated
                 {
                     goto suc;
                 }
-                nanosleep(t100n, NULL);
+                nanosleep(t100000n, NULL);
             }
             cout << "[NOP " << i << "]";
             goto back;
         suc:
-            nanosleep(t100n, NULL);
+            nanosleep(t100000n, NULL);
             ++ht;
             ++hr;
         }
@@ -159,7 +165,8 @@ void *SPI_Updater(void *threadid)
 
 void Raw_Init()
 {
-    fd = SPI_init("/dev/spidev0.0");
+    //fd = SPI_init("/dev/spidev0.0");
+    fd = wiringPiSPISetup(0, 500000);
 }
 
 #elif defined OFFBOARD_RADIO

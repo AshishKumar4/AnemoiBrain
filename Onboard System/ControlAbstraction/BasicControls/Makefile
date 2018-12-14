@@ -23,8 +23,8 @@ OUTPUT:=ControlServer
 OBJS:= *.o
 INCLUDED:=	#-I$(LIBRARY) -I$(SOURCE)
 
-CXXFLAGS:= -w -lstdc++ -O0 -std=gnu++11 -Wall -Wextra -g -D_GLIBCXX_RELEASE $(INCLUDED)
-LDFLAGS+=-lutil -lpthread
+CXXFLAGS:= -w -lstdc++ -O0 -std=gnu++11 -g $(INCLUDED)
+LDFLAGS+=-lutil -lpthread -lwiringPi
 all: clean build clean 
 
 brun: all run
