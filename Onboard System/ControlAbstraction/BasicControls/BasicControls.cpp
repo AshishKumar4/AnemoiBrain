@@ -270,6 +270,7 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
 {
     // First send the value, then the channel, then a dummy and check the returned checksum.
     // if its good, okay otherwise repeat.
+    mtx.lock();
 back:
     printf("\n[Attempting send %d to %d", val, channel);
     uint8_t tv = val, tc = channel;
@@ -277,23 +278,24 @@ back:
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bv, 1);
 #endif
-    nanosleep(t1000n, NULL);
+    nanosleep(t10000n, NULL);
 
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bc, 1);
 #endif
-    nanosleep(t1000n, NULL);
+    nanosleep(t10000n, NULL);
 
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bv, 1);
 #endif
-    nanosleep(t1000n, NULL);
+    nanosleep(t10000n, NULL);
 
     if (bv != tc + tv)
     {
         printf("\tFailed!, Retrying");
         goto back;
     }
+    mtx.unlock();
 }
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
