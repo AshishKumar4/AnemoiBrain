@@ -208,7 +208,7 @@ void Raw_Init()
 
 mutex mtx;
 volatile CommandPackets cp;
-
+/*
 static volatile void sendCommand(uint8_t val, int channel)
 {
 #ifdef SYNCD_TRANSFER
@@ -236,6 +236,7 @@ back:
 // A Dummy transfer to verify if everything went all-right
 retry_ack:
     ht = new uint8_t;
+
 #ifndef GROUND_TEST_NO_FC
         wiringPiSPIDataRW(0, ht, 1);
 #endif
@@ -262,6 +263,36 @@ retry_ack:
     //nanosleep(t10000n, NULL);
     mtx.unlock();
 #endif
+}
+*/
+
+static volatile void sendCommand(uint8_t val, uint8_t channel)
+{
+    // First send the value, then the channel, then a dummy and check the returned checksum.
+    // if its good, okay otherwise repeat.
+back:
+    printf("\n[Attempting send %d to %d", val, channel);
+    uint8_t tv = val, tc = channel;
+#ifndef GROUND_TEST_NO_FC
+    wiringPiSPIDataRW(0, &val, 1);
+#endif
+    nanosleep(t1000n, NULL);
+
+#ifndef GROUND_TEST_NO_FC
+    wiringPiSPIDataRW(0, &channel, 1);
+#endif
+    nanosleep(t1000n, NULL);
+
+#ifndef GROUND_TEST_NO_FC
+    wiringPiSPIDataRW(0, &val, 1);
+#endif
+    nanosleep(t1000n, NULL);
+
+    if (val != tc + tv)
+    {
+        printf("\tFailed!, Retrying");
+        goto back;
+    }
 }
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
