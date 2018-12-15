@@ -143,6 +143,7 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
     // if its good, okay otherwise repeat.
     mtx.lock();
     uint8_t tv, tc, bv, bc;
+    uint8_t tl = tc ^ tv;
     int counter = 0;
 back:
     printf("\n[Attempting send %d to %d", val, channel);
@@ -162,7 +163,7 @@ chnl:
     nanosleep(t10000n, NULL);
     // The ACK for value must have arrived in bc
 chk:
-    bv = 0;
+    bv = tl;
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bv, 1);
     // The ACK for channel (checksum) in bv
@@ -177,9 +178,8 @@ chk:
 #endif
     nanosleep(t10000n, NULL);
 
-    uint8_t tl = tc ^ tv;
 #ifndef GROUND_TEST_NO_FC
-/*if (bc == val)
+    if (bc == val)
     {
         if (tk == tl)
         {
@@ -194,9 +194,9 @@ chk:
             ++counter;
             goto back;
         }
-        else 
+        else
         {
-            printf("\nTimed Out!")
+            printf("\nTimed Out!");
         }
     }
     else if (counter < 20)
@@ -206,7 +206,8 @@ chk:
         goto back;
     }
     mtx.unlock();
-    return;*/
+    return;
+    /*
 recheck:
     if (bc == val)
     {
@@ -248,10 +249,11 @@ recheck:
 #ifndef GROUND_TEST_NO_FC
         wiringPiSPIDataRW(0, &bv, 1);
 #endif
-        nanosleep(t100n, NULL);*/
-        goto back;
+        nanosleep(t100n, NULL);
+        mtx.unlock();
+        return;
     }
-    printf("\nShouldn't have come here");
+    printf("\nShouldn't have come here");*/
 #endif
     mtx.unlock();
 }
