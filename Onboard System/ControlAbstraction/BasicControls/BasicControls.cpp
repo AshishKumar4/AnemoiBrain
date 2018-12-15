@@ -281,24 +281,25 @@ back:
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bv, 1);
 #endif
-    nanosleep(t100000n, NULL);
+    nanosleep(t10000n, NULL);
 
 chnl:
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bc, 1);
 #endif
-    nanosleep(t100000n, NULL);
+    nanosleep(t10000n, NULL);
 chk:
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bv, 1);
 #endif
-    nanosleep(t100000n, NULL);
+    nanosleep(t10000n, NULL);
 
     if (bv == tc ^ tv)
     {
+        printf("\t[SUCCESS]");
         mtx.unlock();
         return;
-    }
+    }/*
     else if (bv == 111)
     {
         goto chk;
@@ -306,7 +307,7 @@ chk:
     else if (bv == 121)
     {
         goto chnl;
-    }
+    }*/
     else if(counter < 10)
     {
         printf("\tFailed! expected [%d], got [%d], Retrying", bv, tc^tv);
@@ -322,7 +323,7 @@ chk:
         nanosleep(t100000n, NULL);
         goto back;
     }
-    mtx.unlock();
+    printf("\nShouldn't have come here");
 }
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
