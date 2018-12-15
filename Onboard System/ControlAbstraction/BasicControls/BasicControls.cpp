@@ -45,7 +45,7 @@ timespec *t100000n = new timespec;
 #ifdef ONBOARD_SPI
 
 #include "SPI/SPIdrivers.h"
-//#include "wiringPiSPI.h"
+#include "wiringPiSPI.h"
 
 int fd;
 
@@ -113,7 +113,7 @@ unsigned char checksum(unsigned char *buf, int len)
     unsigned char tt = 0;
     for (int i = 0; i < len - 1; i++)
     {
-        tt ^= buf[i];
+        tt += buf[i];
     }
     return tt;
 }
@@ -185,22 +185,30 @@ void *SPI_Updater(void *threadid)
 
 void Raw_Init()
 {
-    fd = SPI_init("/dev/spidev0.0");
-    //fd = wiringPiSPISetup(0, 500000);
+    //fd = SPI_init("/dev/spidev0.0");
+    fd = wiringPiSPISetup(0, 1000000);
 }
 
 mutex mtx;
+volatile CommandPackets cp;
 
-void sendCommand(uint8_t val, int channel)
+static volatile void sendCommand(uint8_t val, int channel)
 {
     mtx.lock();
-    CommandPackets* cp = new CommandPackets;
-    cp->magic = REQ_SIGNAL;
-    cp->value = val;
-    cp->channel = channel;
-    cp->checksum = checksum((unsigned char*)cp, sizeof(CommandPackets));
-    SPI_ReadWrite((int)fd, (uintptr_t)cp, (uintptr_t)cp, (size_t)sizeof(CommandPackets));
-    nanosleep(t1000n, NULL);
+    cp.magic = (uint8_t)REQ2_SIGNAL;
+    cp.value = (uint8_t)val;
+    cp.channel = (uint8_t)channel;
+    cp.checksum = 11;//checksum((((unsigned char*)cp)+1), sizeof(CommandPackets) - 1);
+    printf("\n[Sending Command %d to %d, %d]", val, channel, sizeof(CommandPackets));
+    //SPI_ReadWrite((int)fd, (uintptr_t)&cp, (uintptr_t)&cp, (size_t)sizeof(CommandPackets));
+    //wiringPiSPIDataRW(0, (unsigned char*)&cp, sizeof(CommandPackets));
+    uint8_t *ht = (uint8_t*)&cp;
+    for(int i = 0; i < 4; i++)
+    {
+	wiringPiSPIDataRW(0, ht, 1);
+	nanosleep(t1000n, NULL);
+    }
+    //nanosleep(t10000n, NULL);
     mtx.unlock();
 }
 
@@ -261,7 +269,7 @@ void setAux1(int val)
     unsigned char t = (unsigned char)val;
     pp->aux1 = t;
     pp->magic = CP_MAGIC;
-    sendCommand(aux1, 5);
+    sendCommand(val, 5);
     //IssueCommand();
 }
 
@@ -270,7 +278,7 @@ void setAux2(int val)
     unsigned char t = (unsigned char)val;
     pp->aux2 = t;
     pp->magic = CP_MAGIC;
-    sendCommand(aux2, 5);
+    sendCommand(val, 5);
     //IssueCommand();
 }
 

@@ -42,10 +42,10 @@ struct ResponsePackets
 
 struct CommandPackets
 {
-    unsigned char magic;
-    unsigned char value;
-    unsigned char channel;
-    unsigned char checksum;
+    uint8_t magic;
+    uint8_t value;
+    uint8_t channel;
+    uint8_t checksum;
 };
 
 

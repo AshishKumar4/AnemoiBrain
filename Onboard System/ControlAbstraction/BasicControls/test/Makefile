@@ -7,23 +7,23 @@ NASM:=nasm
 
 OBJ_DIR:=./
 C_OBJ_FILES := $(patsubst ./%.c,$(OBJ_DIR)/%.o,$(wildcard ./*.c))	\
-			$(patsubst ./SPI/%.c,./SPI/%.o,$(wildcard ./SPI/*.c))
+			$(patsubst ../SPI/%.c,../SPI/%.o,$(wildcard ../SPI/*.c))
 CPP_OBJ_FILES := $(patsubst ./%.cpp, $(OBJ_DIR)/%.o,$(wildcard ./*.cpp)) \
-			$(patsubst ./SPI/%.cpp,./SPI/%.o,$(wildcard ./SPI/*.cpp)) 
+			$(patsubst ../SPI/%.cpp,../SPI/%.o,$(wildcard ../SPI/*.cpp)) 
 obj = $(CPP_OBJ_FILES) $(C_OBJ_FILES)
 #csrc = $(wildcard ./*.c) \
-       $(wildcard ./SPI/*.c)
+       $(wildcard ../SPI/*.c)
 #cppsrc = $(wildcard ./*.cpp) \
-       $(wildcard ./SPI/*.cpp)
+       $(wildcard ../SPI/*.cpp)
 #obj = $(csrc:.c=.o) $(ccsrc:.cpp=.o)
 
-MAIN:=ControlServer.o
-OUTPUT:=ControlServer
+MAIN:=test.o
+OUTPUT:=test
 
 OBJS:= *.o
 INCLUDED:=	#-I$(LIBRARY) -I$(SOURCE)
 
-CXXFLAGS:= -lstdc++ -O0 -std=gnu++11 $(INCLUDED)
+CXXFLAGS:= -w -lstdc++ -O0 -std=gnu++11 -g $(INCLUDED)
 LDFLAGS+=-lutil -lpthread -lwiringPi
 all: clean build clean 
 
