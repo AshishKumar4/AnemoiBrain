@@ -273,22 +273,23 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
 back:
     printf("\n[Attempting send %d to %d", val, channel);
     uint8_t tv = val, tc = channel;
+    uint8_t bv = val, bc = channel;
 #ifndef GROUND_TEST_NO_FC
-    wiringPiSPIDataRW(0, &val, 1);
+    wiringPiSPIDataRW(0, &bv, 1);
 #endif
     nanosleep(t1000n, NULL);
 
 #ifndef GROUND_TEST_NO_FC
-    wiringPiSPIDataRW(0, &channel, 1);
+    wiringPiSPIDataRW(0, &bc, 1);
 #endif
     nanosleep(t1000n, NULL);
 
 #ifndef GROUND_TEST_NO_FC
-    wiringPiSPIDataRW(0, &val, 1);
+    wiringPiSPIDataRW(0, &bv, 1);
 #endif
     nanosleep(t1000n, NULL);
 
-    if (val != tc + tv)
+    if (bv != tc + tv)
     {
         printf("\tFailed!, Retrying");
         goto back;
