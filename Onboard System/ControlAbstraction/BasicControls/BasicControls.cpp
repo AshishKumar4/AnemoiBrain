@@ -161,21 +161,37 @@ chnl:
 #endif
     nanosleep(t100n, NULL);
 chk:
+    bv = 0;
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bv, 1);
 #endif
     nanosleep(t100n, NULL);
-
+    uint8_t tl = tc ^ tv;
 #ifndef GROUND_TEST_NO_FC
-    if (bv == tc ^ tv) // Checksum
+recheck:
+    if (bc == val)
+    {	
+	if(bv == tl) // Checksum
     {
-        printf("\t[SUCCESS %d, %d]", bv, tc ^ tv);
+done:
+        printf("\t[SUCCESS %d, %d]", bv, tl);
         mtx.unlock();
         return;
     }
+    else if(!bv)
+    {
+	for(int i = 0; i < 10; i++)
+	{
+		if(bv == tl)
+			goto done;
+		nanosleep(t10000n, NULL);
+	}
+	goto back;
+    }
+}
     else if (counter < 10)
     {
-        printf("\tFailed! expected [%d], got [%d], Retrying", bv, tc ^ tv);
+        printf("\tFailed! expected [%d], got [%d], Retrying", tl, bv);
         ++counter;
         goto back;
     }
