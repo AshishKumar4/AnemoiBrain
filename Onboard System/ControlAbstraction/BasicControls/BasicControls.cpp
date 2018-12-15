@@ -179,7 +179,9 @@ chk:
 
     uint8_t tl = tc ^ tv;
 #ifndef GROUND_TEST_NO_FC
-    if (bc == val && tk == tl)
+    if (bc == val)
+    {
+	if( tk == tl)
     {
     done:
         printf("\t[SUCCESS %d, %d]", bv, tl);
@@ -188,11 +190,19 @@ chk:
     }
     else if (counter < 20)
     {
-        printf("\tFailed! expected [%d], got [%d], Retrying", tl, bv);
+        printf("\tFailed! expected [%d], got [%d], Retrying", tl, tk);
         ++counter;
         goto back;
     }
-
+    }
+    else if(counter < 20)
+    {
+	printf("\tFailed! 2 Expected [%d], got [%d], Retrying", val, bc);
+	++counter;
+	goto back;
+    }
+    mtx.unlock();
+    return;
     /*recheck:
     if (bc == val)
     {
