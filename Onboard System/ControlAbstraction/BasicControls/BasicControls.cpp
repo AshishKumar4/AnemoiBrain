@@ -198,7 +198,7 @@ static volatile void sendCommand(uint8_t val, int channel)
     cp.magic = (uint8_t)REQ2_SIGNAL;
     cp.value = (uint8_t)val;
     cp.channel = (uint8_t)channel;
-    cp.checksum = 11;//checksum((((unsigned char*)cp)+1), sizeof(CommandPackets) - 1);
+    cp.checksum = cp.value + cp.channel;//checksum((((unsigned char*)&cp)+1), sizeof(CommandPackets) - 1);
     printf("\n[Sending Command %d to %d, %d]", val, channel, sizeof(CommandPackets));
     //SPI_ReadWrite((int)fd, (uintptr_t)&cp, (uintptr_t)&cp, (size_t)sizeof(CommandPackets));
     //wiringPiSPIDataRW(0, (unsigned char*)&cp, sizeof(CommandPackets));
@@ -206,7 +206,8 @@ static volatile void sendCommand(uint8_t val, int channel)
     for(int i = 0; i < 4; i++)
     {
 	wiringPiSPIDataRW(0, ht, 1);
-	nanosleep(t1000n, NULL);
+	nanosleep(t10000n, NULL);
+	++ht;
     }
     //nanosleep(t10000n, NULL);
     mtx.unlock();
