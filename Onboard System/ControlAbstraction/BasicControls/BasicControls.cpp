@@ -179,58 +179,63 @@ chk:
 
     uint8_t tl = tc ^ tv;
 #ifndef GROUND_TEST_NO_FC
-    if (bc == val)
+/*if (bc == val)
     {
-	if( tk == tl)
-    {
-    done:
-        printf("\t[SUCCESS %d, %d]", bv, tl);
-        mtx.unlock();
-        return;
-    }
-    else if (counter < 20)
-    {
-        printf("\tFailed! expected [%d], got [%d], Retrying", tl, tk);
-        ++counter;
-        goto back;
-    }
-    }
-    else if(counter < 20)
-    {
-	printf("\tFailed! 2 Expected [%d], got [%d], Retrying", val, bc);
-	++counter;
-	goto back;
-    }
-    mtx.unlock();
-    return;
-    /*recheck:
-    if (bc == val)
-    {
-        if (bv == tl) // Checksum
+        if (tk == tl)
         {
         done:
             printf("\t[SUCCESS %d, %d]", bv, tl);
             mtx.unlock();
             return;
         }
-        else if (!bv)
+        else if (counter < 20)
+        {
+            printf("\tFailed! expected [%d], got [%d], Retrying", tl, tk);
+            ++counter;
+            goto back;
+        }
+        else 
+        {
+            printf("\nTimed Out!")
+        }
+    }
+    else if (counter < 20)
+    {
+        printf("\tFailed! 2 Expected [%d], got [%d], Retrying", val, bc);
+        ++counter;
+        goto back;
+    }
+    mtx.unlock();
+    return;*/
+recheck:
+    if (bc == val)
+    {
+        if (tk == tl) // Checksum
+        {
+        done:
+            printf("\t[SUCCESS %d, %d]", tk, tl);
+            mtx.unlock();
+            return;
+        }
+        else if (!tk)
         {
             for (int i = 0; i < 10; i++)
             {
-                if (bv == tl)
+                if (tk == tl)
                     goto done;
                 nanosleep(t10000n, NULL);
             }
+            ++counter;
             goto back;
         }
     }
-    else 
+    else
     {
-        printf("bc != val, %d %d", bc, val);
+        printf("[bc != val, %d %d]", bc, val);
     }
     if (counter < 10)
     {
-        printf("\tFailed! expected [%d], got [%d], Retrying", tl, bv);
+        printf("\tFailed! expected [%d], got [%d], Retrying", tl, tk);
         ++counter;
         goto back;
     }
@@ -239,12 +244,13 @@ chk:
         printf("\n<<TIMED-OUT!!!>>");
         counter = 0;
         bv = REQ2_SIGNAL;
+        /*
 #ifndef GROUND_TEST_NO_FC
         wiringPiSPIDataRW(0, &bv, 1);
 #endif
-        nanosleep(t100n, NULL);
+        nanosleep(t100n, NULL);*/
         goto back;
-    }*/
+    }
     printf("\nShouldn't have come here");
 #endif
     mtx.unlock();
