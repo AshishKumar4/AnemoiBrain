@@ -294,7 +294,7 @@ chk:
 #endif
     nanosleep(t100000n, NULL);
 
-    if (bv == tc + tv)
+    if (bv == tc ^ tv)
     {
         mtx.unlock();
         return;
@@ -309,7 +309,7 @@ chk:
     }
     else if(counter < 10)
     {
-        printf("\tFailed!, Retrying");
+        printf("\tFailed! expected [%d], got [%d], Retrying", bv, tc^tv);
         ++counter;
         goto back;
     }

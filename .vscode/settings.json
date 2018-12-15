@@ -48,7 +48,8 @@
         "tuple": "cpp",
         "typeinfo": "cpp",
         "utility": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "mutex": "cpp"
     },
     "python.formatting.provider": "black",
     // Files excluded from counting.
