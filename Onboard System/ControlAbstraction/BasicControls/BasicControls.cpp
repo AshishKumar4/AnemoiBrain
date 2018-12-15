@@ -74,58 +74,13 @@ unsigned char checksum(unsigned char *buf, int len)
 }
 
 int SPI_handshake()
-{ /*
-back:
-    int ht = REQ_SIGNAL;
-    int hb = ht;
-#ifndef GROUND_TEST_NO_FC
-    //SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
-    wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
-#endif
-    nanosleep(t100000n, NULL);
-    // We first need to tell the FC that we are ready to send handshake!
-    for (int i = 0; i < TIMEOUT_VAL; i++)
-    {
-        if (ht != hb) // Value was actually Successfully updated
-        {
-            cout<<"[Got "<<ht<<"]";
-            goto proceed;
-            //if (ht == ACCEPT_SIGNAL)
-            //{
-            //    goto proceed;
-            //}
-            cout << "Handshake Failed, wrong value recieved [" << ht << "]";
-            return 1;
-        }
-        nanosleep(t10000n, NULL);
-    }
-    cout << "Handshake Timed out...";
-    return 1;
-
-proceed:*/
+{
     int ht = REQ2_SIGNAL;
 #ifndef GROUND_TEST_NO_FC
     SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1); //wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
 #endif
     //nanosleep(t100000n, NULL);
     return 0;
-    /*for (int i = 0; i < TIMEOUT_VAL; i++)
-    {
-        if (ht != hb) // Value was actually Successfully updated
-        {
-            cout<<"[Final Got "<<ht<<"]";
-            return 0;
-            if (ht == ACCEPT_SIGNAL)
-            {
-                goto proceed;
-            }
-            cout << "Handshake Failed, wrong value recieved [" << ht << "]";
-            return 1;
-        }
-        nanosleep(t10000n, NULL);
-    }
-    cout << "Handshake Timed out at stage 2...";
-    return 1;*/
 }
 
 int IssueCommand()
@@ -136,32 +91,6 @@ int IssueCommand()
         uint8_t *hr = ((uint8_t *)&rff);
         pp->checksum = checksum(ht, sizeof(ControlPackets));
         uint8_t tb = 0;
-        /*
-        for (int i = 0; i < sizeof(ControlPackets); i++)
-        {
-        back:
-            //tb = *hr;
-#ifndef GROUND_TEST_NO_FC
-            SPI_ReadWrite((int)fd, (uintptr_t)ht, (uintptr_t)hr, (size_t)1);
-            //wiringPiSPIDataRW(0, (unsigned char*)ht, 1);
-#endif
-            nanosleep(t100000n, NULL);
-            for (int j = 0; j < TIMEOUT_VAL; j++)
-            {
-                if (*hr != tb) // Value was actually Successfully updated
-                {
-                    goto suc;
-                }
-                nanosleep(t100000n, NULL);
-            }
-            cout << "[NOP " << i << "]";
-            goto back;
-        suc:
-            nanosleep(t100000n, NULL);
-            ++ht;
-            ++hr;
-        }*/
-
 #ifndef GROUND_TEST_NO_FC
         SPI_ReadWrite((int)fd, (uintptr_t)ht, (uintptr_t)hr, (size_t)sizeof(ControlPackets));
 #endif
@@ -207,64 +136,6 @@ void Raw_Init()
 }
 
 mutex mtx;
-volatile CommandPackets cp;
-/*
-static volatile void sendCommand(uint8_t val, int channel)
-{
-#ifdef SYNCD_TRANSFER
-    mtx.lock();
-back:
-    cp.magic = (uint8_t)REQ2_SIGNAL;
-    cp.value = (uint8_t)val;
-    cp.channel = (uint8_t)channel;
-    cp.checksum = cp.value + cp.channel;
-    printf("\n[Sending Command %d to %d, %d]", val, channel, sizeof(CommandPackets));
-
-#ifndef GROUND_TEST_NO_FC
-    //SPI_ReadWrite((int)fd, (uintptr_t)&cp, (uintptr_t)&cp, (size_t)sizeof(CommandPackets));
-    //wiringPiSPIDataRW(0, (unsigned char*)&cp, sizeof(CommandPackets));
-#endif
-    uint8_t *ht = (uint8_t *)&cp;
-    for (int i = 0; i < 4; i++)
-    {
-#ifndef GROUND_TEST_NO_FC
-        wiringPiSPIDataRW(0, ht, 1);
-#endif
-        nanosleep(t10000n, NULL);
-        ++ht;
-    }
-// A Dummy transfer to verify if everything went all-right
-retry_ack:
-    ht = new uint8_t;
-
-#ifndef GROUND_TEST_NO_FC
-        wiringPiSPIDataRW(0, ht, 1);
-#endif
-    nanosleep(t100000n, NULL);
-
-#ifdef GROUND_TEST_NO_FC
-    *ht = ACK_GOT_PACKET; // Fool the system to give as real a simulation as possible
-#endif
-
-    if (*ht == ACK_GOT_PACKET)
-    {
-        printf("\t[ACK]Command Issued Successfully!");
-    }
-    else if (*ht == FALSE_PACKET)
-    {
-        printf("\t[Packet Lost]");
-        goto back;
-    }
-    else
-    {
-        printf("\tSomething Unexpected!");
-        goto retry_ack;
-    }
-    //nanosleep(t10000n, NULL);
-    mtx.unlock();
-#endif
-}
-*/
 
 static volatile void sendCommand(uint8_t val, uint8_t channel)
 {
@@ -275,55 +146,53 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
     int counter = 0;
 back:
     printf("\n[Attempting send %d to %d", val, channel);
-    tv = val; tc = channel;
-    bv = val; bc = channel;
+    tv = val;
+    tc = channel;
+    bv = val;
+    bc = channel;
 
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bv, 1);
 #endif
-    nanosleep(t10000n, NULL);
-
+    nanosleep(t100n, NULL);
 chnl:
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bc, 1);
 #endif
-    nanosleep(t10000n, NULL);
+    nanosleep(t100n, NULL);
 chk:
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bv, 1);
 #endif
-    nanosleep(t10000n, NULL);
+    nanosleep(t100n, NULL);
 
-    if (bv == tc ^ tv)
+#ifndef GROUND_TEST_NO_FC
+    if (bv == tc ^ tv) // Checksum
     {
-        printf("\t[SUCCESS]");
+        printf("\t[SUCCESS %d, %d]", bv, tc ^ tv);
         mtx.unlock();
         return;
-    }/*
-    else if (bv == 111)
-    {
-        goto chk;
     }
-    else if (bv == 121)
+    else if (counter < 10)
     {
-        goto chnl;
-    }*/
-    else if(counter < 10)
-    {
-        printf("\tFailed! expected [%d], got [%d], Retrying", bv, tc^tv);
+        printf("\tFailed! expected [%d], got [%d], Retrying", bv, tc ^ tv);
         ++counter;
         goto back;
     }
-    else 
+    else
     {
-        printf("\n<<TIMEDOUT!!!>>");
+        printf("\n<<TIMED-OUT!!!>>");
         counter = 0;
         bv = REQ2_SIGNAL;
+#ifndef GROUND_TEST_NO_FC
         wiringPiSPIDataRW(0, &bv, 1);
-        nanosleep(t100000n, NULL);
+#endif
+        nanosleep(t100n, NULL);
         goto back;
     }
     printf("\nShouldn't have come here");
+#endif
+    mtx.unlock();
 }
 
 /* ------------------------------------------------------------------------------------------------------------------------ */

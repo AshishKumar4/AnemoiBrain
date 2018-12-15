@@ -159,9 +159,13 @@ void DirectController::sendCommand(int val, int channel)
 {
   try
   {
-    if (val == -1)  // If the value recieved is nonsence, send over the last sensible data
+    if (val <= -1)  // If the value recieved is nonsence, send over the last sensible data
     {
-      val = channelBuffs[channel];
+      val = 0;//channelBuffs[channel];
+    }
+    else if (val >= 255)
+    {
+      val = 254;
     }
     else if (channelBuffs[channel] == val) // Why send the same data again? waste of time
     {

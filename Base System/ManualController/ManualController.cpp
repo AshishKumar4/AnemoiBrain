@@ -369,9 +369,9 @@ class ManualController
     int filter(int val, int channel)
     {
         double vvv = double(val);
-        if(vvv < lfactors[channel]) vvv = lfactors[channel];
+        /*if(vvv < lfactors[channel]) vvv = lfactors[channel];
         else if(vvv > rfactors[channel]) vvv = rfactors[channel];
-        //cout<<"["<<val<<"_";
+        cout<<"["<<val<<"_";*/
         // Eq --> ((no-ni)/(bo-bi))*(a-bi) + ni; (no-ni)*(bo-bi) is our factor
         // We take into account the mid stick values
         if (vvv <= mids[channel])
