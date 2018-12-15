@@ -154,42 +154,71 @@ back:
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bv, 1);
 #endif
-    nanosleep(t100n, NULL);
+    nanosleep(t10000n, NULL);
 chnl:
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bc, 1);
 #endif
-    nanosleep(t100n, NULL);
+    nanosleep(t10000n, NULL);
+    // The ACK for value must have arrived in bc
 chk:
     bv = 0;
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bv, 1);
+    // The ACK for channel (checksum) in bv
 #endif
-    nanosleep(t100n, NULL);
+    nanosleep(t10000n, NULL);
+
+    uint8_t tk = bv;
+
+#ifndef GROUND_TEST_NO_FC
+    wiringPiSPIDataRW(0, &bv, 1);
+    // send the checksum back
+#endif
+    nanosleep(t10000n, NULL);
+
     uint8_t tl = tc ^ tv;
 #ifndef GROUND_TEST_NO_FC
-recheck:
-    if (bc == val)
-    {	
-	if(bv == tl) // Checksum
+    if (bc == val && tk == tl)
     {
-done:
+    done:
         printf("\t[SUCCESS %d, %d]", bv, tl);
         mtx.unlock();
         return;
     }
-    else if(!bv)
+    else if (counter < 20)
     {
-	for(int i = 0; i < 10; i++)
-	{
-		if(bv == tl)
-			goto done;
-		nanosleep(t10000n, NULL);
-	}
-	goto back;
+        printf("\tFailed! expected [%d], got [%d], Retrying", tl, bv);
+        ++counter;
+        goto back;
     }
-}
-    else if (counter < 10)
+
+    /*recheck:
+    if (bc == val)
+    {
+        if (bv == tl) // Checksum
+        {
+        done:
+            printf("\t[SUCCESS %d, %d]", bv, tl);
+            mtx.unlock();
+            return;
+        }
+        else if (!bv)
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                if (bv == tl)
+                    goto done;
+                nanosleep(t10000n, NULL);
+            }
+            goto back;
+        }
+    }
+    else 
+    {
+        printf("bc != val, %d %d", bc, val);
+    }
+    if (counter < 10)
     {
         printf("\tFailed! expected [%d], got [%d], Retrying", tl, bv);
         ++counter;
@@ -205,7 +234,7 @@ done:
 #endif
         nanosleep(t100n, NULL);
         goto back;
-    }
+    }*/
     printf("\nShouldn't have come here");
 #endif
     mtx.unlock();
