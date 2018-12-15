@@ -271,28 +271,55 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
     // First send the value, then the channel, then a dummy and check the returned checksum.
     // if its good, okay otherwise repeat.
     mtx.lock();
+    uint8_t tv, tc, bv, bc;
+    int counter = 0;
 back:
     printf("\n[Attempting send %d to %d", val, channel);
-    uint8_t tv = val, tc = channel;
-    uint8_t bv = val, bc = channel;
+    tv = val; tc = channel;
+    bv = val; bc = channel;
+
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bv, 1);
 #endif
-    nanosleep(t10000n, NULL);
+    nanosleep(t100000n, NULL);
 
+chnl:
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bc, 1);
 #endif
-    nanosleep(t10000n, NULL);
-
+    nanosleep(t100000n, NULL);
+chk:
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bv, 1);
 #endif
-    nanosleep(t10000n, NULL);
+    nanosleep(t100000n, NULL);
 
-    if (bv != tc + tv)
+    if (bv == tc + tv)
+    {
+        mtx.unlock();
+        return;
+    }
+    else if (bv == 111)
+    {
+        goto chk;
+    }
+    else if (bv == 121)
+    {
+        goto chnl;
+    }
+    else if(counter < 10)
     {
         printf("\tFailed!, Retrying");
+        ++counter;
+        goto back;
+    }
+    else 
+    {
+        printf("\n<<TIMEDOUT!!!>>");
+        counter = 0;
+        bv = REQ2_SIGNAL;
+        wiringPiSPIDataRW(0, &bv, 1);
+        nanosleep(t100000n, NULL);
         goto back;
     }
     mtx.unlock();
