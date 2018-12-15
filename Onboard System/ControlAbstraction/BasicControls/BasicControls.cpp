@@ -143,6 +143,77 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
     // if its good, okay otherwise repeat.
     mtx.lock();
     uint8_t tv, tc, bv, bc;
+    uint8_t flg1 = 0, flg2 = 0;
+    int counter = 0;
+back:
+    printf("\n[Attempting send %d to %d", val, channel);
+    bv = val;
+    bc = channel;
+
+    wiringPiSPIDataRW(0, &bv, 1); // Send the value
+    nanosleep(t10000n, NULL);
+
+    wiringPiSPIDataRW(0, &bc, 1); // Send the channel, recieve the value
+    nanosleep(t10000n, NULL);
+
+    uint8_t tmp1, tmp2;
+
+    if (bc == val || flg1)
+    {
+        printf(" [correct val] ");
+        tmp1 = 0x0f;
+        flg1 = 1;
+    }
+    else
+    {
+        printf(" [false val %d] ", bc);
+        tmp1 = 0xf0;
+        flg1 = 0;
+    }
+
+    wiringPiSPIDataRW(0, &tmp1, 1); // Send confirmation of reception, recieve channel
+    nanosleep(t10000n, NULL);
+
+    if (tmp1 == channel || flg2)
+    {
+        printf(" [correct channel] ");
+        tmp2 = 0x0f;
+        flg2 = 1;
+    }
+    else
+    {
+        printf(" [false channel %d] ", bc);
+        tmp2 = 0xf0;
+        flg2 = 0;
+    }
+
+    wiringPiSPIDataRW(0, &tmp2, 1); // Send confirmation of reception, recieve something
+    nanosleep(t10000n, NULL);
+
+    /*
+        If the value was wrong but channel was right, send the value only;
+        and vice versa
+    */
+    if (flg1 & flg2)
+    {
+        printf("\tSuccess!");
+        mtx.unlock();
+        return;
+    }
+    else
+    {
+        printf("\t[Retrying]");
+        goto back;
+    }
+}
+
+/*
+static volatile void sendCommand(uint8_t val, uint8_t channel)
+{
+    // First send the value, then the channel, then a dummy and check the returned checksum.
+    // if its good, okay otherwise repeat.
+    mtx.lock();
+    uint8_t tv, tc, bv, bc;
     uint8_t tl = tc ^ tv;
     int counter = 0;
 back:
@@ -171,6 +242,11 @@ chk:
     nanosleep(t10000n, NULL);
 
     uint8_t tk = bv;
+
+    if(val != bc)
+    {
+        bv = 0;     // Send a wrong Checksum
+    }
 
 #ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, &bv, 1);
@@ -207,6 +283,7 @@ chk:
     }
     mtx.unlock();
     return;
+}
     /*
 recheck:
     if (bc == val)
@@ -253,10 +330,10 @@ recheck:
         mtx.unlock();
         return;
     }
-    printf("\nShouldn't have come here");*/
+    printf("\nShouldn't have come here");
 #endif
     mtx.unlock();
-}
+}*/
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ---------------------------------------------For Nrf24L01 Communication------------------------------------------------- */
