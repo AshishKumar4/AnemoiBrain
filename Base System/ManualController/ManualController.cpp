@@ -369,6 +369,8 @@ class ManualController
     int filter(int val, int channel)
     {
         double vvv = double(val);
+        if(vvv < lfactors[channel]) vvv = lfactors[channel];
+        else if(vvv > rfactors[channel]) vvv = rfactors[channel];
         //cout<<"["<<val<<"_";
         // Eq --> ((no-ni)/(bo-bi))*(a-bi) + ni; (no-ni)*(bo-bi) is our factor
         // We take into account the mid stick values
@@ -396,7 +398,7 @@ int main(int argc, char **argv)
         droneControl = new DirectController(argv[1], atoi(argv[2]));
 
     //DirectController droneControl("0.0.0.0");
-    ManualController remote(droneControl, "/dev/ttyUSB2");
+    ManualController remote(droneControl, "/dev/ttyUSB1");
     remote.ExecutorSerial();
     return 0;
 }

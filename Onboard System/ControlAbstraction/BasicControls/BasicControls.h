@@ -11,6 +11,7 @@ uint8_t checksum(uint8_t *buf, int len);
 #define ACCEPT_SIGNAL    252
 #define RPACKET_MAGIC  120
 #define FALSE_PACKET   145
+#define ACK_GOT_PACKET  250
 
 struct ControlPackets
 {

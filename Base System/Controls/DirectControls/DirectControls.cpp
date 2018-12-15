@@ -159,7 +159,7 @@ void DirectController::sendCommand(int val, int channel)
 {
   try
   {
-    if (val == -1)
+    if (val == -1)  // If the value recieved is nonsence, send over the last sensible data
     {
       val = channelBuffs[channel];
     }

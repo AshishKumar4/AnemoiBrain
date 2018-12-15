@@ -13,6 +13,8 @@
 
 #include "BasicControls.h"
 
+//#define GROUND_TEST_NO_FC
+
 /*
     There are two possible configurations, 
     1) RPI unit is on board the drone and communicates with 
@@ -21,6 +23,8 @@
 */
 #define ONBOARD_SPI
 //#define OFFBOARD_RADIO
+
+#define SYNCD_TRANSFER
 
 /*
     Telemetry Type
@@ -44,8 +48,10 @@ timespec *t100000n = new timespec;
 
 #ifdef ONBOARD_SPI
 
+#ifndef GROUND_TEST_NO_FC
 #include "SPI/SPIdrivers.h"
 #include "wiringPiSPI.h"
+#endif
 
 int fd;
 
@@ -56,14 +62,26 @@ int fd;
     Send a special msg, then wait for an amount of time for it to arrive. 
     if it arrives, validate, else print handshake failed or timed out
 */
-int SPI_handshake()
+
+unsigned char checksum(unsigned char *buf, int len)
 {
-    /*
+    unsigned char tt = 0;
+    for (int i = 0; i < len - 1; i++)
+    {
+        tt += buf[i];
+    }
+    return tt;
+}
+
+int SPI_handshake()
+{ /*
 back:
     int ht = REQ_SIGNAL;
     int hb = ht;
-    SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
-    //wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
+#ifndef GROUND_TEST_NO_FC
+    //SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
+    wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
+#endif
     nanosleep(t100000n, NULL);
     // We first need to tell the FC that we are ready to send handshake!
     for (int i = 0; i < TIMEOUT_VAL; i++)
@@ -86,7 +104,9 @@ back:
 
 proceed:*/
     int ht = REQ2_SIGNAL;
-    SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);//wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
+#ifndef GROUND_TEST_NO_FC
+    SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1); //wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
+#endif
     //nanosleep(t100000n, NULL);
     return 0;
     /*for (int i = 0; i < TIMEOUT_VAL; i++)
@@ -108,16 +128,6 @@ proceed:*/
     return 1;*/
 }
 
-unsigned char checksum(unsigned char *buf, int len)
-{
-    unsigned char tt = 0;
-    for (int i = 0; i < len - 1; i++)
-    {
-        tt += buf[i];
-    }
-    return tt;
-}
-
 int IssueCommand()
 {
     if (!SPI_handshake())
@@ -131,8 +141,10 @@ int IssueCommand()
         {
         back:
             //tb = *hr;
+#ifndef GROUND_TEST_NO_FC
             SPI_ReadWrite((int)fd, (uintptr_t)ht, (uintptr_t)hr, (size_t)1);
             //wiringPiSPIDataRW(0, (unsigned char*)ht, 1);
+#endif
             nanosleep(t100000n, NULL);
             for (int j = 0; j < TIMEOUT_VAL; j++)
             {
@@ -149,7 +161,10 @@ int IssueCommand()
             ++ht;
             ++hr;
         }*/
+
+#ifndef GROUND_TEST_NO_FC
         SPI_ReadWrite((int)fd, (uintptr_t)ht, (uintptr_t)hr, (size_t)sizeof(ControlPackets));
+#endif
         cout << "Successfully Issued Command\n";
         return 0;
     }
@@ -185,8 +200,10 @@ void *SPI_Updater(void *threadid)
 
 void Raw_Init()
 {
+#ifndef GROUND_TEST_NO_FC
     //fd = SPI_init("/dev/spidev0.0");
     fd = wiringPiSPISetup(0, 1000000);
+#endif
 }
 
 mutex mtx;
@@ -194,24 +211,62 @@ volatile CommandPackets cp;
 
 static volatile void sendCommand(uint8_t val, int channel)
 {
+#ifdef SYNCD_TRANSFER
     mtx.lock();
+back:
     cp.magic = (uint8_t)REQ2_SIGNAL;
     cp.value = (uint8_t)val;
     cp.channel = (uint8_t)channel;
-    cp.checksum = cp.value + cp.channel;//checksum((((unsigned char*)&cp)+1), sizeof(CommandPackets) - 1);
+    cp.checksum = cp.value + cp.channel;
     printf("\n[Sending Command %d to %d, %d]", val, channel, sizeof(CommandPackets));
+
+#ifndef GROUND_TEST_NO_FC
     //SPI_ReadWrite((int)fd, (uintptr_t)&cp, (uintptr_t)&cp, (size_t)sizeof(CommandPackets));
     //wiringPiSPIDataRW(0, (unsigned char*)&cp, sizeof(CommandPackets));
-    uint8_t *ht = (uint8_t*)&cp;
-    for(int i = 0; i < 4; i++)
+#endif
+    uint8_t *ht = (uint8_t *)&cp;
+    for (int i = 0; i < 4; i++)
     {
-	wiringPiSPIDataRW(0, ht, 1);
-	nanosleep(t10000n, NULL);
-	++ht;
+#ifndef GROUND_TEST_NO_FC
+        wiringPiSPIDataRW(0, ht, 1);
+#endif
+        nanosleep(t10000n, NULL);
+        ++ht;
+    }
+// A Dummy transfer to verify if everything went all-right
+retry_ack:
+    ht = new uint8_t;
+#ifndef GROUND_TEST_NO_FC
+        wiringPiSPIDataRW(0, ht, 1);
+#endif
+    nanosleep(t100000n, NULL);
+
+#ifdef GROUND_TEST_NO_FC
+    *ht = ACK_GOT_PACKET; // Fool the system to give as real a simulation as possible
+#endif
+
+    if (*ht == ACK_GOT_PACKET)
+    {
+        printf("\t[ACK]Command Issued Successfully!");
+    }
+    else if (*ht == FALSE_PACKET)
+    {
+        printf("\t[Packet Lost]");
+        goto back;
+    }
+    else
+    {
+        printf("\tSomething Unexpected!");
+        goto retry_ack;
     }
     //nanosleep(t10000n, NULL);
     mtx.unlock();
+#endif
 }
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* ---------------------------------------------For Nrf24L01 Communication------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
 
 #elif defined OFFBOARD_RADIO
 
@@ -293,7 +348,7 @@ int BasicControls_init()
     //int fd = wiringPiSPISetup(0, SPI_IOC_WR_MAX_SPEED_HZ);//SPI_init("/dev/spidev0.0");
     Raw_Init();
 
-    pp->magic = 110;
+    pp->magic = CP_MAGIC;
     pp->throttle = 0;
     pp->pitch = 0;
     pp->roll = 0;
@@ -312,12 +367,12 @@ int BasicControls_init()
     //IssueCommand();
 
     pthread_t thread;
-
+#ifndef SYNCD_TRANSFER
     //thread SPI_Updater_thread(SPI_Updater);
-    //if (pthread_create(&thread, NULL, SPI_Updater, 0))
+    if (pthread_create(&thread, NULL, SPI_Updater, 0))
     {
         cout << "\nError creating threads...";
     }
-
+#endif
     return 0;
 }

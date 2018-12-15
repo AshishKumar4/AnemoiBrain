@@ -24,12 +24,17 @@ OBJS:= *.o
 INCLUDED:=	#-I$(LIBRARY) -I$(SOURCE)
 
 CXXFLAGS:= -lstdc++ -O0 -std=gnu++11 $(INCLUDED)
-LDFLAGS+=-lutil -lpthread -lwiringPi
+LDFLAGS+=-lutil -lpthread 
+LD_SPL_FLAGS+=-lwiringPi
 all: clean build clean 
+test: clean test-build clean
 
 brun: all run
 
 build: $(obj)
+	$(CXX) -o $(OUTPUT) $^ $(LDFLAGS) $(LD_SPL_FLAGS)
+
+test-build: $(obj)
 	$(CXX) -o $(OUTPUT) $^ $(LDFLAGS)
 
 build-main:	$(MAIN)

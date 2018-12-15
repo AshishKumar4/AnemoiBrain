@@ -27,7 +27,7 @@ const char HANDSHAKE_OUT_MSG[] = "Hello Overloard!";
 typedef void (*func_t)(int); //void function pointer
 ResponsePackets *resbuff;
 func_t CHANNEL_HANDLER_TABLES[] = {&setThrottle, &setPitch, &setRoll, &setYaw, &setAux1, &setAux2};
-char* CHANNEL_NAME_TABLES[] = {"throttle", "pitch", "roll", "yaw", "aux1", "aux2"};
+string CHANNEL_NAME_TABLES[] = {"throttle", "pitch", "roll", "yaw", "aux1", "aux2"};
 
 class ControlServer
 {
@@ -57,6 +57,7 @@ class ControlServer
         ListenerThreads[4]->join();
         ListenerThreads[5]->join();
         //std::cout << "Broken Pipe, Waiting for incoming Connections...";
+        return 0;
     }
 
   public:
@@ -152,16 +153,18 @@ void ControlServer::ChannelListeners(int i)
                 // Split the input line into several [:x:]
                 while (std::getline(input_stringstream, parsed, '.'))
                 {
+                    if(!parsed.length())
+                        continue;
                     //std::cout << "Parsed: [" << parsed << "],\n";
                     std::string par1, par2, val;
                     std::stringstream parsed_stream(parsed);
                     std::getline(parsed_stream, par1, ':');
                     std::getline(parsed_stream, val, ':'); // Extract the x
 
-                    //std::cout << par1 << " " << val << " (" << atoi(val.c_str()) << ") " << par2 << "\n";
+                    //std::cout << endl << par1 << " " << "<" << val.length() << ">" << val << " (" << atoi(val.c_str()) << ") " << par2 << "\n";
 
                     // We Now issue our command
-                    printf("\n [%s] Command Issued ", CHANNEL_NAME_TABLES[i]);
+                    //printf("\n [%s] Command Issued ", CHANNEL_NAME_TABLES[i].c_str());
 
 #ifndef DRONELESS_LOCAL_TEST
                     CHANNEL_HANDLER_TABLES[i](atoi(val.c_str()));
