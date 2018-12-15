@@ -22,7 +22,7 @@ struct ControlPackets
     unsigned char aux1;
     unsigned char aux2;
     unsigned char switches;
-    unsigned char random[9];
+    //unsigned char random[9];
     unsigned char checksum;
 };
 
@@ -36,7 +36,15 @@ struct ResponsePackets
     unsigned char lat;
     unsigned char lon;
     unsigned char heading;
-    unsigned char random[9];
+    //unsigned char random[9];
+    unsigned char checksum;
+};
+
+struct CommandPackets
+{
+    unsigned char magic;
+    unsigned char value;
+    unsigned char channel;
     unsigned char checksum;
 };
 

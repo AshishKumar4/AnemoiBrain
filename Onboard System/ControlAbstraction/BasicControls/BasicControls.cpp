@@ -9,6 +9,7 @@
 #include <thread> // std::thread
 #include <unistd.h>
 #include <pthread.h>
+#include <mutex>
 
 #include "BasicControls.h"
 
@@ -43,8 +44,8 @@ timespec *t100000n = new timespec;
 
 #ifdef ONBOARD_SPI
 
-//#include "SPI/SPIdrivers.h"
-#include "wiringPiSPI.h"
+#include "SPI/SPIdrivers.h"
+//#include "wiringPiSPI.h"
 
 int fd;
 
@@ -57,52 +58,54 @@ int fd;
 */
 int SPI_handshake()
 {
+    /*
 back:
     int ht = REQ_SIGNAL;
     int hb = ht;
-    //SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
-    wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
+    SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);
+    //wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
     nanosleep(t100000n, NULL);
     // We first need to tell the FC that we are ready to send handshake!
     for (int i = 0; i < TIMEOUT_VAL; i++)
     {
         if (ht != hb) // Value was actually Successfully updated
         {
-            cout<<"[Got "<<hb<<"]";
+            cout<<"[Got "<<ht<<"]";
             goto proceed;
-            /*if (ht == ACCEPT_SIGNAL)
-            {
-                goto proceed;
-            }
+            //if (ht == ACCEPT_SIGNAL)
+            //{
+            //    goto proceed;
+            //}
             cout << "Handshake Failed, wrong value recieved [" << ht << "]";
-            return 1;*/
+            return 1;
         }
         nanosleep(t10000n, NULL);
     }
     cout << "Handshake Timed out...";
     return 1;
 
-proceed:
-    ht = REQ2_SIGNAL;
-    wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
-    nanosleep(t100000n, NULL);
-    for (int i = 0; i < TIMEOUT_VAL; i++)
+proceed:*/
+    int ht = REQ2_SIGNAL;
+    SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1);//wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
+    //nanosleep(t100000n, NULL);
+    return 0;
+    /*for (int i = 0; i < TIMEOUT_VAL; i++)
     {
         if (ht != hb) // Value was actually Successfully updated
         {
-            cout<<"[Final Got "<<hb<<"]";
+            cout<<"[Final Got "<<ht<<"]";
             return 0;
-            /*if (ht == ACCEPT_SIGNAL)
+            if (ht == ACCEPT_SIGNAL)
             {
                 goto proceed;
             }
             cout << "Handshake Failed, wrong value recieved [" << ht << "]";
-            return 1;*/
+            return 1;
         }
         nanosleep(t10000n, NULL);
     }
     cout << "Handshake Timed out at stage 2...";
-    return 1;
+    return 1;*/
 }
 
 unsigned char checksum(unsigned char *buf, int len)
@@ -123,13 +126,15 @@ int IssueCommand()
         uint8_t *hr = ((uint8_t *)&rff);
         pp->checksum = checksum(ht, sizeof(ControlPackets));
         uint8_t tb = 0;
+        /*
         for (int i = 0; i < sizeof(ControlPackets); i++)
         {
         back:
             //tb = *hr;
-            wiringPiSPIDataRW(0, (unsigned char*)ht, 1);
+            SPI_ReadWrite((int)fd, (uintptr_t)ht, (uintptr_t)hr, (size_t)1);
+            //wiringPiSPIDataRW(0, (unsigned char*)ht, 1);
             nanosleep(t100000n, NULL);
-            /*for (int j = 0; j < TIMEOUT_VAL; j++)
+            for (int j = 0; j < TIMEOUT_VAL; j++)
             {
                 if (*hr != tb) // Value was actually Successfully updated
                 {
@@ -138,12 +143,13 @@ int IssueCommand()
                 nanosleep(t100000n, NULL);
             }
             cout << "[NOP " << i << "]";
-            goto back;*/
+            goto back;
         suc:
-            //nanosleep(t100000n, NULL);
+            nanosleep(t100000n, NULL);
             ++ht;
             ++hr;
-        }
+        }*/
+        SPI_ReadWrite((int)fd, (uintptr_t)ht, (uintptr_t)hr, (size_t)sizeof(ControlPackets));
         cout << "Successfully Issued Command\n";
         return 0;
     }
@@ -172,8 +178,6 @@ void *SPI_Updater(void *threadid)
         {
             cout << "Couldn't Issue the command\n";
         }
-        //SPI_ReadWrite(fd, (uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
-        //wiringPiSPIDataRW(0, (unsigned char*)pp, sizeof(ControlPackets));
     skip:
         nanosleep(t10000n, NULL);
     }
@@ -181,8 +185,23 @@ void *SPI_Updater(void *threadid)
 
 void Raw_Init()
 {
-    //fd = SPI_init("/dev/spidev0.0");
-    fd = wiringPiSPISetup(0, 500000);
+    fd = SPI_init("/dev/spidev0.0");
+    //fd = wiringPiSPISetup(0, 500000);
+}
+
+mutex mtx;
+
+void sendCommand(uint8_t val, int channel)
+{
+    mtx.lock();
+    CommandPackets* cp = new CommandPackets;
+    cp->magic = REQ_SIGNAL;
+    cp->value = val;
+    cp->channel = channel;
+    cp->checksum = checksum((unsigned char*)cp, sizeof(CommandPackets));
+    SPI_ReadWrite((int)fd, (uintptr_t)cp, (uintptr_t)cp, (size_t)sizeof(CommandPackets));
+    nanosleep(t1000n, NULL);
+    mtx.unlock();
 }
 
 #elif defined OFFBOARD_RADIO
@@ -206,6 +225,7 @@ void setThrottle(int throttle)
     unsigned char t = (unsigned char)throttle;
     pp->throttle = t;
     pp->magic = CP_MAGIC;
+    sendCommand(throttle, 0);
     //IssueCommand();
 }
 
@@ -214,6 +234,7 @@ void setPitch(int pitch)
     unsigned char t = (unsigned char)pitch;
     pp->pitch = t;
     pp->magic = CP_MAGIC;
+    sendCommand(pitch, 1);
     //IssueCommand();
 }
 
@@ -222,6 +243,7 @@ void setRoll(int roll)
     unsigned char t = (unsigned char)roll;
     pp->roll = t;
     pp->magic = CP_MAGIC;
+    sendCommand(roll, 2);
     //IssueCommand();
 }
 
@@ -230,6 +252,7 @@ void setYaw(int yaw)
     unsigned char t = (unsigned char)yaw;
     pp->yaw = t;
     pp->magic = CP_MAGIC;
+    sendCommand(yaw, 3);
     //IssueCommand();
 }
 
@@ -238,6 +261,7 @@ void setAux1(int val)
     unsigned char t = (unsigned char)val;
     pp->aux1 = t;
     pp->magic = CP_MAGIC;
+    sendCommand(aux1, 5);
     //IssueCommand();
 }
 
@@ -246,6 +270,7 @@ void setAux2(int val)
     unsigned char t = (unsigned char)val;
     pp->aux2 = t;
     pp->magic = CP_MAGIC;
+    sendCommand(aux2, 5);
     //IssueCommand();
 }
 
@@ -280,7 +305,7 @@ int BasicControls_init()
     pthread_t thread;
 
     //thread SPI_Updater_thread(SPI_Updater);
-    if (pthread_create(&thread, NULL, SPI_Updater, 0))
+    //if (pthread_create(&thread, NULL, SPI_Updater, 0))
     {
         cout << "\nError creating threads...";
     }
