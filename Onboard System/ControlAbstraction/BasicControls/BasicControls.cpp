@@ -142,52 +142,53 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
     // First send the value, then the channel, then a dummy and check the returned checksum.
     // if its good, okay otherwise repeat.
     mtx.lock();
-    uint8_t tv, tc, bv, bc;
-    uint8_t flg1 = 0, flg2 = 0;
+    volatile uint8_t* bv = new uint8_t;
+    volatile uint8_t* bc = new uint8_t;
+    volatile int flg1 = 0, flg2 = 0;
+    volatile uint8_t *tmp1 = new uint8_t;
+    volatile uint8_t *tmp2 = new uint8_t;
     int counter = 0;
 back:
     printf("\n[Attempting send %d to %d", val, channel);
-    bv = val;
-    bc = channel;
+    *bv = val;
+    *bc = channel;
 
-    wiringPiSPIDataRW(0, &bv, 1); // Send the value
-    nanosleep(t10000n, NULL);
+    wiringPiSPIDataRW(0, bv, 1); // Send the value
+    nanosleep(t100000n, NULL);
 
-    wiringPiSPIDataRW(0, &bc, 1); // Send the channel, recieve the value
-    nanosleep(t10000n, NULL);
+    wiringPiSPIDataRW(0, bc, 1); // Send the channel, recieve the value
+    nanosleep(t100000n, NULL);
 
-    uint8_t tmp1, tmp2;
-
-    if (bc == val ^ 0xff || flg1)
+    if (*bc == val ^ 0xff || flg1)
     {
         printf(" [correct val] ");
-        tmp1 = 0x0f;
+        *tmp1 = val;
         flg1 = 1;
     }
     else
     {
-        printf(" [false val %d] ", bc);
-        tmp1 = 0xf0;
+        printf(" [false val %d] ", *bc);
+        *tmp1 = 0xff;
         flg1 = 0;
     }
 
-    wiringPiSPIDataRW(0, &tmp1, 1); // Send confirmation of reception, recieve channel
-    nanosleep(t10000n, NULL);
+    wiringPiSPIDataRW(0, tmp1, 1); // Send confirmation of reception, recieve channel
+    nanosleep(t100000n, NULL);
 
-    if (tmp1 == channel ^ 0xff || flg2)
+    if (*tmp1 == channel ^ 0xff || flg2)
     {
         printf(" [correct channel] ");
-        tmp2 = 0x0f;
+        *tmp2 = channel;
         flg2 = 1;
     }
     else
     {
-        printf(" [false channel %d] ", bc);
-        tmp2 = 0xf0;
+        printf(" [false channel %d] ", *tmp1);
+        *tmp2 = 0xff;
         flg2 = 0;
     }
 
-    wiringPiSPIDataRW(0, &tmp2, 1); // Send confirmation of reception, recieve something
+    wiringPiSPIDataRW(0, tmp2, 1); // Send confirmation of reception, recieve something
     nanosleep(t10000n, NULL);
 
     /*
@@ -197,6 +198,10 @@ back:
     if (flg1 & flg2)
     {
         printf("\tSuccess!");
+        delete bv;
+        delete bc;
+        delete tmp1;
+        delete tmp2;
         mtx.unlock();
         return;
     }
