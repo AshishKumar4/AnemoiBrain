@@ -131,7 +131,7 @@ void Raw_Init()
 {
 #ifndef GROUND_TEST_NO_FC
     //fd = SPI_init("/dev/spidev0.0");
-    fd = wiringPiSPISetup(0, 1000000);
+    fd = wiringPiSPISetup(0, 500000);
 #endif
 }
 
@@ -142,14 +142,16 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
     // First send the value, then the channel, then a dummy and check the returned checksum.
     // if its good, okay otherwise repeat.
     mtx.lock();
-    volatile uint8_t* bv = new uint8_t;
-    volatile uint8_t* bc = new uint8_t;
-    volatile int flg1 = 0, flg2 = 0;
-    volatile uint8_t *tmp1 = new uint8_t;
-    volatile uint8_t *tmp2 = new uint8_t;
+    uint8_t* bv = new uint8_t;
+    uint8_t* bc = new uint8_t;
+    int flg1 = 0, flg2 = 0;
+    uint8_t *tmp1 = new uint8_t;
+    uint8_t *tmp2 = new uint8_t;
     int counter = 0;
+    uint8_t *t1 = new uint8_t;
+    uint8_t *t2 = new uint8_t;
 back:
-    printf("\n[Attempting send %d to %d", val, channel);
+    printf("\n[Attempting send %d to %d <%d, %d>", val, channel, flg1, flg2);
     *bv = val;
     *bc = channel;
 
@@ -159,15 +161,16 @@ back:
     wiringPiSPIDataRW(0, bc, 1); // Send the channel, recieve the value
     nanosleep(t100000n, NULL);
 
-    if (*bc == val ^ 0xff || flg1)
+    if (*bc == (val ^ 0xff) || flg1)
     {
-        printf(" [correct val] ");
+        printf(" [correct val %d %d, %d] ", *bc, (val ^ 0xff), flg1);
         *tmp1 = val;
+	*t1 = (*bc ^ 0xff);
         flg1 = 1;
     }
     else
     {
-        printf(" [false val %d] ", *bc);
+        printf(" [false val %d %d, %d] ", *bc, (val ^ 0xff), flg1);
         *tmp1 = 0xff;
         flg1 = 0;
     }
@@ -175,29 +178,30 @@ back:
     wiringPiSPIDataRW(0, tmp1, 1); // Send confirmation of reception, recieve channel
     nanosleep(t100000n, NULL);
 
-    if (*tmp1 == channel ^ 0xff || flg2)
+    if (*tmp1 == (channel ^ 0xff) || flg2)
     {
-        printf(" [correct channel] ");
+        printf(" [correct channel %d %d, %d] ", *tmp1, (channel ^ 0xff), flg2);
         *tmp2 = channel;
+	*t2 = (*tmp1 ^ 0xff);
         flg2 = 1;
     }
     else
     {
-        printf(" [false channel %d] ", *tmp1);
+        printf(" [false channel %d %d, %d] ", *tmp1, (channel ^ 0xff), flg2);
         *tmp2 = 0xff;
         flg2 = 0;
     }
 
     wiringPiSPIDataRW(0, tmp2, 1); // Send confirmation of reception, recieve something
-    nanosleep(t10000n, NULL);
+    nanosleep(t100000n, NULL);
 
     /*
         If the value was wrong but channel was right, send the value only;
         and vice versa
     */
-    if (flg1 & flg2)
+    if (flg1 && flg2)
     {
-        printf("\tSuccess!");
+        printf("\tSuccess!, %d, %d", *t1, *t2);
         delete bv;
         delete bc;
         delete tmp1;
