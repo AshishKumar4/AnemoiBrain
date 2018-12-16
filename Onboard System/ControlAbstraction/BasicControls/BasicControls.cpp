@@ -158,7 +158,7 @@ back:
 
     uint8_t tmp1, tmp2;
 
-    if (bc == val || flg1)
+    if (bc == val ^ 0xff || flg1)
     {
         printf(" [correct val] ");
         tmp1 = 0x0f;
@@ -174,7 +174,7 @@ back:
     wiringPiSPIDataRW(0, &tmp1, 1); // Send confirmation of reception, recieve channel
     nanosleep(t10000n, NULL);
 
-    if (tmp1 == channel || flg2)
+    if (tmp1 == channel ^ 0xff || flg2)
     {
         printf(" [correct channel] ");
         tmp2 = 0x0f;
