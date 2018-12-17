@@ -23,15 +23,25 @@ OUTPUT:=ControlServer
 OBJS:= *.o
 INCLUDED:=	#-I$(LIBRARY) -I$(SOURCE)
 
-LIBS:=$(wildcard ./lib/*.so)#./lib/*.so
+LIBS_RPI3:=$(wildcard ./lib/rpi3/*.so)#./lib/rpi3*.so
+LIBS_RPI0:=$(wildcard ./lib/rpi0/*.so)
+LIBS_PC:=$(wildcard ./lib/pc/*.so)
 
 CXXFLAGS:= -lstdc++ -O0 -std=gnu++11 $(INCLUDED)
 LDFLAGS+=-lutil -lpthread 
 LD_SPL_FLAGS+=-lwiringPi
 all: clean build clean 
 test: clean test-build clean
+pi3: clean build-pi3 clean
+pi0: clean build-pi0 clean
 
 brun: all run
+
+build-pi3: $(obj)
+	$(CXX) -o $(OUTPUT) $^ $(LIBS_RPI3) $(LDFLAGS) $(LD_SPL_FLAGS)
+
+build-pi0: $(obj)
+	$(CSS) -o $(OUTPUT) $^ $(LIBS_RPI0) $(LDFLAGS) $(LD_SPL_FLAGS)
 
 build: $(obj)
 	$(CXX) -o $(OUTPUT) $^ $(LIBS) $(LDFLAGS) $(LD_SPL_FLAGS)
