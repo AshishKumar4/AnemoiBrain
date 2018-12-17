@@ -118,22 +118,27 @@ int DirectController::ConnectChannel(char *ip, int port, int channel) // This wo
 
 void DirectController::arm()
 {
+  // TODO: Instead of manipulating via RC, make and use APIs directly to FC
   cmd(0, 255, 127, 127);
-  sleep(1);
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
   cmd(0, 127, 127, 127);
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
   cout << "ARMed Successfully...\n";
 }
 
 void DirectController::disarm()
 {
+  // TODO: Instead of manipulating via RC, make and use APIs directly to FC
   cmd(0, 0, 127, 127);
-  sleep(1);
-  cmd(0, 0, 127, 127);
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  cmd(0, 127, 127, 127);
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
   cout << "Disarmed Successfully...\n";
 }
 
 void DirectController::balance()
 {
+  // TODO: Instead of manipulating via RC, make and use APIs directly to FC
   cmd(-1, -1, 255, 255);
   sleep(0.01);
   cmd(-1, -1, 127, 127);
@@ -159,13 +164,14 @@ void DirectController::sendCommand(int val, int channel)
 {
   try
   {
-    if (val <= -1)  // If the value recieved is nonsence, send over the last sensible data
+    if (val == -1)  // If the value recieved is nonsence, send over the last sensible data
     {
-      val = 0;//channelBuffs[channel];
+      val = channelBuffs[channel];
     }
     else if (val >= 255)
     {
-      val = 254;
+      val = 255;
+      channelBuffs[channel] = 255;
     }
     else if (channelBuffs[channel] == val) // Why send the same data again? waste of time
     {
@@ -175,10 +181,12 @@ void DirectController::sendCommand(int val, int channel)
     {
       channelBuffs[channel] = val;
     }
-    stringstream ss;
+    stringstream ss;// = new stringstream;
     ss << ".[:" << val << ":]";
-    string msg = ss.str();
+    string msg = ss.str();// = new string(ss->str());
     send(server_fd[channel], msg.c_str(), msg.size(), 0);
+    /*delete msg;
+    delete ss;*/
   }
   catch (exception &e)
   {

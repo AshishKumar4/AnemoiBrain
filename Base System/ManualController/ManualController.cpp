@@ -134,47 +134,47 @@ class ManualController
         cout << "\n\n***Calibration in progress***\n";
         // TODO: Instead of taking simple values, take in average
         cout << "\n\tPlease push the throttle and pitch to their minimum levels within 2 seconds";
-        sleep(2);
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
         parseSerialData_syncd(600, 15);
         //delay1(5);
         mins[THROTTLE] = t_val;
         mins[PITCH] = p_val;
         printf("\n{%d %d}", t_val, p_val);
         cout << "\n\t\tLets hope it done rightly, Calibrated accordingly";
-        sleep(2);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
         cout << "\n\tPlease push the throttle and pitch to their maximum levels within 2 seconds";
-        sleep(2);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1500));
         parseSerialData_syncd(600, 15);
         //delay1(5);
         maxs[THROTTLE] = t_val;
         maxs[PITCH] = p_val;
         printf("\n{%d %d}", t_val, p_val);
         cout << "\n\t\tLets hope it done rightly, Calibrated accordingly";
-        sleep(2);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
         cout << "\n\tPlease push the yaw and roll to their minimum levels within 2 seconds";
-        sleep(2);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1500));
         parseSerialData_syncd(600, 15);
         //delay1(5);
         mins[ROLL] = r_val;
         mins[YAW] = y_val;
         printf("\n{%d %d}", r_val, y_val);
         cout << "\n\t\tLets hope it done rightly, Calibrated accordingly";
-        sleep(2);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
         cout << "\n\tPlease push the yaw and roll to their maximum levels within 2 seconds";
-        sleep(2);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1500));
         parseSerialData_syncd(600, 15);
         //delay1(5);
         maxs[ROLL] = r_val;
         maxs[YAW] = y_val;
         printf("\n{%d %d}", r_val, y_val);
         cout << "\n\t\tLets hope it done rightly, Calibrated accordingly";
-        sleep(2);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
         cout << "\n\tPlease leave the throttle and place them in the middle positions within 2 seconds";
-        sleep(2);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1500));
         parseSerialData_syncd(600, 15);
         //delay1(5);
         mids[THROTTLE] = t_val;
@@ -209,7 +209,7 @@ class ManualController
         }
 
         cout << "\nCalibration Completed!!!";
-        sleep(5);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
         // After Calibration, We shall tune the Moving Average filters a bit...
         for(int i = 0; i < 6; i++)
@@ -249,7 +249,7 @@ class ManualController
             //controls->setAux1((a1_val));
             //controls->setAux2((a2_val));
             cout << "\n";
-            usleep(200);
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
         //serial->closeSerial();
     }
@@ -382,6 +382,8 @@ class ManualController
         {
             vvv = ((vvv - mids[channel]) * rfactors[channel]) + 127.5; // + mids[channel];
         }
+        if(vvv < 0) vvv = 0;
+        else if(vvv > 255) vvv = 255;
         cout << "[" << vvv << " ]--";
         return int(vvv);
     }

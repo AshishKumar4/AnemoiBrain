@@ -25,7 +25,6 @@ int opt = 1;
 const char HANDSHAKE_IN_MSG[] = "Hello Gardien!";
 const char HANDSHAKE_OUT_MSG[] = "Hello Overloard!";
 typedef void (*func_t)(int); //void function pointer
-ResponsePackets *resbuff;
 func_t CHANNEL_HANDLER_TABLES[] = {&setThrottle, &setPitch, &setRoll, &setYaw, &setAux1, &setAux2};
 string CHANNEL_NAME_TABLES[] = {"throttle", "pitch", "roll", "yaw", "aux1", "aux2"};
 
@@ -237,7 +236,7 @@ int main(int argc, char const *argv[])
 {
     char *buff = new char[1024];
 #ifndef DRONELESS_LOCAL_TEST
-    BasicControls_init();
+    BasicControls_init(argc, (char**)argv);     // Maybe lower levels can make use of command line args
 #endif
     //resbuff = getResponse();
     //std::cout << "\nSPI Threads Initialized...\n";

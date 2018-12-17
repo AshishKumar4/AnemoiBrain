@@ -49,7 +49,14 @@
         "typeinfo": "cpp",
         "utility": "cpp",
         "algorithm": "cpp",
-        "mutex": "cpp"
+        "mutex": "cpp",
+        "csignal": "cpp",
+        "cstdarg": "cpp",
+        "strstream": "cpp",
+        "codecvt": "cpp",
+        "condition_variable": "cpp",
+        "future": "cpp",
+        "bitset": "cpp"
     },
     "python.formatting.provider": "black",
     // Files excluded from counting.

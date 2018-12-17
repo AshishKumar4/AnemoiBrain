@@ -8,23 +8,38 @@
 #include <string>
 #include <thread> // std::thread
 #include <unistd.h>
-#include <pthread.h>
 #include <mutex>
 
 #include "BasicControls.h"
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* --------------------------------------------------Some Configurations--------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
 
 //#define GROUND_TEST_NO_FC
 
 /*
     There are two possible configurations, 
     1) RPI unit is on board the drone and communicates with 
-        flight controller through SPI, and so the telemetry unit is connected to RPI directly.
+        flight controller, and so the telemetry unit is connected to RPI directly.
     2) RPI unit is off board the drone and communicates with the flight controller through Radio (wifi/ Xbee)
 */
-#define ONBOARD_SPI
-//#define OFFBOARD_RADIO
+
+/*
+    Telemetry Protocol
+*/
+//#define ONBOARD_SPI_PROTOCOL
+//#define NRF24L01_SPI_PROTOCOL
+//#define I2C_PROTOCOL
+#define MSP_Serial_PROTOCOL
+
+/*
+    Data Gathering method
+*/
+#define MSP_SERIAL_CLI_MONITOR
 
 #define SYNCD_TRANSFER
+#define UPDATER_THREAD
 
 /*
     Telemetry Type
@@ -33,23 +48,87 @@
 //#define WIFI
 //#define XBEE
 
-using namespace std;
+/*
+    Outputs to be shown on CLI
+*/
+
+#define SHOW_STATUS_RC
+#define SHOW_STATUS_ARMED
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* ---------------------------------------------------Some Definitions----------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+#define THROTTLE 0
+#define PITCH 1
+#define ROLL 2
+#define YAW 3
+#define AUX1 4
+#define AUX2 5
+
+uint8_t RC_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+#if defined(ONBOARD_SPI_PROTOCOL) || defined(NRF24L01_SPI_PROTOCOL) || defined(I2C_PROTOCOL)
+struct ControlPackets
+{
+    unsigned char magic;
+    unsigned char throttle;
+    unsigned char pitch;
+    unsigned char roll;
+    unsigned char yaw;
+    unsigned char aux1;
+    unsigned char aux2;
+    unsigned char switches;
+    //unsigned char random[9];
+    unsigned char checksum;
+};
+
+struct ResponsePackets
+{
+    unsigned char magic;
+    unsigned char alt;
+    unsigned char pitch;
+    unsigned char roll;
+    unsigned char yaw;
+    unsigned char lat;
+    unsigned char lon;
+    unsigned char heading;
+    //unsigned char random[9];
+    unsigned char checksum;
+};
+
+struct CommandPackets
+{
+    uint8_t magic;
+    uint8_t value;
+    uint8_t channel;
+    uint8_t checksum;
+};
 
 ControlPackets defCp;
 ControlPackets oldDefCp;
 ResponsePackets rff;
 ControlPackets *pp = &defCp;
 ControlPackets *ppold = &oldDefCp;
+#else
+
+#endif
+
+using namespace std;
 
 timespec *t100n = new timespec;
 timespec *t1000n = new timespec;
 timespec *t10000n = new timespec;
 timespec *t100000n = new timespec;
 
-#ifdef ONBOARD_SPI
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* ---------------------------------------------For SPI Based Communication------------------------------------------------ */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+#if defined(ONBOARD_SPI_PROTOCOL)
 
 #ifndef GROUND_TEST_NO_FC
-#include "SPI/SPIdrivers.h"
+#include "LowLevel/SPIdrivers.h"
 #include "wiringPiSPI.h"
 #endif
 
@@ -100,7 +179,7 @@ int IssueCommand()
     return 1;
 }
 
-void *SPI_Updater(void *threadid)
+void *Channel_Updater(void *threadid)
 {
     cout << "\nSPI Updater Initialized...";
     uint8_t *tbo = (uint8_t *)ppold;
@@ -127,7 +206,7 @@ void *SPI_Updater(void *threadid)
     }
 }
 
-void Raw_Init()
+void Raw_Init(int argc, char *argv[])
 {
 #ifndef GROUND_TEST_NO_FC
     //fd = SPI_init("/dev/spidev0.0");
@@ -142,8 +221,8 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
     // First send the value, then the channel, then a dummy and check the returned checksum.
     // if its good, okay otherwise repeat.
     mtx.lock();
-    uint8_t* bv = new uint8_t;
-    uint8_t* bc = new uint8_t;
+    uint8_t *bv = new uint8_t;
+    uint8_t *bc = new uint8_t;
     int flg1 = 0, flg2 = 0;
     uint8_t *tmp1 = new uint8_t;
     uint8_t *tmp2 = new uint8_t;
@@ -155,17 +234,21 @@ back:
     *bv = val;
     *bc = channel;
 
+#ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, bv, 1); // Send the value
+#endif
     nanosleep(t100000n, NULL);
 
+#ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, bc, 1); // Send the channel, recieve the value
+#endif
     nanosleep(t100000n, NULL);
 
     if (*bc == (val ^ 0xff) || flg1)
     {
         printf(" [correct val %d %d, %d] ", *bc, (val ^ 0xff), flg1);
         *tmp1 = val;
-	*t1 = (*bc ^ 0xff);
+        *t1 = (*bc ^ 0xff);
         flg1 = 1;
     }
     else
@@ -175,14 +258,16 @@ back:
         flg1 = 0;
     }
 
+#ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, tmp1, 1); // Send confirmation of reception, recieve channel
+#endif
     nanosleep(t100000n, NULL);
 
     if (*tmp1 == (channel ^ 0xff) || flg2)
     {
         printf(" [correct channel %d %d, %d] ", *tmp1, (channel ^ 0xff), flg2);
         *tmp2 = channel;
-	*t2 = (*tmp1 ^ 0xff);
+        *t2 = (*tmp1 ^ 0xff);
         flg2 = 1;
     }
     else
@@ -192,7 +277,9 @@ back:
         flg2 = 0;
     }
 
+#ifndef GROUND_TEST_NO_FC
     wiringPiSPIDataRW(0, tmp2, 1); // Send confirmation of reception, recieve something
+#endif
     nanosleep(t100000n, NULL);
 
     /*
@@ -216,223 +303,317 @@ back:
     }
 }
 
-/*
-static volatile void sendCommand(uint8_t val, uint8_t channel)
+#endif
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* ---------------------------------------------For I2C Based Communication------------------------------------------------ */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+#if defined I2C_PROTOCOL
+
+#include "LowLevel/I2Cdrivers.h"
+
+int IssueCommand()
 {
-    // First send the value, then the channel, then a dummy and check the returned checksum.
-    // if its good, okay otherwise repeat.
-    mtx.lock();
-    uint8_t tv, tc, bv, bc;
-    uint8_t tl = tc ^ tv;
-    int counter = 0;
-back:
-    printf("\n[Attempting send %d to %d", val, channel);
-    tv = val;
-    tc = channel;
-    bv = val;
-    bc = channel;
-
-#ifndef GROUND_TEST_NO_FC
-    wiringPiSPIDataRW(0, &bv, 1);
-#endif
-    nanosleep(t10000n, NULL);
-chnl:
-#ifndef GROUND_TEST_NO_FC
-    wiringPiSPIDataRW(0, &bc, 1);
-#endif
-    nanosleep(t10000n, NULL);
-    // The ACK for value must have arrived in bc
-chk:
-    bv = tl;
-#ifndef GROUND_TEST_NO_FC
-    wiringPiSPIDataRW(0, &bv, 1);
-    // The ACK for channel (checksum) in bv
-#endif
-    nanosleep(t10000n, NULL);
-
-    uint8_t tk = bv;
-
-    if(val != bc)
-    {
-        bv = 0;     // Send a wrong Checksum
-    }
-
-#ifndef GROUND_TEST_NO_FC
-    wiringPiSPIDataRW(0, &bv, 1);
-    // send the checksum back
-#endif
-    nanosleep(t10000n, NULL);
-
-#ifndef GROUND_TEST_NO_FC
-    if (bc == val)
-    {
-        if (tk == tl)
-        {
-        done:
-            printf("\t[SUCCESS %d, %d]", bv, tl);
-            mtx.unlock();
-            return;
-        }
-        else if (counter < 20)
-        {
-            printf("\tFailed! expected [%d], got [%d], Retrying", tl, tk);
-            ++counter;
-            goto back;
-        }
-        else
-        {
-            printf("\nTimed Out!");
-        }
-    }
-    else if (counter < 20)
-    {
-        printf("\tFailed! 2 Expected [%d], got [%d], Retrying", val, bc);
-        ++counter;
-        goto back;
-    }
-    mtx.unlock();
-    return;
 }
-    /*
-recheck:
-    if (bc == val)
-    {
-        if (tk == tl) // Checksum
-        {
-        done:
-            printf("\t[SUCCESS %d, %d]", tk, tl);
-            mtx.unlock();
-            return;
-        }
-        else if (!tk)
-        {
-            for (int i = 0; i < 10; i++)
-            {
-                if (tk == tl)
-                    goto done;
-                nanosleep(t10000n, NULL);
-            }
-            ++counter;
-            goto back;
-        }
-    }
-    else
-    {
-        printf("[bc != val, %d %d]", bc, val);
-    }
-    if (counter < 10)
-    {
-        printf("\tFailed! expected [%d], got [%d], Retrying", tl, tk);
-        ++counter;
-        goto back;
-    }
-    else
-    {
-        printf("\n<<TIMED-OUT!!!>>");
-        counter = 0;
-        bv = REQ2_SIGNAL;
-        /*
-#ifndef GROUND_TEST_NO_FC
-        wiringPiSPIDataRW(0, &bv, 1);
+
+void Raw_Init(int argc, char *argv[])
+{
+}
+
+void sendCommand(uint8_t val, uint8_t channel)
+{
+}
+
 #endif
-        nanosleep(t100n, NULL);
-        mtx.unlock();
-        return;
-    }
-    printf("\nShouldn't have come here");
-#endif
-    mtx.unlock();
-}*/
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ---------------------------------------------For Nrf24L01 Communication------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
 
-#elif defined OFFBOARD_RADIO
+#if defined NRF24L01_SPI_PROTOCOL
 
 #include "RadioDrivers.cpp"
 
-#if defined NRF24
 int IssueCommand()
 {
     NRF24_Send((uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
 }
 
-void Raw_Init()
+void Raw_Init(int argc, char *argv[])
 {
 }
+
+static volatile void sendCommand(uint8_t val, uint8_t channel)
+{
+}
+
 #endif
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* -----------------------------------------For MSP Based Serial directly to FC-------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+#if defined MSP_Serial_PROTOCOL
+
+#include "LowLevel/msp/inc/msp/MSP.hpp"
+#include "LowLevel/msp/inc/msp/msg_print.hpp"
+#include "LowLevel/msp/inc/msp/msp_id.hpp"
+#include "LowLevel/msp/inc/msp/FlightController.hpp"
+
+fcu::FlightController *FlController;
+
+int IssueCommand()
+{
+    return 0;
+}
+
+void Channel_Updater(int threadId);
+
+void Raw_Init(int argc, char *argv[])
+{
+    const std::string device = (argc > 1) ? std::string(argv[1]) : "/dev/ttyUSB0";
+    const size_t baudrate = (argc > 2) ? std::stoul(argv[2]) : 115200;
+    /*
+    msp::MSP msp(device, baudrate);
+    msp.setWait(1);
+*/
+    std::chrono::high_resolution_clock::time_point start, end;
+    bool feature_changed = false;
+start:
+    FlController = new fcu::FlightController(device, baudrate);
+
+    // wait until connection is established
+    // get unique box IDs
+    start = std::chrono::high_resolution_clock::now();
+    FlController->initialise();
+    end = std::chrono::high_resolution_clock::now();
+    std::cout << "ready after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
+
+    // on cleanflight, we need to enable the "RX_MSP" feature
+    if (FlController->isFirmwareCleanflight())
+    {
+        std::cout << "\n\n\tCleanFlight/BetaFlight FC Identified and Successfully Connected\n\n";
+        if (FlController->enableRxMSP() == 1)
+        {
+            std::cout << "RX_MSP enabled, restart" << std::endl;
+            feature_changed = true;
+            goto start;
+        }
+
+        if (feature_changed)
+        {
+            // if we rebooted after updating the RX_MSP feature, we need to sleep for a while
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+        }
+    }
+    else if (FlController->isFirmwareMultiWii())
+    {
+        std::cout << "\n\n\tMultiWii FC Identified and Successfully Connected\n\n";
+    }
+
+    std::cout << "Armed? " << FlController->isArmed() << std::endl;
+
+    // disarm the FC
+    std::cout << "Disarming..." << std::endl;
+    start = std::chrono::high_resolution_clock::now();
+    FlController->disarm_block();
+    end = std::chrono::high_resolution_clock::now();
+
+    if (!FlController->isArmed())
+    {
+        std::cout << "disarmed after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
+    }
+
+    // try connecting until first package is received
+    /*
+    {
+        std::cout << "Waiting for flight controller to become ready..." << std::endl;
+        auto start = std::chrono::steady_clock::now();
+        msp::msg::Ident ident;
+        if (msp.request_wait(ident, 10))
+        {
+            auto end = std::chrono::steady_clock::now();
+            std::cout << "MSP version " << (int)ident.version << " ready after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
+            std::cout << "\n\n\tMultiWii FC Identified and Successfully Connected\n\n";
+            // test update rate for reading Gyro messages
+            {
+                const unsigned int max_msg = 1000;
+                unsigned int n_msg = 0;
+                auto start = std::chrono::steady_clock::now();
+                while (n_msg != max_msg)
+                {
+                    msp::msg::ImuRaw status;
+                    msp.request_block(status);
+                    n_msg++;
+                }
+                auto end = std::chrono::steady_clock::now();
+
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+                std::cout << "read " << max_msg << " messages in: " << duration << " ms" << std::endl;
+                std::cout << "messages per second: " << max_msg / (duration / 1000.0) << " Hz" << std::endl;
+            }
+        }
+        else
+        {
+            std::cout << "error getting MSP version" << std::endl;
+            exit(0);
+        }
+    }*/
+}
+
+uint16_t rcExpand(uint8_t val) // Basically map val from 0, 255 to 1000 to 2000
+{
+    uint16_t aa = 1000 + (4 * uint16_t(val)); // The formula to map ranges
+    if(aa < 1000) aa = 1000;
+    else if (aa > 2000) aa = 2000;
+
+    return aa;
+}
+
+mutex mtx;
+
+void Channel_Updater(int threadId)
+{
+    // Basicaly, make sure to update every 5 seconds to convey the FC that everything is fine.
+    while (1)
+    {
+        mtx.lock();
+        FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE])); //, pp->aux1, pp->aux2, 1000, 1000);
+        mtx.unlock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    }
+}
+
+void sendCommand(uint8_t val, uint8_t channel)
+{
+    FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE])); //, pp->aux1, pp->aux2, 1000, 1000);
+}
+
 #endif
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* -------------------------------------MSP Data stream for Multiwii/Betaflight FC----------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+#if defined(MSP_SERIAL_CLI_MONITOR)
+
+void Channel_ViewRefresh(int threadId)
+{
+    while (1)
+    {
+#if defined(SHOW_STATUS_ARMED)
+        if (FlController->isArmed())
+        {
+            std::cout << "Armed\t"; // after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
+        }
+        else
+        {
+            std::cout << "Disarmed\t";
+        }
+#endif
+#if defined(SHOW_STATUS_RC)
+        msp::msg::Rc rc;
+        FlController->client.request(rc);
+        cout << rc;
+#endif
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
+#endif
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* ----------------------------------------------General APIs for Control-------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
 
 void setThrottle(int throttle)
 {
     unsigned char t = (unsigned char)throttle;
-    pp->throttle = t;
-    pp->magic = CP_MAGIC;
+    mtx.lock();
+    RC_DATA[THROTTLE] = t;
+#if defined(SYNCD_TRANSFER)
     sendCommand(throttle, 0);
+#endif
+    mtx.unlock();
     //IssueCommand();
 }
 
 void setPitch(int pitch)
 {
     unsigned char t = (unsigned char)pitch;
-    pp->pitch = t;
-    pp->magic = CP_MAGIC;
+    mtx.lock();
+    RC_DATA[PITCH] = t;
+#if defined(SYNCD_TRANSFER)
     sendCommand(pitch, 1);
+#endif
+    mtx.unlock();
     //IssueCommand();
 }
 
 void setRoll(int roll)
 {
     unsigned char t = (unsigned char)roll;
-    pp->roll = t;
-    pp->magic = CP_MAGIC;
+    mtx.lock();
+    RC_DATA[ROLL] = t;
+#if defined(SYNCD_TRANSFER)
     sendCommand(roll, 2);
+#endif
+    mtx.unlock();
     //IssueCommand();
 }
 
 void setYaw(int yaw)
 {
     unsigned char t = (unsigned char)yaw;
-    pp->yaw = t;
-    pp->magic = CP_MAGIC;
+    mtx.lock();
+    RC_DATA[YAW] = t;
+#if defined(SYNCD_TRANSFER)
     sendCommand(yaw, 3);
+#endif
+    mtx.unlock();
     //IssueCommand();
 }
 
 void setAux1(int val)
 {
     unsigned char t = (unsigned char)val;
-    pp->aux1 = t;
-    pp->magic = CP_MAGIC;
+    mtx.lock();
+    RC_DATA[AUX1] = t;
+#if defined(SYNCD_TRANSFER)
     sendCommand(val, 5);
+#endif
+    mtx.unlock();
     //IssueCommand();
 }
 
 void setAux2(int val)
 {
     unsigned char t = (unsigned char)val;
-    pp->aux2 = t;
-    pp->magic = CP_MAGIC;
+    mtx.lock();
+    RC_DATA[AUX2] = t;
+#if defined(SYNCD_TRANSFER)
     sendCommand(val, 5);
+#endif
+    mtx.unlock();
     //IssueCommand();
 }
-
+/*
 ResponsePackets *getResponse()
 {
     return &rff;
-}
+}*/
 
-int BasicControls_init()
+int BasicControls_init(int argc, char *argv[])
 {
     //int fd = wiringPiSPISetup(0, SPI_IOC_WR_MAX_SPEED_HZ);//SPI_init("/dev/spidev0.0");
-    Raw_Init();
-
+    Raw_Init(argc, argv);
+    /*
     pp->magic = CP_MAGIC;
     pp->throttle = 0;
-    pp->pitch = 0;
-    pp->roll = 0;
-    pp->yaw = 0;
+    pp->pitch = 127;
+    pp->roll = 127;
+    pp->yaw = 254;*/
 
     t100n->tv_sec = 0;
     t100n->tv_nsec = 100;
@@ -446,13 +627,12 @@ int BasicControls_init()
     //SPI_handshake();
     //IssueCommand();
 
-    pthread_t thread;
-#ifndef SYNCD_TRANSFER
-    //thread SPI_Updater_thread(SPI_Updater);
-    if (pthread_create(&thread, NULL, SPI_Updater, 0))
-    {
-        cout << "\nError creating threads...";
-    }
+#if defined(MSP_SERIAL_CLI_MONITOR)
+    thread *chnl_refresh = new thread(Channel_ViewRefresh, 0);
 #endif
+#if defined(UPDATER_THREAD)
+    thread *chnl_update = new thread(Channel_Updater, 1);
+#endif
+
     return 0;
 }

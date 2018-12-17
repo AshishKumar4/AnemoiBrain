@@ -23,6 +23,8 @@ OUTPUT:=ControlServer
 OBJS:= *.o
 INCLUDED:=	#-I$(LIBRARY) -I$(SOURCE)
 
+LIBS:=$(wildcard ./lib/*.so)#./lib/*.so
+
 CXXFLAGS:= -lstdc++ -O0 -std=gnu++11 $(INCLUDED)
 LDFLAGS+=-lutil -lpthread 
 LD_SPL_FLAGS+=-lwiringPi
@@ -32,10 +34,10 @@ test: clean test-build clean
 brun: all run
 
 build: $(obj)
-	$(CXX) -o $(OUTPUT) $^ $(LDFLAGS) $(LD_SPL_FLAGS)
+	$(CXX) -o $(OUTPUT) $^ $(LIBS) $(LDFLAGS) $(LD_SPL_FLAGS)
 
 test-build: $(obj)
-	$(CXX) -o $(OUTPUT) $^ $(LDFLAGS)
+	$(CXX) -o $(OUTPUT) $^ $(LIBS) $(LDFLAGS)
 
 build-main:	$(MAIN)
 	$(CXX) -o $(OUTPUT) $^ $(LDFLAGS)
@@ -45,7 +47,7 @@ run:
 	./$(OUTPUT)
 
 clean:
-	rm -f build-crt0 *.o */*.o */*/*.o
+	rm -f build-crt0 *.o */*.o */*/*.o */*/*/*.o
 	rm -rfv objs
 
 %.o: %.c
