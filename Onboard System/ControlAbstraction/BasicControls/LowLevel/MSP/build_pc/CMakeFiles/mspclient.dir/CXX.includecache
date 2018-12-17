@@ -1,0 +1,46 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../inc/msp/Client.hpp
+string
+-
+thread
+-
+functional
+-
+mutex
+-
+condition_variable
+-
+map
+-
+types.hpp
+../inc/msp/types.hpp
+
+../inc/msp/msp_id.hpp
+
+../inc/msp/types.hpp
+vector
+-
+stdint.h
+-
+msp_id.hpp
+../inc/msp/msp_id.hpp
+
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/ControlAbstraction/BasicControls/LowLevel/MSP/src/Client.cpp
+Client.hpp
+-
+SerialPortImpl.cpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/ControlAbstraction/BasicControls/LowLevel/MSP/src/SerialPortImpl.cpp
+iostream
+-
+
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/ControlAbstraction/BasicControls/LowLevel/MSP/src/SerialPortImpl.cpp
+asio.hpp
+-
+

@@ -44,10 +44,10 @@ build-pi0: $(obj)
 	$(CSS) -o $(OUTPUT) $^ $(LIBS_RPI0) $(LDFLAGS) $(LD_SPL_FLAGS)
 
 build: $(obj)
-	$(CXX) -o $(OUTPUT) $^ $(LIBS) $(LDFLAGS) $(LD_SPL_FLAGS)
+	$(CXX) -o $(OUTPUT) $^ $(LIBS_RPI0) $(LDFLAGS) $(LD_SPL_FLAGS)
 
 test-build: $(obj)
-	$(CXX) -o $(OUTPUT) $^ $(LIBS) $(LDFLAGS)
+	$(CXX) -o $(OUTPUT) $^ $(LIBS_PC) $(LDFLAGS)
 
 build-main:	$(MAIN)
 	$(CXX) -o $(OUTPUT) $^ $(LDFLAGS)
