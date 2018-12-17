@@ -378,6 +378,7 @@ void Raw_Init(int argc, char *argv[])
     msp::MSP msp(device, baudrate);
     msp.setWait(1);
 */
+    cout<<"\n\tAttempting to connect to the Flight Controller...\n";
     std::chrono::high_resolution_clock::time_point start, end;
     bool feature_changed = false;
 start:
@@ -388,7 +389,7 @@ start:
     start = std::chrono::high_resolution_clock::now();
     FlController->initialise();
     end = std::chrono::high_resolution_clock::now();
-    std::cout << "ready after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
+    std::cout << "FC connected, ready after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
 
     // on cleanflight, we need to enable the "RX_MSP" feature
     if (FlController->isFirmwareCleanflight())
