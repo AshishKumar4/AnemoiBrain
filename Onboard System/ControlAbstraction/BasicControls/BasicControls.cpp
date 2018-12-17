@@ -356,10 +356,10 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
 
 #if defined MSP_Serial_PROTOCOL
 
-#include "LowLevel/msp/inc/msp/MSP.hpp"
-#include "LowLevel/msp/inc/msp/msg_print.hpp"
-#include "LowLevel/msp/inc/msp/msp_id.hpp"
-#include "LowLevel/msp/inc/msp/FlightController.hpp"
+#include "LowLevel/MSP/inc/msp/MSP.hpp"
+#include "LowLevel/MSP/inc/msp/msg_print.hpp"
+#include "LowLevel/MSP/inc/msp/msp_id.hpp"
+#include "LowLevel/MSP/inc/msp/FlightController.hpp"
 
 fcu::FlightController *FlController;
 
