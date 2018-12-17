@@ -1,0 +1,9 @@
+Name: msp
+Description: 
+Version: 
+Requires: 
+prefix=/usr/local
+includedir=${prefix}/include/
+libdir=${prefix}/lib
+Libs: -L${libdir} -lmsp -lmsp_fcu -lmspclient -lmsp_msg_print
+Cflags: -I${includedir}
