@@ -5,23 +5,21 @@ LD:=ld
 AS:=as
 NASM:=nasm
 
+AIRSIM_AIRLIB_DIR:=/home/unrealengine/Desktop/GuardianGrounds/Plugins/AirSim/Source/AirLib/include/vehicles/multirotor
+AIRSIM_PROJ_SOURCE_DIR:=/home/unrealengine/Desktop/GuardianGrounds/Plugins/AirSim/Source
+AIRSIM_INCLUDE:=-I$(AIRSIM_PROJ_SOURCE_DIR)/AirLib/deps/rpclib/include -I$(AIRSIM_AIRLIB_DIR) -I$(AIRSIM_PROJ_SOURCE_DIR)/AirLib/deps/eigen3 -I$(AIRSIM_PROJ_SOURCE_DIR)/AirLib/include
+
 OBJ_DIR:=./
 C_OBJ_FILES := $(patsubst ./%.c,$(OBJ_DIR)/%.o,$(wildcard ./*.c))	\
 			$(patsubst ./SPI/%.c,./SPI/%.o,$(wildcard ./SPI/*.c))
 CPP_OBJ_FILES := $(patsubst ./%.cpp, $(OBJ_DIR)/%.o,$(wildcard ./*.cpp)) \
 			$(patsubst ./SPI/%.cpp,./SPI/%.o,$(wildcard ./SPI/*.cpp)) 
 obj = $(CPP_OBJ_FILES) $(C_OBJ_FILES)
-#csrc = $(wildcard ./*.c) \
-       $(wildcard ./SPI/*.c)
-#cppsrc = $(wildcard ./*.cpp) \
-       $(wildcard ./SPI/*.cpp)
-#obj = $(csrc:.c=.o) $(ccsrc:.cpp=.o)
 
 MAIN:=ControlServer.o
 OUTPUT:=ControlServer
 
-OBJS:= *.o
-INCLUDED:=	#-I$(LIBRARY) -I$(SOURCE)
+INCLUDED:= $(AIRSIM_INCLUDE)	#-I$(LIBRARY) -I$(SOURCE)
 
 LIBS_RPI3:=$(wildcard ./lib/rpi3/*.so)#./lib/rpi3*.so
 LIBS_RPI0:=$(wildcard ./lib/rpi0/*.so)

@@ -16,37 +16,21 @@
 /* --------------------------------------------------Some Configurations--------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
 
-//#define GROUND_TEST_NO_FC
-
 /*
-    There are two possible configurations, 
-    1) RPI unit is on board the drone and communicates with 
-        flight controller, and so the telemetry unit is connected to RPI directly.
-    2) RPI unit is off board the drone and communicates with the flight controller through Radio (wifi/ Xbee)
+    Two Modes -> 
+        1. Aisim simulation mode, fake, simple flight controller using Airsim C++ APIs 
+        2. Real Drone Mode, To fly the real thing. Real Flight Controller required.
 */
+//#define MODE_AIRSIM
+//#define MODE_MAVLINK_SIM
+//#define MODE_DEBUG_NO_FC
 
-/*
-    Telemetry Protocol
-*/
-//#define ONBOARD_SPI_PROTOCOL
-//#define NRF24L01_SPI_PROTOCOL
-//#define I2C_PROTOCOL
-#define MSP_Serial_PROTOCOL
-
-/*
-    Data Gathering method
-*/
-#define MSP_SERIAL_CLI_MONITOR
+#if !defined(MODE_AIRSIM) && !defined(MODE_MAVLINK_SIM) && !defined(MODE_DEBUG_NO_FC)
+#define MODE_REALDRONE
+#endif
 
 #define SYNCD_TRANSFER
 #define UPDATER_THREAD
-
-/*
-    Telemetry Type
-*/
-//#define NRF24
-//#define WIFI
-//#define XBEE
 
 /*
     Outputs to be shown on CLI
@@ -54,6 +38,35 @@
 
 #define SHOW_STATUS_RC
 #define SHOW_STATUS_ARMED
+
+#if defined(MODE_REALDRONE)
+/*
+        There are two possible configurations, 
+        1) RPI unit is on board the drone and communicates with 
+            flight controller, and so the telemetry unit is connected to RPI directly.
+        2) RPI unit is off board the drone and communicates with the flight controller through Radio (wifi/ Xbee)
+    */
+
+/*
+        Telemetry Protocol
+    */
+//#define ONBOARD_SPI_PROTOCOL
+//#define NRF24L01_SPI_PROTOCOL
+//#define I2C_PROTOCOL
+#define MSP_Serial_PROTOCOL
+
+/*
+        Data Gathering method
+    */
+#define MSP_SERIAL_CLI_MONITOR
+
+/*
+        Telemetry Type
+    */
+//#define NRF24
+//#define WIFI
+//#define Xbee
+#endif
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ---------------------------------------------------Some Definitions----------------------------------------------------- */
@@ -69,6 +82,7 @@
 uint8_t RC_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 #if defined(ONBOARD_SPI_PROTOCOL) || defined(NRF24L01_SPI_PROTOCOL) || defined(I2C_PROTOCOL)
+mutex mtx;
 struct ControlPackets
 {
     unsigned char magic;
@@ -127,7 +141,7 @@ timespec *t100000n = new timespec;
 
 #if defined(ONBOARD_SPI_PROTOCOL)
 
-#ifndef GROUND_TEST_NO_FC
+#ifndef MODE_DEBUG_NO_FC
 #include "LowLevel/SPIdrivers.h"
 #include "wiringPiSPI.h"
 #endif
@@ -137,10 +151,10 @@ int fd;
 #define TIMEOUT_VAL 20
 
 /*
-    The new handshake mechanism works like this ->
-    Send a special msg, then wait for an amount of time for it to arrive. 
-    if it arrives, validate, else print handshake failed or timed out
-*/
+        The new handshake mechanism works like this ->
+        Send a special msg, then wait for an amount of time for it to arrive. 
+        if it arrives, validate, else print handshake failed or timed out
+    */
 
 unsigned char checksum(unsigned char *buf, int len)
 {
@@ -155,7 +169,7 @@ unsigned char checksum(unsigned char *buf, int len)
 int SPI_handshake()
 {
     int ht = REQ2_SIGNAL;
-#ifndef GROUND_TEST_NO_FC
+#ifndef MODE_DEBUG_NO_FC
     SPI_ReadWrite((int)fd, (uintptr_t)&ht, (uintptr_t)&ht, (size_t)1); //wiringPiSPIDataRW(0, (unsigned char*)&ht, 1);
 #endif
     //nanosleep(t100000n, NULL);
@@ -170,7 +184,7 @@ int IssueCommand()
         uint8_t *hr = ((uint8_t *)&rff);
         pp->checksum = checksum(ht, sizeof(ControlPackets));
         uint8_t tb = 0;
-#ifndef GROUND_TEST_NO_FC
+#ifndef MODE_DEBUG_NO_FC
         SPI_ReadWrite((int)fd, (uintptr_t)ht, (uintptr_t)hr, (size_t)sizeof(ControlPackets));
 #endif
         cout << "Successfully Issued Command\n";
@@ -187,8 +201,8 @@ void *Channel_Updater(void *threadid)
     while (1)
     {
         /*
-            Well, Basically, Firstly, check if the new data that we are gonna send is identical to the older, we don't need to send anything!
-        */
+                Well, Basically, Firstly, check if the new data that we are gonna send is identical to the older, we don't need to send anything!
+            */
         for (int i = 0; i < sizeof(ControlPackets); i++)
         {
             if (tb[i] != tbo[i])
@@ -208,13 +222,11 @@ void *Channel_Updater(void *threadid)
 
 void Raw_Init(int argc, char *argv[])
 {
-#ifndef GROUND_TEST_NO_FC
+#ifndef MODE_DEBUG_NO_FC
     //fd = SPI_init("/dev/spidev0.0");
     fd = wiringPiSPISetup(0, 500000);
 #endif
 }
-
-mutex mtx;
 
 static volatile void sendCommand(uint8_t val, uint8_t channel)
 {
@@ -234,12 +246,12 @@ back:
     *bv = val;
     *bc = channel;
 
-#ifndef GROUND_TEST_NO_FC
+#ifndef MODE_DEBUG_NO_FC
     wiringPiSPIDataRW(0, bv, 1); // Send the value
 #endif
     nanosleep(t100000n, NULL);
 
-#ifndef GROUND_TEST_NO_FC
+#ifndef MODE_DEBUG_NO_FC
     wiringPiSPIDataRW(0, bc, 1); // Send the channel, recieve the value
 #endif
     nanosleep(t100000n, NULL);
@@ -258,7 +270,7 @@ back:
         flg1 = 0;
     }
 
-#ifndef GROUND_TEST_NO_FC
+#ifndef MODE_DEBUG_NO_FC
     wiringPiSPIDataRW(0, tmp1, 1); // Send confirmation of reception, recieve channel
 #endif
     nanosleep(t100000n, NULL);
@@ -277,15 +289,15 @@ back:
         flg2 = 0;
     }
 
-#ifndef GROUND_TEST_NO_FC
+#ifndef MODE_DEBUG_NO_FC
     wiringPiSPIDataRW(0, tmp2, 1); // Send confirmation of reception, recieve something
 #endif
     nanosleep(t100000n, NULL);
 
     /*
-        If the value was wrong but channel was right, send the value only;
-        and vice versa
-    */
+            If the value was wrong but channel was right, send the value only;
+            and vice versa
+        */
     if (flg1 && flg2)
     {
         printf("\tSuccess!, %d, %d", *t1, *t2);
@@ -302,7 +314,6 @@ back:
         goto back;
     }
 }
-
 #endif
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
@@ -310,7 +321,6 @@ back:
 /* ------------------------------------------------------------------------------------------------------------------------ */
 
 #if defined I2C_PROTOCOL
-
 #include "LowLevel/I2Cdrivers.h"
 
 int IssueCommand()
@@ -375,10 +385,10 @@ void Raw_Init(int argc, char *argv[])
     const std::string device = (argc > 1) ? std::string(argv[1]) : "/dev/ttyUSB0";
     const size_t baudrate = (argc > 2) ? std::stoul(argv[2]) : 115200;
     /*
-    msp::MSP msp(device, baudrate);
-    msp.setWait(1);
-*/
-    cout<<"\n\tAttempting to connect to the Flight Controller...\n";
+        msp::MSP msp(device, baudrate);
+        msp.setWait(1);
+    */
+    cout << "\n\tAttempting to connect to the Flight Controller...\n";
     std::chrono::high_resolution_clock::time_point start, end;
     bool feature_changed = false;
 start:
@@ -428,47 +438,49 @@ start:
 
     // try connecting until first package is received
     /*
-    {
-        std::cout << "Waiting for flight controller to become ready..." << std::endl;
-        auto start = std::chrono::steady_clock::now();
-        msp::msg::Ident ident;
-        if (msp.request_wait(ident, 10))
         {
-            auto end = std::chrono::steady_clock::now();
-            std::cout << "MSP version " << (int)ident.version << " ready after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
-            std::cout << "\n\n\tMultiWii FC Identified and Successfully Connected\n\n";
-            // test update rate for reading Gyro messages
+            std::cout << "Waiting for flight controller to become ready..." << std::endl;
+            auto start = std::chrono::steady_clock::now();
+            msp::msg::Ident ident;
+            if (msp.request_wait(ident, 10))
             {
-                const unsigned int max_msg = 1000;
-                unsigned int n_msg = 0;
-                auto start = std::chrono::steady_clock::now();
-                while (n_msg != max_msg)
-                {
-                    msp::msg::ImuRaw status;
-                    msp.request_block(status);
-                    n_msg++;
-                }
                 auto end = std::chrono::steady_clock::now();
+                std::cout << "MSP version " << (int)ident.version << " ready after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
+                std::cout << "\n\n\tMultiWii FC Identified and Successfully Connected\n\n";
+                // test update rate for reading Gyro messages
+                {
+                    const unsigned int max_msg = 1000;
+                    unsigned int n_msg = 0;
+                    auto start = std::chrono::steady_clock::now();
+                    while (n_msg != max_msg)
+                    {
+                        msp::msg::ImuRaw status;
+                        msp.request_block(status);
+                        n_msg++;
+                    }
+                    auto end = std::chrono::steady_clock::now();
 
-                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+                    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
-                std::cout << "read " << max_msg << " messages in: " << duration << " ms" << std::endl;
-                std::cout << "messages per second: " << max_msg / (duration / 1000.0) << " Hz" << std::endl;
+                    std::cout << "read " << max_msg << " messages in: " << duration << " ms" << std::endl;
+                    std::cout << "messages per second: " << max_msg / (duration / 1000.0) << " Hz" << std::endl;
+                }
             }
-        }
-        else
-        {
-            std::cout << "error getting MSP version" << std::endl;
-            exit(0);
-        }
-    }*/
+            else
+            {
+                std::cout << "error getting MSP version" << std::endl;
+                exit(0);
+            }
+        }*/
 }
 
 uint16_t rcExpand(uint8_t val) // Basically map val from 0, 255 to 1000 to 2000
 {
     uint16_t aa = 1000 + (4 * uint16_t(val)); // The formula to map ranges
-    if(aa < 1000) aa = 1000;
-    else if (aa > 2000) aa = 2000;
+    if (aa < 1000)
+        aa = 1000;
+    else if (aa > 2000)
+        aa = 2000;
 
     return aa;
 }
@@ -493,6 +505,35 @@ void sendCommand(uint8_t val, uint8_t channel)
 }
 
 #endif
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* -------------------------------------For AirSim Simple FC, through provided APIs---------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+
+#if defined MODE_AIRSIM
+
+#include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
+
+
+int IssueCommand()
+{
+    //NRF24_Send((uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
+}
+
+void Raw_Init(int argc, char *argv[])
+{
+}
+
+static volatile void sendCommand(uint8_t val, uint8_t channel)
+{
+}
+
+#endif
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* -----------------------------------------------RX Definitions ends here------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* -------------------------------------MSP Data stream for Multiwii/Betaflight FC----------------------------------------- */
