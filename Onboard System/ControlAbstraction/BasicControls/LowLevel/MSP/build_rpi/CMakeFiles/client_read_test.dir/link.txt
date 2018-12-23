@@ -1,1 +1,0 @@
-/usr/bin/c++      CMakeFiles/client_read_test.dir/examples/client_read_test.cpp.o  -o client_read_test -Wl,-rpath,"/root/Gardien-System/Onboard System/ControlAbstraction/BasicControls/LowLevel/MSP/build_rpi" -rdynamic libmspclient.so libmsp_msg_print.so -lpthread 
