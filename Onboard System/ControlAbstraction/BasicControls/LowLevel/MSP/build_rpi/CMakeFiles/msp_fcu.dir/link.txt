@@ -1,1 +1,0 @@
-/usr/bin/c++  -fPIC   -shared -Wl,-soname,libmsp_fcu.so -o libmsp_fcu.so CMakeFiles/msp_fcu.dir/src/FlightController.cpp.o -Wl,-rpath,"/root/Gardien-System/Onboard System/ControlAbstraction/BasicControls/LowLevel/MSP/build_rpi:" libmspclient.so -lpthread 

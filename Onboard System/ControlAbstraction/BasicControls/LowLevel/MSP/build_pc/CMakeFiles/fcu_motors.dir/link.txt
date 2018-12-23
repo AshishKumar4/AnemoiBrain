@@ -1,1 +1,0 @@
-/usr/bin/c++    -rdynamic CMakeFiles/fcu_motors.dir/examples/fcu_motor_test.cpp.o  -o fcu_motors -Wl,-rpath,"/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/ControlAbstraction/BasicControls/LowLevel/MSP/build_pc" libmsp_fcu.so libmspclient.so -lpthread 
