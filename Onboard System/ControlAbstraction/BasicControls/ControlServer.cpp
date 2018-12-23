@@ -162,9 +162,9 @@ void ControlServer::ChannelListeners(int i)
         {
             try
             {
-                memset(buff, 0, strlen(buff));
+                memset(buff, 0, 4096);
                 valread = read(new_socket, buff, 4096);
-                if (valread == 0)
+                if (valread == 0 || valread == -1)
                     break;
 #if defined(STREAM_PROTOCOL_1)
                 std::string parsed, cmd(buff);
@@ -196,8 +196,7 @@ void ControlServer::ChannelListeners(int i)
 #endif
                 }
 #elif defined(STREAM_PROTOCOL_2)
-                int slen = strlen(buff);
-                for(int j = 0; j < slen; j++)
+                for(int j = 0; j < valread; j++)
                 {
                     CHANNEL_HANDLER_TABLES[i](int(buff[j]));
                 }
