@@ -197,9 +197,9 @@ void ControlServer::ChannelListeners(int i)
                 }
 #elif defined(STREAM_PROTOCOL_2)
                 int slen = strlen(buff);
-                for(int i = 0; i < slen; i++)
+                for(int j = 0; j < slen; j++)
                 {
-                    CHANNEL_HANDLER_TABLES[i](int(buff[i]));
+                    CHANNEL_HANDLER_TABLES[i](int(buff[j]));
                 }
 #endif
 
