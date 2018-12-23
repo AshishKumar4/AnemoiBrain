@@ -19,7 +19,7 @@ obj = $(CPP_OBJ_FILES) $(C_OBJ_FILES)
 MAIN:=ControlServer.o
 OUTPUT:=ControlServer
 
-INCLUDED:= $(AIRSIM_INCLUDE)	#-I$(LIBRARY) -I$(SOURCE)
+INCLUDED:=# $(AIRSIM_INCLUDE)	#-I$(LIBRARY) -I$(SOURCE)
 
 LIBS_RPI3:=$(wildcard ./lib/rpi3/*.so)#./lib/rpi3*.so
 LIBS_RPI0:=$(wildcard ./lib/rpi0/*.so)

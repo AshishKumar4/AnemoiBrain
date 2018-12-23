@@ -27,20 +27,6 @@
 
 float volatile delay_dump=0;
 
-void delay1(uint32_t ms)
-{
-    float volatile k=0;
-    for(uint32_t i=0; i<ms*102400;i++)
-      {
-        srand(i+100);
-        for(int j=0; j<500; j++)
-        {
-          k=rand();
-          k/=57377;
-        }
-      }//k+=( k/1000 - 50 + k*5);
-      delay_dump+=k/737;
-}
 using namespace std;
 
 /*
@@ -214,7 +200,7 @@ class ManualController
         // After Calibration, We shall tune the Moving Average filters a bit...
         for(int i = 0; i < 6; i++)
         {
-            channelFilters[i]->Reset(0.7);
+            channelFilters[i]->Reset(0.6);
         }
 
         printf("\n\nCalibration Parameters --> ");
@@ -244,12 +230,12 @@ class ManualController
 
             controls->setThrottle(filter(t_val, THROTTLE)); // (double(t_val - t_min) * t_factor)));
             controls->setYaw(filter(y_val, YAW));           //(double(y_val - y_min) * y_factor)));
-            controls->setPitch(filter(p_val, PITCH));       //(double(p_val - p_min) * p_factor)));
-            controls->setRoll(filter(r_val, ROLL));         //(double(r_val - r_min) * r_factor)));
+            controls->setPitch(255 - filter(p_val, PITCH));   // Reversed Pitch     //(double(p_val - p_min) * p_factor)));
+            controls->setRoll(255 - filter(r_val, ROLL));  // Reversed Roll       //(double(r_val - r_min) * r_factor)));
             //controls->setAux1((a1_val));
             //controls->setAux2((a2_val));
             cout << "\n";
-            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
         //serial->closeSerial();
     }
@@ -400,7 +386,7 @@ int main(int argc, char **argv)
         droneControl = new DirectController(argv[1], atoi(argv[2]));
 
     //DirectController droneControl("0.0.0.0");
-    ManualController remote(droneControl, "/dev/ttyUSB1");
+    ManualController remote(droneControl, "/dev/ttyUSB0");
     remote.ExecutorSerial();
     return 0;
 }
