@@ -37,7 +37,7 @@
 */
 
 #define SHOW_STATUS_RC
-#define SHOW_STATUS_ARMED
+//#define SHOW_STATUS_ARMED
 
 #if defined(MODE_REALDRONE)
 /*
@@ -490,7 +490,7 @@ void Channel_Updater(int threadId)
     while (1)
     {
         mtx.lock();
-        FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE])); //, pp->aux1, pp->aux2, 1000, 1000);
+        //FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE])); //, pp->aux1, pp->aux2, 1000, 1000);
         mtx.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(2000));
     }
@@ -558,6 +558,7 @@ void Raw_Init(int argc, char *argv[])
 
 static volatile void sendCommand(uint8_t val, uint8_t channel)
 {
+    printf("\n[%d ------> %d", val, channel);
 }
 
 #endif
@@ -576,6 +577,7 @@ void Channel_ViewRefresh(int threadId)
 {
     while (1)
     {
+        mtx.lock();
 #if defined(SHOW_STATUS_ARMED)
         if (FlController->isArmed())
         {
@@ -591,6 +593,7 @@ void Channel_ViewRefresh(int threadId)
         FlController->client.request(rc);
         cout << rc;
 #endif
+        mtx.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }

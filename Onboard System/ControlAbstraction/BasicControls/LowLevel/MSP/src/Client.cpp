@@ -97,6 +97,7 @@ bool Client::sendData(const uint8_t id, const ByteVector &data) {
     } catch (const asio::system_error &ec) {
         if (ec.code() == asio::error::operation_aborted) {
             //operation_aborted error probably means the client is being closed
+            std::cout<<"\nSome Error Occured while sending data!";
             return false;
         }
     }

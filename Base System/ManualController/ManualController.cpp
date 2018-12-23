@@ -200,7 +200,7 @@ class ManualController
         // After Calibration, We shall tune the Moving Average filters a bit...
         for(int i = 0; i < 6; i++)
         {
-            channelFilters[i]->Reset(0.6);
+            channelFilters[i]->Reset(0.5);
         }
 
         printf("\n\nCalibration Parameters --> ");
@@ -235,7 +235,7 @@ class ManualController
             //controls->setAux1((a1_val));
             //controls->setAux2((a2_val));
             cout << "\n";
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(3));
         }
         //serial->closeSerial();
     }
@@ -370,7 +370,7 @@ class ManualController
         }
         if(vvv < 0) vvv = 0;
         else if(vvv > 255) vvv = 255;
-        cout << "[" << vvv << " ]--";
+        cout << "[" << int(vvv) << " ]--";
         return int(vvv);
     }
 };

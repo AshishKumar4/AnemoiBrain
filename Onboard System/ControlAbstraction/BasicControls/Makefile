@@ -27,7 +27,7 @@ LIBS_PC:=$(wildcard ./lib/pc/*.so)
 
 CXXFLAGS:= -lstdc++ -O2 -std=gnu++11 $(INCLUDED)
 LDFLAGS+=-lutil -lpthread 
-LD_SPL_FLAGS+=-lwiringPi
+LD_SPL_FLAGS+=#-lwiringPi
 all: clean build clean 
 test: clean test-build clean
 pi3: clean build-pi3 clean
