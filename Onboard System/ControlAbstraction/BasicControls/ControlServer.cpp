@@ -166,7 +166,7 @@ void ControlServer::ChannelListeners(int i)
                 valread = read(new_socket, buff, 4096);
                 if (valread == 0)
                     break;
-#if defined(STREAM_PROTOCOL_2)
+#if defined(STREAM_PROTOCOL_1)
                 std::string parsed, cmd(buff);
                 //std::cout << cmd << endl;
 

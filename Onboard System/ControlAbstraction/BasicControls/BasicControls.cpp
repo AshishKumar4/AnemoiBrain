@@ -23,7 +23,7 @@
 */
 //#define MODE_AIRSIM
 //#define MODE_MAVLINK_SIM
-#define MODE_DEBUG_NO_FC
+//#define MODE_DEBUG_NO_FC
 
 #if !defined(MODE_AIRSIM) && !defined(MODE_MAVLINK_SIM) && !defined(MODE_DEBUG_NO_FC)
 #define MODE_REALDRONE
