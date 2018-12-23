@@ -49,13 +49,13 @@ class AirSimControls:
         print("Starting Listener Threads, Base PORT is " + str(portBase))
         # We Now need to setup the AirSim Simulator before we can start the threads!
         ############################ AirSim MultiCopter Initialization ############################
-        client = airsim.MultirotorClient()
-        self.client = client
-        client.confirmConnection()
-        client.enableApiControl(True)
-        client.armDisarm(True)
+        #/client = airsim.MultirotorClient()
+        #/self.client = client
+        #/client.confirmConnection()
+        #/client.enableApiControl(True)
+        #/client.armDisarm(True)
         # Some Parameter Definitions, tweak them for realistic behavior
-        self.timeSlice = 0.005
+        self.timeSlice = 0.001
         self.rmin = -1
         self.rmax = 1
         self.pmin = -1
@@ -78,7 +78,7 @@ class AirSimControls:
     def ChannelSyncToSim(self):
         # Now we Sync the data and send it over to the simulator
         while True:
-            self.client.moveByAngleThrottleAsync(self.p, self.r, self.t, self.y, self.timeSlice)
+            #/self.client.moveByAngleThrottleAsync(self.p, self.r, self.t, self.y, self.timeSlice)
             time.sleep(self.timeSlice)
     def ChannelControllers(self, id):
         print("ID: " + str(id))

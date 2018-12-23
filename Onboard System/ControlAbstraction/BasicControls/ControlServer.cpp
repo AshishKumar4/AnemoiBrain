@@ -14,9 +14,35 @@
 
 #include "BasicControls.h"
 
-using namespace std;
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* --------------------------------------------------Some Configurations--------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+/*
+  STREAM_PROTOCOL_1 Refers to conventional failproof streaming of values as packets, encapsulated and later stripped off on the other hand 
+  STREAM_PROTOCOL_2 Refers to newer, faster and lightweight but simplest streaming, stream of simple bytes. This isn't failproof and errors 
+                    may be entroduced.
+*/
+//#define STREAM_PROTOCOL_1 // FailProof, Encapsulate
+#define STREAM_PROTOCOL_2 // Simple Byte Stream, Faster and lightweight
 
 //#define DRONELESS_LOCAL_TEST
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* ------------------------------------------------Permanent Configurations------------------------------------------------ */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+#if defined(STREAM_PROTOCOL_1)
+#undef STREAM_PROTOCOL_2
+#elif defined(STREAM_PROTOCOL_2)
+#undef STREAM_PROTOCOL_1
+#endif
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* -----------------------------------------------------Main Program------------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+using namespace std;
 
 //int server_fd, new_socket, valread;
 //struct sockaddr_in address;
@@ -65,11 +91,11 @@ class ControlServer
         PORT_BASE = portBase;
         // We would first create several sockets and store their fds
         CreateChannel(portBase + 0, 0); //  Throttle is         0
-        CreateChannel(portBase + 1, 1);    //  Pitch is            1
-        CreateChannel(portBase + 2, 2);     //  Roll is             2
-        CreateChannel(portBase + 3, 3);      //  Yaw is              3
-        CreateChannel(portBase + 4, 4);     //  Aux1 is             4
-        CreateChannel(portBase + 5, 5);     //  Aux2 is             5*/
+        CreateChannel(portBase + 1, 1); //  Pitch is            1
+        CreateChannel(portBase + 2, 2); //  Roll is             2
+        CreateChannel(portBase + 3, 3); //  Yaw is              3
+        CreateChannel(portBase + 4, 4); //  Aux1 is             4
+        CreateChannel(portBase + 5, 5); //  Aux2 is             5
         // We Create six channels, each corresponding to six basic controls of drone
 
         // We would then create serveral threads, which would in turn listen to sockets
@@ -140,19 +166,19 @@ void ControlServer::ChannelListeners(int i)
                 valread = read(new_socket, buff, 4096);
                 if (valread == 0)
                     break;
-
+#if defined(STREAM_PROTOCOL_2)
                 std::string parsed, cmd(buff);
                 //std::cout << cmd << endl;
 
                 /*
-                Format of the input command ->
-                .[:x:].
-            */
+                    Format of the input command ->
+                    .[:x:].
+                */
                 std::stringstream input_stringstream(cmd);
                 // Split the input line into several [:x:]
                 while (std::getline(input_stringstream, parsed, '.'))
                 {
-                    if(!parsed.length())
+                    if (!parsed.length())
                         continue;
                     //std::cout << "Parsed: [" << parsed << "],\n";
                     std::string par1, par2, val;
@@ -169,6 +195,13 @@ void ControlServer::ChannelListeners(int i)
                     CHANNEL_HANDLER_TABLES[i](atoi(val.c_str()));
 #endif
                 }
+#elif defined(STREAM_PROTOCOL_2)
+                int slen = strlen(buff);
+                for(int i = 0; i < slen; i++)
+                {
+                    CHANNEL_HANDLER_TABLES[i](int(buff[i]));
+                }
+#endif
 
                 //send(new_socket, resbuff, sizeof(ResponsePackets), 0);
                 //send(new_socket, resbuff, sizeof(ResponsePackets), 0);
@@ -236,7 +269,7 @@ int main(int argc, char const *argv[])
 {
     char *buff = new char[1024];
 #ifndef DRONELESS_LOCAL_TEST
-    BasicControls_init(argc, (char**)argv);     // Maybe lower levels can make use of command line args
+    BasicControls_init(argc, (char **)argv); // Maybe lower levels can make use of command line args
 #endif
     //resbuff = getResponse();
     //std::cout << "\nSPI Threads Initialized...\n";

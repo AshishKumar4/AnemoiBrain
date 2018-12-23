@@ -23,7 +23,7 @@
 */
 //#define MODE_AIRSIM
 //#define MODE_MAVLINK_SIM
-//#define MODE_DEBUG_NO_FC
+#define MODE_DEBUG_NO_FC
 
 #if !defined(MODE_AIRSIM) && !defined(MODE_MAVLINK_SIM) && !defined(MODE_DEBUG_NO_FC)
 #define MODE_REALDRONE
@@ -80,9 +80,10 @@
 #define AUX2 5
 
 uint8_t RC_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+using namespace std;
+mutex mtx;
 
 #if defined(ONBOARD_SPI_PROTOCOL) || defined(NRF24L01_SPI_PROTOCOL) || defined(I2C_PROTOCOL)
-mutex mtx;
 struct ControlPackets
 {
     unsigned char magic;
@@ -127,8 +128,6 @@ ControlPackets *ppold = &oldDefCp;
 #else
 
 #endif
-
-using namespace std;
 
 timespec *t100n = new timespec;
 timespec *t1000n = new timespec;
@@ -193,7 +192,7 @@ int IssueCommand()
     return 1;
 }
 
-void *Channel_Updater(void *threadid)
+void Channel_Updater(int threadid)
 {
     cout << "\nSPI Updater Initialized...";
     uint8_t *tbo = (uint8_t *)ppold;
@@ -485,8 +484,6 @@ uint16_t rcExpand(uint8_t val) // Basically map val from 0, 255 to 1000 to 2000
     return aa;
 }
 
-mutex mtx;
-
 void Channel_Updater(int threadId)
 {
     // Basicaly, make sure to update every 5 seconds to convey the FC that everything is fine.
@@ -516,9 +513,43 @@ void sendCommand(uint8_t val, uint8_t channel)
 #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
 
 
-int IssueCommand()
+int IssueCommand(int threadId)
 {
     //NRF24_Send((uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
+}
+
+void Channel_Updater(int threadid)
+{
+    while(1);
+}
+
+void Raw_Init(int argc, char *argv[])
+{
+}
+
+static volatile void sendCommand(uint8_t val, uint8_t channel)
+{
+}
+
+#endif
+
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* --------------------------------------For Testing without FC, on development PC----------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+
+#if defined MODE_DEBUG_NO_FC
+
+
+int IssueCommand()
+{
+    return 0;
+}
+
+void Channel_Updater(int threadid)
+{
+    while(1);
 }
 
 void Raw_Init(int argc, char *argv[])

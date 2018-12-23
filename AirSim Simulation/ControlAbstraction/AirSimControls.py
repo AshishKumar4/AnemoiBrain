@@ -7,6 +7,12 @@ import time
 from threading import Thread
 from socket import *
 
+#  STREAM_PROTOCOL_1 Refers to conventional failproof streaming of values as packets, encapsulated and later stripped off on the other hand 
+#  STREAM_PROTOCOL_2 Refers to newer, faster and lightweight but simplest streaming, stream of simple bytes. This isn't failproof and errors 
+#                    may be entroduced.
+
+STREAM_PROTOCOL = 2
+
 
 def valMap(i, imin, imax, omin, omax):
     aa = omin + (((omax - omin) / (imax - imin)) * (i - imin))  # The formula to map ranges
@@ -30,8 +36,8 @@ class AirSimControls:
         self.ip = ip
         self.threads = list()
         self.portBase = portBase
-        self.socks = list()
-        self.connections = list()
+        self.socks = dict()#list()
+        self.connections = dict()#list()
         self.channelTable = {
             0: {"name": "throttle", "func": self.setThrottle},
             1: {"name": "pitch", "func": self.setPitch},
@@ -49,13 +55,13 @@ class AirSimControls:
         print("Starting Listener Threads, Base PORT is " + str(portBase))
         # We Now need to setup the AirSim Simulator before we can start the threads!
         ############################ AirSim MultiCopter Initialization ############################
-        #/client = airsim.MultirotorClient()
-        #/self.client = client
-        #/client.confirmConnection()
-        #/client.enableApiControl(True)
-        #/client.armDisarm(True)
+        client = airsim.MultirotorClient()
+        self.client = client
+        client.confirmConnection()
+        client.enableApiControl(True)
+        client.armDisarm(True)
         # Some Parameter Definitions, tweak them for realistic behavior
-        self.timeSlice = 0.005
+        self.timeSlice = 0.001
         self.rmin = -1
         self.rmax = 1
         self.pmin = -1
@@ -78,19 +84,19 @@ class AirSimControls:
     def ChannelSyncToSim(self):
         # Now we Sync the data and send it over to the simulator
         while True:
-            #/self.client.moveByAngleThrottleAsync(self.p, self.r, self.t, self.y, self.timeSlice)
+            self.client.moveByAngleThrottleAsync(self.p, self.r, self.t, self.y, self.timeSlice)
             time.sleep(self.timeSlice)
     def ChannelControllers(self, id):
         print("ID: " + str(id))
         lport = id + self.portBase
         s = socket(AF_INET, SOCK_STREAM)
-        self.socks.append(s)
+        self.socks[id] = s
         s.bind((self.ip, lport))
         s.listen(5)
         while True:
             try:
                 c, a = s.accept()
-                self.connections.append(c)
+                self.connections[id] = c
                 # Handshake Message ->  IN: "Hello Gardien!"
                 buff = c.recv(1024).decode("utf-8")
                 if buff == "Hello Gardien!":
@@ -103,30 +109,34 @@ class AirSimControls:
                 # Go into an infinite while loop and look for command requests
                 bb = b""
                 while True:
+                    g = c.recv(4096)
+                    if len(g) == 0:
+                        print("Connection Broken...")
+                        del self.connections[id]
+                        del c
+                        raise Exception('Connection Broken')
                     try:
-                        g = c.recv(4096)
-                        if len(g) == 0:
-                            print("Connection Broken...")
-                            del self.connections[id]
-                            del c
-                            raise Exception('Connection Broken')
-                        tmp = bb + g
-                        a = tmp.decode("utf-8")
-                        bb = bytes(a[tmp.rfind(b".") :], "utf-8")  # Get the index of the last dot and store it for future
-                        b = str(a).split(".")
+                        if STREAM_PROTOCOL == 1:
+                            tmp = bb + g
+                            a = tmp.decode("utf-8")
+                            bb = bytes(a[tmp.rfind(b".") :], "utf-8")  # Get the index of the last dot and store it for future
+                            b = str(a).split(".")
+                            print(b)
+                            for i in b:  # For multiple logged commands
+                                cmd = i.split(":")
+                                if len(cmd) == 3:  # We recieved the command properly
+                                    # print("Got Request nicely...")
+                                    val = float(int(cmd[1]))
+                                    #print("Got Request "+ self.channelTable[id]["name"] + " :"+ str(val))
+                                    self.channelTable[id]["func"](val)
+                        elif STREAM_PROTOCOL == 2:
+                            for i in g:
+                                self.channelTable[id]["func"](i)
                     except ValueError as e:
                         print("Error in Recieving and parsing...")
                         del self.connections[id]
                         del c
                         raise Exception('Unknown Error in parsing')
-                    print(b)
-                    for i in b:  # For multiple logged commands
-                        cmd = i.split(":")
-                        if len(cmd) == 3:  # We recieved the command properly
-                            # print("Got Request nicely...")
-                            val = float(int(cmd[1]))
-                            #print("Got Request "+ self.channelTable[id]["name"] + " :"+ str(val))
-                            self.channelTable[id]["func"](val)
             except Exception as e:
                 print(e)
         return None

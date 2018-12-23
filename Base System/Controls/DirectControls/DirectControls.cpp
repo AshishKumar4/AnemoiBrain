@@ -15,20 +15,39 @@
 
 #include "DirectControls.h"
 
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* --------------------------------------------------Some Configurations--------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+/*
+  STREAM_PROTOCOL_1 Refers to conventional failproof streaming of values as packets, encapsulated and later stripped off on the other hand 
+  STREAM_PROTOCOL_2 Refers to newer, faster and lightweight but simplest streaming, stream of simple bytes. This isn't failproof and errors 
+                    may be entroduced.
+*/
+//#define STREAM_PROTOCOL_1 // FailProof, Encapsulate
+#define STREAM_PROTOCOL_2 // Simple Byte Stream, Faster and lightweight
+
+//#define DRONELESS_LOCAL_TEST
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* ------------------------------------------------Permanent Configurations------------------------------------------------ */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+#if defined(STREAM_PROTOCOL_1)
+#undef STREAM_PROTOCOL_2
+#elif defined(STREAM_PROTOCOL_2)
+#undef STREAM_PROTOCOL_1
+#endif
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* -----------------------------------------------------Main Program------------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
 using namespace std;
 
 const char HANDSHAKE_IN_MSG[] = "Hello Gardien!";
 const char HANDSHAKE_OUT_MSG[] = "Hello Overloard!";
 int opt = 1;
-/*
-#define PORT_BASE 8300
-
-#define PORT_THROTTLE PORT_BASE + 0
-#define PORT_PITCH PORT_BASE + 1
-#define PORT_ROLL PORT_BASE + 2
-#define PORT_YAW PORT_BASE + 3
-#define PORT_AUX1 PORT_BASE + 4
-#define PORT_AUX2 PORT_BASE + 5*/
 
 void DirectController::InitSequence()
 {
@@ -164,7 +183,7 @@ void DirectController::sendCommand(int val, int channel)
 {
   try
   {
-    if (val == -1)  // If the value recieved is nonsence, send over the last sensible data
+    if (val == -1) // If the value recieved is nonsence, send over the last sensible data
     {
       val = channelBuffs[channel];
     }
@@ -181,10 +200,20 @@ void DirectController::sendCommand(int val, int channel)
     {
       channelBuffs[channel] = val;
     }
-    stringstream ss;// = new stringstream;
+    char *bmsg;
+    int blen = 0;
+#if defined(STREAM_PROTOCOL_1)
+    stringstream ss; // = new stringstream;
     ss << ".[:" << val << ":]";
-    string msg = ss.str();// = new string(ss->str());
-    send(server_fd[channel], msg.c_str(), msg.size(), 0);
+    string msg = ss.str(); // = new string(ss->str());
+    bmsg = (char *)msg.c_str();
+    blen = msg.size();
+#elif defined(STREAM_PROTOCOL_2)
+    uint8_t gm[1] = {uint8_t(val)};
+    bmsg = (char*)gm;
+    blen = 1;
+#endif
+    send(server_fd[channel], bmsg, blen, 0);
     /*delete msg;
     delete ss;*/
   }
@@ -222,4 +251,37 @@ void DirectController::setAux1(int val)
 void DirectController::setAux2(int val)
 {
   sendCommand(val, 5);
+}
+
+/*
+  Sensors APIs 
+*/
+
+int DirectController::startSensorsServer()
+{
+  return 0;
+}
+
+DroneState_t *DirectController::getState()
+{
+  return NULL;
+}
+
+DronePosition_t *DirectController::getPosition()
+{
+  return NULL;
+}
+
+int DirectController::startCameraServer()
+{
+  return 0;
+}
+int *DirectController::getCameraView(int id)
+{
+  return NULL;
+}
+
+int *DirectController::getCameraView(DroneCamera_t *camera)
+{
+  return NULL;
 }

@@ -19,13 +19,13 @@ obj = $(CPP_OBJ_FILES) $(C_OBJ_FILES)
 MAIN:=ControlServer.o
 OUTPUT:=ControlServer
 
-INCLUDED:= $(AIRSIM_INCLUDE)	#-I$(LIBRARY) -I$(SOURCE)
+INCLUDED:=# $(AIRSIM_INCLUDE)	#-I$(LIBRARY) -I$(SOURCE)
 
 LIBS_RPI3:=$(wildcard ./lib/rpi3/*.so)#./lib/rpi3*.so
 LIBS_RPI0:=$(wildcard ./lib/rpi0/*.so)
 LIBS_PC:=$(wildcard ./lib/pc/*.so)
 
-CXXFLAGS:= -lstdc++ -O0 -std=gnu++11 $(INCLUDED)
+CXXFLAGS:= -lstdc++ -O2 -std=gnu++11 $(INCLUDED)
 LDFLAGS+=-lutil -lpthread 
 LD_SPL_FLAGS+=-lwiringPi
 all: clean build clean 
