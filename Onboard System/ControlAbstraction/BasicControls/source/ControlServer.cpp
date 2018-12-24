@@ -237,12 +237,12 @@ int ControlServer::CreateChannel(int port, int channel) // This would create a p
     address->sin_port = htons(port);
 
     // Forcefully attaching socket to the given port
-    bind(sfd, (struct sockaddr *)address, sizeof(struct sockaddr_in));
-    /*if (bind(sfd, (struct sockaddr *)address, sizeof(struct sockaddr_in)) < 0)
+    //bind(sfd, (struct sockaddr *)address, sizeof(struct sockaddr_in));
+    if (::bind(sfd, (struct sockaddr *)address, sizeof(struct sockaddr_in)) < 0)
     {
         perror("bind failed");
         exit(EXIT_FAILURE);
-    }*/
+    }
     try
     {
         if (server_fd.size() <= channel)
