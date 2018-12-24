@@ -235,7 +235,7 @@ class ManualController
             //controls->setAux1((a1_val));
             //controls->setAux2((a2_val));
             cout << "\n";
-            std::this_thread::sleep_for(std::chrono::milliseconds(3));
+            std::this_thread::sleep_for(std::chrono::microseconds(1000));
         }
         //serial->closeSerial();
     }

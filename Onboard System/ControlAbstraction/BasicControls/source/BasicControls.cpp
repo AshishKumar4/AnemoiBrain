@@ -37,7 +37,14 @@
 */
 
 #define SHOW_STATUS_RC
-//#define SHOW_STATUS_ARMED
+#define SHOW_STATUS_ARMED
+
+#if defined(MODE_AIRSIM)
+
+#define AIRSIM_MODE_API
+//#define AIRSIM_MODE_SOCKETS
+
+#endif
 
 #if defined(MODE_REALDRONE)
 /*
@@ -365,10 +372,10 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
 
 #if defined MSP_Serial_PROTOCOL
 
-#include "LowLevel/MSP/inc/msp/MSP.hpp"
-#include "LowLevel/MSP/inc/msp/msg_print.hpp"
-#include "LowLevel/MSP/inc/msp/msp_id.hpp"
-#include "LowLevel/MSP/inc/msp/FlightController.hpp"
+#include "LowLevel/msp/MSP.hpp"
+#include "LowLevel/msp/msg_print.hpp"
+#include "LowLevel/msp/msp_id.hpp"
+#include "LowLevel/msp/FlightController.hpp"
 
 fcu::FlightController *FlController;
 
@@ -510,12 +517,16 @@ void sendCommand(uint8_t val, uint8_t channel)
 
 #if defined MODE_AIRSIM
 
-#include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
+#if defined(AIRSIM_MODE_SOCKET)
 
+#elif defined(AIRSIM_MODE_API)
+#include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
+#include "rpc/server.h"
 
 int IssueCommand(int threadId)
 {
     //NRF24_Send((uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
+    return 0;
 }
 
 void Channel_Updater(int threadid)
@@ -525,12 +536,24 @@ void Channel_Updater(int threadid)
 
 void Raw_Init(int argc, char *argv[])
 {
+    //rpc::server srv(8080);
+    msr::airlib::MultirotorRpcLibClient client;
+
+    cout << "Press Enter to enable API control" << endl; cin.get();
+    client.enableApiControl(true);
+
+    cout << "Press Enter to arm the drone" << endl; cin.get();
+    client.armDisarm(true);
+
+    cout << "Press Enter to takeoff" << endl; cin.get();
+    client.takeoffAsync(5)->waitOnLastTask();//*/
 }
 
 static volatile void sendCommand(uint8_t val, uint8_t channel)
 {
 }
 
+#endif
 #endif
 
 

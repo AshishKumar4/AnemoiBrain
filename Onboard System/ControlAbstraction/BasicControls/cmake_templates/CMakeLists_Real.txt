@@ -1,0 +1,35 @@
+cmake_minimum_required(VERSION 3.0.0)
+project(ControlServer)
+set (CMAKE_CXX_STANDARD 11)
+
+# Include the Necessary Headers
+include_directories(include
+    include/LowLevel)
+
+
+# Add the Linker Directories
+link_directories(lib/
+    build/)
+
+# Initialize the Source Variables
+file(GLOB LOWLEVELS "source/*/*.cpp")
+#file(GLOB SOURCES "source/*.cpp")
+
+# Some global configurations
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
+# Build our Library
+set(LIBRARY_SOURCES "source/BasicControls.cpp")
+add_library(BasicControls SHARED ${LOWLEVELS} ${LIBRARY_SOURCES})
+target_link_libraries(BasicControls Threads::Threads)
+target_link_libraries(BasicControls libmspclient.so)
+target_link_libraries(BasicControls libmsp.so)
+target_link_libraries(BasicControls libmsp_fcu.so)
+target_link_libraries(BasicControls libmsp_msg_print.so)
+install(TARGETS BasicControls DESTINATION lib/)
+
+# Build our Control Server
+set(SERVER_SOURCES "source/ControlServer.cpp")
+add_executable(${PROJECT_NAME} ${SERVER_SOURCES})
+target_link_libraries(${PROJECT_NAME} BasicControls)

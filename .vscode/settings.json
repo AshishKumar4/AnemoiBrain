@@ -56,7 +56,8 @@
         "codecvt": "cpp",
         "condition_variable": "cpp",
         "future": "cpp",
-        "bitset": "cpp"
+        "bitset": "cpp",
+        "*.ipp": "cpp"
     },
     "python.formatting.provider": "black",
     // Files excluded from counting.

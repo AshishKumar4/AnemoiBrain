@@ -1,5 +1,5 @@
-#ifndef BASICCONTROLS_H
-#define BASICCONTROLS_H
+#pragma once 
+
 #include "stdint.h"
 
 #define CP_MAGIC 110
@@ -20,6 +20,10 @@ void setYaw(int yaw);
 void setAux1(int val);
 void setAux2(int val);
 
+void setThrottle(int throttle);
+void setPitch(int pitch);
+void setRoll(int roll);
+void setYaw(int yaw);
+void setAux1(int val);
+void setAux2(int val);
 int BasicControls_init(int argc, char *argv[]);
-
-#endif

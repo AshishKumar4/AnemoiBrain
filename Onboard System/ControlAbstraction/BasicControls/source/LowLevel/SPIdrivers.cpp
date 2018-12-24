@@ -7,14 +7,14 @@
 #include "stdio.h"
 #include "stdlib.h"
 
-#include "./SPIdrivers.h"
+#include "SPIdrivers.h"
 
 /*******************************************************************************************************/
 /*******************************************************************************************************/
 
 int SPI_init(char* file)
 {
-    int fd = (int)open(file, O_RDWR);
+    int fd = reinterpret_cast<int>(open(file, O_RDWR));
     unsigned int speed = SPI_SPEED;
     ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
 
@@ -27,8 +27,8 @@ int SPI_ReadWrite(int fd, uintptr_t writebuff, uintptr_t readbuff, size_t len)
     //uintptr_t tmp = (uintptr_t)malloc(len);
     struct spi_ioc_transfer spi;
     memset(&spi, 0, sizeof(spi));
-    spi.tx_buf = (unsigned long)writebuff;
-    spi.rx_buf = (unsigned long)readbuff;
+    spi.tx_buf = reinterpret_cast<unsigned long>(writebuff);
+    spi.rx_buf = reinterpret_cast<unsigned long>(readbuff);
     spi.len    = len;
     spi.speed_hz = SPI_SPEED;
     spi.bits_per_word = 8;
@@ -42,8 +42,8 @@ int SPI_send(int fd, uintptr_t buffer, size_t len)
 {
     struct spi_ioc_transfer spi;
     memset(&spi, 0, sizeof(spi));
-    spi.tx_buf = (unsigned long)buffer;
-    spi.rx_buf = (unsigned long)buffer;
+    spi.tx_buf = reinterpret_cast<unsigned long>(buffer);
+    spi.rx_buf = reinterpret_cast<unsigned long>(buffer);
     spi.len    = len;
     
     ioctl(fd, SPI_IOC_MESSAGE(1), &spi);
@@ -55,8 +55,8 @@ int SPI_read(int fd, uintptr_t buffer, size_t len)
 {
     struct spi_ioc_transfer spi;
     memset(&spi, 0, sizeof(spi));
-    spi.tx_buf = (unsigned long)buffer;
-    spi.rx_buf = (unsigned long)buffer;
+    spi.tx_buf = reinterpret_cast<unsigned long>(buffer);
+    spi.rx_buf = reinterpret_cast<unsigned long>(buffer);
     spi.len    = len;
     
     ioctl(fd, SPI_IOC_MESSAGE(1), &spi);

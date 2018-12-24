@@ -1,13 +1,14 @@
 OBJ:=objs
 CC:=gcc
-CPP:=g++
+CPP:=clang++-5.0#g++
 LD:=ld
 AS:=as
 NASM:=nasm
+#CXX:=clang++-5.0
+CLANG++:=clang++-5.0
 
-AIRSIM_AIRLIB_DIR:=/home/unrealengine/Desktop/GuardianGrounds/Plugins/AirSim/Source/AirLib/include/vehicles/multirotor
-AIRSIM_PROJ_SOURCE_DIR:=/home/unrealengine/Desktop/GuardianGrounds/Plugins/AirSim/Source
-AIRSIM_INCLUDE:=-I$(AIRSIM_PROJ_SOURCE_DIR)/AirLib/deps/rpclib/include -I$(AIRSIM_AIRLIB_DIR) -I$(AIRSIM_PROJ_SOURCE_DIR)/AirLib/deps/eigen3 -I$(AIRSIM_PROJ_SOURCE_DIR)/AirLib/include
+AIRSIM_SOURCE_DIR:=/home/unrealengine/Desktop/GuardianGrounds/Plugins/AirSim/Source/#/opt/AirSim/
+AIRSIM_INCLUDE:=-I$(AIRSIM_SOURCE_DIR)/AirLib/deps/rpclib/include -I$(AIRSIM_SOURCE_DIR)/AirLib/deps/eigen3 -I$(AIRSIM_SOURCE_DIR)/AirLib/include
 
 OBJ_DIR:=./
 C_OBJ_FILES := $(patsubst ./%.c,$(OBJ_DIR)/%.o,$(wildcard ./*.c))	\
@@ -19,19 +20,28 @@ obj = $(CPP_OBJ_FILES) $(C_OBJ_FILES)
 MAIN:=ControlServer.o
 OUTPUT:=ControlServer
 
-INCLUDED:=# $(AIRSIM_INCLUDE)	#-I$(LIBRARY) -I$(SOURCE)
+INCLUDED:= $(AIRSIM_INCLUDE)	#-I$(LIBRARY) -I$(SOURCE)
 
 LIBS_RPI3:=$(wildcard ./lib/rpi3/*.so)#./lib/rpi3*.so
 LIBS_RPI0:=$(wildcard ./lib/rpi0/*.so)
 LIBS_PC:=$(wildcard ./lib/pc/*.so)
 
-CXXFLAGS:= -lstdc++ -O2 -std=gnu++11 $(INCLUDED)
-LDFLAGS+=-lutil -lpthread 
+LIBS_AIRSIM:=$(LIBS_PC) \
+			$(wildcard /opt/AirSim/build_debug/output/lib/*.a) 
+			#$(wildcard $(AIRSIM_SOURCE_DIR)/AirLib/lib/x64/Debug/*.a) \
+			#$(wildcard $(AIRSIM_SOURCE_DIR)/AirLib/lib/x64/*.a) \
+			#$(wildcard $(AIRSIM_SOURCE_DIR)/AirLib/lib/x64/Debug/*.a) \
+			#$(wildcard /opt/AirSim/llvm-build/output/lib/*.a) 
+
+CXXFLAGS:= -std=c++11  $(INCLUDED) #-lstdc++ -O2 -std=gnu++11 
+LDFLAGS+=-lpthread#-lutil -lpthread 
 LD_SPL_FLAGS+=#-lwiringPi
+
 all: clean build clean 
 test: clean test-build clean
 pi3: clean build-pi3 clean
 pi0: clean build-pi0 clean
+airsim: clean build-airsim clean
 
 brun: all run
 
@@ -39,13 +49,16 @@ build-pi3: $(obj)
 	$(CXX) -o $(OUTPUT) $^ $(LIBS_RPI3) $(LDFLAGS) $(LD_SPL_FLAGS)
 
 build-pi0: $(obj)
-	$(CSS) -o $(OUTPUT) $^ $(LIBS_RPI0) $(LDFLAGS) $(LD_SPL_FLAGS)
+	$(CXX) -o $(OUTPUT) $^ $(LIBS_RPI0) $(LDFLAGS) $(LD_SPL_FLAGS)
 
 build: $(obj)
 	$(CXX) -o $(OUTPUT) $^ $(LIBS_RPI0) $(LDFLAGS) $(LD_SPL_FLAGS)
 
 test-build: $(obj)
 	$(CXX) -o $(OUTPUT) $^ $(LIBS_PC) $(LDFLAGS)
+
+build-airsim: $(obj)
+	$(CLANG++) -o $(OUTPUT) $^ $(LIBS_AIRSIM) $(LDFLAGS) -lc++abi
 
 build-main:	$(MAIN)
 	$(CXX) -o $(OUTPUT) $^ $(LDFLAGS)

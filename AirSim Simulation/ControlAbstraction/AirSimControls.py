@@ -61,7 +61,7 @@ class AirSimControls:
         client.enableApiControl(True)
         client.armDisarm(True)
         # Some Parameter Definitions, tweak them for realistic behavior
-        self.timeSlice = 0.001
+        self.timeSlice = 0.0005
         self.rmin = -1
         self.rmax = 1
         self.pmin = -1
