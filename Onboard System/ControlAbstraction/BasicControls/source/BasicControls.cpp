@@ -514,7 +514,6 @@ void sendCommand(uint8_t val, uint8_t channel)
 /* -------------------------------------For AirSim Simple FC, through provided APIs---------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
 
-
 #if defined MODE_AIRSIM
 
 #if defined(AIRSIM_MODE_SOCKET)
@@ -522,6 +521,23 @@ void sendCommand(uint8_t val, uint8_t channel)
 #elif defined(AIRSIM_MODE_API)
 #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
 #include "rpc/server.h"
+
+#define TIMESLICE 0.0005
+
+msr::airlib::MultirotorRpcLibClient client;
+
+/*
+
+def valMap(i, imin, imax, omin, omax):
+    aa = omin + (((omax - omin) / (imax - imin)) * (i - imin))  # The formula to map ranges
+    return aa
+*/
+
+float rcShrink(uint8_t val, float omin = -1, float omax = 1)
+{
+    float aa = omin + (((omax)/(255.0)) * int(val));
+    return aa;
+}
 
 int IssueCommand(int threadId)
 {
@@ -531,22 +547,25 @@ int IssueCommand(int threadId)
 
 void Channel_Updater(int threadid)
 {
-    while(1);
+    while (1);
+    {
+        //client.moveByAngleThrottleAsync(rcShrink(RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 10), rcShrink(RC_DATA[YAW], -6, 6), TIMESLICE);
+        std::this_thread::sleep_for(std::chrono::microseconds(int(TIMESLICE * 1000 * 1000)));
+    }
 }
 
 void Raw_Init(int argc, char *argv[])
 {
     //rpc::server srv(8080);
-    msr::airlib::MultirotorRpcLibClient client;
 
-    cout << "Press Enter to enable API control" << endl; cin.get();
-    client.enableApiControl(true);
+    //cout << "Press Enter to enable API control" << endl; cin.get();
+    /*client.enableApiControl(true);
 
-    cout << "Press Enter to arm the drone" << endl; cin.get();
+    //cout << "Press Enter to arm the drone" << endl; cin.get();
     client.armDisarm(true);
 
-    cout << "Press Enter to takeoff" << endl; cin.get();
-    client.takeoffAsync(5)->waitOnLastTask();//*/
+    //cout << "Press Enter to takeoff" << endl; cin.get();
+    client.takeoffAsync(5); //*/
 }
 
 static volatile void sendCommand(uint8_t val, uint8_t channel)
@@ -556,14 +575,11 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
 #endif
 #endif
 
-
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* --------------------------------------For Testing without FC, on development PC----------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
 
-
 #if defined MODE_DEBUG_NO_FC
-
 
 int IssueCommand()
 {
@@ -572,7 +588,8 @@ int IssueCommand()
 
 void Channel_Updater(int threadid)
 {
-    while(1);
+    while (1)
+        ;
 }
 
 void Raw_Init(int argc, char *argv[])
