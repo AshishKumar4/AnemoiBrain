@@ -522,7 +522,7 @@ void sendCommand(uint8_t val, uint8_t channel)
 #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
 #include "rpc/server.h"
 
-#define TIMESLICE 0.0005
+#define TIMESLICE 0.001
 
 msr::airlib::MultirotorRpcLibClient client;
 
@@ -533,9 +533,9 @@ def valMap(i, imin, imax, omin, omax):
     return aa
 */
 
-float rcShrink(uint8_t val, float omin = -1, float omax = 1)
+float rcShrink(uint8_t val, float omin = -1.0, float omax = 1.0)
 {
-    float aa = omin + (((omax)/(255.0)) * int(val));
+    float aa = omin + (((omax - omin)/(255.0)) * int(val));
     return aa;
 }
 
@@ -547,9 +547,11 @@ int IssueCommand(int threadId)
 
 void Channel_Updater(int threadid)
 {
-    while (1);
+    while (1)
     {
-        //client.moveByAngleThrottleAsync(rcShrink(RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 10), rcShrink(RC_DATA[YAW], -6, 6), TIMESLICE);
+        //mtx.lock();
+        client.moveByAngleThrottleAsync(rcShrink(RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 10), rcShrink(RC_DATA[YAW], -6.0, 6.0), TIMESLICE);
+        //mtx.unlock();
         std::this_thread::sleep_for(std::chrono::microseconds(int(TIMESLICE * 1000 * 1000)));
     }
 }
@@ -559,7 +561,7 @@ void Raw_Init(int argc, char *argv[])
     //rpc::server srv(8080);
 
     //cout << "Press Enter to enable API control" << endl; cin.get();
-    /*client.enableApiControl(true);
+    client.enableApiControl(true);
 
     //cout << "Press Enter to arm the drone" << endl; cin.get();
     client.armDisarm(true);
@@ -570,6 +572,7 @@ void Raw_Init(int argc, char *argv[])
 
 static volatile void sendCommand(uint8_t val, uint8_t channel)
 {
+    //client.moveByAngleThrottleAsync(rcShrink(RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 10), rcShrink(RC_DATA[YAW], -6, 6), 10);
 }
 
 #endif

@@ -377,6 +377,7 @@ class ManualController
 
 int main(int argc, char **argv)
 {
+    char* serialport = "/dev/ttyUSB0";
     DirectController* droneControl;
     if(argc == 1)
         droneControl = new DirectController("0.0.0.0");
@@ -384,10 +385,12 @@ int main(int argc, char **argv)
         droneControl = new DirectController(argv[1]);
     else if(argc == 3)
         droneControl = new DirectController(argv[1], atoi(argv[2]));
+    else if(argc == 4)
+        serialport = argv[3];
 
     //DirectController droneControl("0.0.0.0");
-    //ManualController remote(droneControl, serialport);
-    ManualController remote(droneControl, "/dev/ttyUSB1");
+    ManualController remote(droneControl, serialport);
+    //ManualController remote(droneControl, "/dev/ttyUSB0");
     remote.ExecutorSerial();
     return 0;
 }
