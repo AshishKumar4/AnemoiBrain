@@ -21,7 +21,7 @@
         1. Aisim simulation mode, fake, simple flight controller using Airsim C++ APIs 
         2. Real Drone Mode, To fly the real thing. Real Flight Controller required.
 */
-//#define MODE_AIRSIM
+#define MODE_AIRSIM
 //#define MODE_MAVLINK_SIM
 //#define MODE_DEBUG_NO_FC
 

@@ -59,9 +59,9 @@ std::mutex smtx;
 
 class ControlServer
 {
-    static int* server_fd;
+    static int *server_fd;
     vector<thread *> ListenerThreads;
-    static struct sockaddr_in** addresses;
+    static struct sockaddr_in **addresses;
 
     static int PORT_BASE;
 
@@ -112,8 +112,8 @@ class ControlServer
     static void ChannelListeners(int i);
 };
 
-int* ControlServer::server_fd = new int[8];
-struct sockaddr_in** ControlServer::addresses = (struct sockaddr_in**)malloc(sizeof(struct sockaddr_in*)*8);
+int *ControlServer::server_fd = new int[8];
+struct sockaddr_in **ControlServer::addresses = (struct sockaddr_in **)malloc(sizeof(struct sockaddr_in *) * 8);
 
 int ControlServer::PORT_BASE;
 
@@ -150,19 +150,26 @@ back:
         }
         std::cout << "\nGot an incoming request...\n";
 
-        valread = read(new_socket, buff, 1024);
-        if (valread == 0)
-            continue;
+        try
+        {
+            valread = read(new_socket, buff, 1024);
+            if (valread == 0)
+                continue;
 
-        if (strncmp(buff, HANDSHAKE_IN_MSG, strlen(HANDSHAKE_IN_MSG)))
-        {
-            std::cout << "Overloard Could not establish Connection / Handshake Failure...\n";
-            continue;
+            if (strncmp(buff, HANDSHAKE_IN_MSG, strlen(HANDSHAKE_IN_MSG)))
+            {
+                std::cout << "Overloard Could not establish Connection / Handshake Failure...\n";
+                continue;
+            }
+            else
+            {
+                send(new_socket, HANDSHAKE_OUT_MSG, strlen(HANDSHAKE_OUT_MSG), 0);
+                std::cout << "Overloard Connected Successfully...\n";
+            }
         }
-        else
+        catch (exception &e)
         {
-            send(new_socket, HANDSHAKE_OUT_MSG, strlen(HANDSHAKE_OUT_MSG), 0);
-            std::cout << "Overloard Connected Successfully...\n";
+            cout << "Some ERROR!!!" << e.what() << "\n";
         }
 
         // The Control Loop -->
