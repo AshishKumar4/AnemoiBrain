@@ -1,15 +1,20 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(ControlServer)
+set (ONBOARD_ROOT ../..)
 set (CMAKE_CXX_STANDARD 11)
 
 # Include the Necessary Headers
 include_directories(include
-    include/LowLevel)
+    include/LowLevel
+    ${ONBOARD_ROOT}/Utils/include
+    )
 
 
 # Add the Linker Directories
 link_directories(lib/
-    build/)
+    build/
+    ${ONBOARD_ROOT}/Utils/lib
+    )
 
 # Initialize the Source Variables
 file(GLOB LOWLEVELS "source/*/*.cpp")
@@ -33,3 +38,4 @@ install(TARGETS BasicControls DESTINATION lib/)
 set(SERVER_SOURCES "source/ControlServer.cpp")
 add_executable(${PROJECT_NAME} ${SERVER_SOURCES})
 target_link_libraries(${PROJECT_NAME} BasicControls)
+target_link_libraries(${PROJECT_NAME} OnboardUtils)

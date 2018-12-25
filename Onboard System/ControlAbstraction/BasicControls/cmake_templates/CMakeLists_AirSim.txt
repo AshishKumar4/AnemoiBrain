@@ -1,13 +1,12 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(ControlServer)
+set (ONBOARD_ROOT ../..)
 set (AIRSIM_ROOT /opt/AirSim)
 set (CMAKE_CXX_STANDARD 11)
 
 # We need to compile in AIRSIM MODE
 add_definitions(-DMODE_AIRSIM)
 
-#LIST(APPEND CMAKE_MODULE_PATH "${AIRSIM_ROOT}/cmake/cmake-modules") 
-#INCLUDE("${AIRSIM_ROOT}/CommonSetup.cmake")
 LIST(APPEND CMAKE_MODULE_PATH "cmake_templates") 
 INCLUDE("cmake_templates/CommonSetup.cmake")
 CommonSetup()
@@ -15,18 +14,23 @@ CommonSetup()
 # Include the Necessary Headers
 # Set the path to AirLib directly correctly !!!
 include_directories(include
+    include/LowLevel
+    ${ONBOARD_ROOT}/Utils/include
     ${AIRSIM_ROOT}/AirLib/include
     ${RPC_LIB_INCLUDES}
     ${AIRSIM_ROOT}/MavLinkCom/include
     ${AIRSIM_ROOT}/MavLinkCom/common_utils
-    ${AIRSIM_ROOT}/AirLib/deps/eigen3)
+    ${AIRSIM_ROOT}/AirLib/deps/eigen3
+    )
 
 
 # Add the Linker Directories
 # Set the path to AirLib directly correctly !!!
 link_directories(lib/
     build/
-    ${AIRSIM_ROOT}/cmake/output/lib/)
+    ${ONBOARD_ROOT}/Utils/lib
+    ${AIRSIM_ROOT}/cmake/output/lib/
+    )
 
 # Some global configurations
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -34,7 +38,7 @@ find_package(Threads REQUIRED)
 
 # Build our Library
 set(LIBRARY_SOURCES "source/BasicControls.cpp")
-add_library(BasicControls STATIC ${LOWLEVELS} ${LIBRARY_SOURCES})
+add_library(BasicControls SHARED ${LOWLEVELS} ${LIBRARY_SOURCES})
 target_link_libraries(BasicControls Threads::Threads)
 target_link_libraries(BasicControls AirLib)
 target_link_libraries(BasicControls rpc)
@@ -45,3 +49,5 @@ install(TARGETS BasicControls DESTINATION lib/)
 set(SERVER_SOURCES "source/ControlServer.cpp")
 add_executable(${PROJECT_NAME} ${SERVER_SOURCES})
 target_link_libraries(${PROJECT_NAME} BasicControls)
+target_link_libraries(${PROJECT_NAME} OnboardUtils)
+target_link_libraries(${PROJECT_NAME} Threads::Threads)
