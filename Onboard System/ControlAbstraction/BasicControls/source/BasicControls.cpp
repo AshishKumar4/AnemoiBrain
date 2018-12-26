@@ -38,6 +38,7 @@
 
 #define SHOW_STATUS_RC
 #define SHOW_STATUS_ARMED
+#define RC_VIEW_UPDATE_RATE     200 // Miliseconds
 
 #if defined(MODE_AIRSIM)
 
@@ -384,7 +385,29 @@ int IssueCommand()
     return 0;
 }
 
-void Channel_Updater(int threadId);
+uint16_t rcExpand(uint8_t val) // Basically map val from 0, 255 to 1000 to 2000
+{
+    uint16_t aa = 1000 + (4 * uint16_t(val)); // The formula to map ranges
+    if (aa < 1000)
+        aa = 1000;
+    else if (aa > 2000)
+        aa = 2000;
+
+    return aa;
+}
+
+void Channel_Updater(int threadId)
+{
+    // Basicaly, make sure to update every 5 seconds to convey the FC that everything is fine.
+    while (1)
+    {
+        mtx.lock();
+        FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE])); //, pp->aux1, pp->aux2, 1000, 1000);
+        mtx.unlock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(800));
+    }
+}
+
 
 void Raw_Init(int argc, char *argv[])
 {
@@ -397,7 +420,6 @@ void Raw_Init(int argc, char *argv[])
     cout << "\n\tAttempting to connect to the Flight Controller...\n";
     std::chrono::high_resolution_clock::time_point start, end;
     bool feature_changed = false;
-start:
     FlController = new fcu::FlightController(device, baudrate);
 
     // wait until connection is established
@@ -411,12 +433,12 @@ start:
     if (FlController->isFirmwareCleanflight())
     {
         std::cout << "\n\n\tCleanFlight/BetaFlight FC Identified and Successfully Connected\n\n";
-        if (FlController->enableRxMSP() == 1)
+        /*if (FlController->enableRxMSP() == 1)
         {
             std::cout << "RX_MSP enabled, restart" << std::endl;
             feature_changed = true;
             goto start;
-        }
+        }*/
 
         if (feature_changed)
         {
@@ -478,29 +500,6 @@ start:
                 exit(0);
             }
         }*/
-}
-
-uint16_t rcExpand(uint8_t val) // Basically map val from 0, 255 to 1000 to 2000
-{
-    uint16_t aa = 1000 + (4 * uint16_t(val)); // The formula to map ranges
-    if (aa < 1000)
-        aa = 1000;
-    else if (aa > 2000)
-        aa = 2000;
-
-    return aa;
-}
-
-void Channel_Updater(int threadId)
-{
-    // Basicaly, make sure to update every 5 seconds to convey the FC that everything is fine.
-    while (1)
-    {
-        mtx.lock();
-        //FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE])); //, pp->aux1, pp->aux2, 1000, 1000);
-        mtx.unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-    }
 }
 
 void sendCommand(uint8_t val, uint8_t channel)
@@ -637,7 +636,7 @@ void Channel_ViewRefresh(int threadId)
         cout << rc;
 #endif
         mtx.unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(RC_VIEW_UPDATE_RATE));
     }
 }
 

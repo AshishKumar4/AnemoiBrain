@@ -386,7 +386,10 @@ int main(int argc, char **argv)
     else if(argc == 3)
         droneControl = new DirectController(argv[1], atoi(argv[2]));
     else if(argc == 4)
+    {
+        droneControl = new DirectController(argv[1], atoi(argv[2]));
         serialport = argv[3];
+    }
 
     //DirectController droneControl("0.0.0.0");
     ManualController remote(droneControl, serialport);
