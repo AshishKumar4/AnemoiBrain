@@ -49,12 +49,12 @@ namespace Onboard
 namespace Controls
 {
 
-int opt = 1; 
+int opt = 1;
 
 func_vi_t CHANNEL_HANDLER_TABLES[] = {&setThrottle, &setPitch, &setRoll, &setYaw, &setAux1, &setAux2};
 std::string CHANNEL_NAME_TABLES[] = {"throttle", "pitch", "roll", "yaw", "aux1", "aux2"};
 
-char **ControlChannelBuffer = (char**)malloc(sizeof(char*) * 8);
+char **ControlChannelBuffer = (char **)malloc(sizeof(char *) * 8);
 
 int ControlListeners(int i, int fd)
 {
@@ -108,6 +108,35 @@ int ControlListeners(int i, int fd)
     return 0;
 }
 } // namespace Controls
+
+#if defined(MSP_SERIAL_FORWARDING)
+
+namespace SerialForwarding
+{
+char *buff = new char[8192];
+
+int ControlListeners(int i, int fd)
+{
+    try
+    {
+        memset(buff, 0, 4096);
+        int valread = read(fd, buff, 4096);
+        if (valread == 0 || valread == -1)
+            return 1;
+
+        
+    }
+    catch (std::exception &e)
+    {
+        std::cout << "Some ERROR!!!" << e.what() << "\n";
+        return 1;
+    }
+    return 0;
+}
+} // namespace SerialForwarding
+
+#endif
+
 } // namespace Onboard
 
 int main(int argc, char const *argv[])
@@ -117,14 +146,14 @@ int main(int argc, char const *argv[])
     BasicControls_init(argc, (char **)argv); // Maybe lower levels can make use of command line args
 #endif
     Onboard::AbstractServer ControlServer(8400);
-    for(int i = 0; i < 6; i++)
+    for (int i = 0; i < 6; i++)
     {
         Onboard::Controls::ControlChannelBuffer[i] = new char[4096];
         ControlServer.AddChannels(Onboard::Controls::ControlListeners);
     }
     ControlServer.LaunchThreads();
     while (1)
-        std::cout<<"Some Error!";
-        ;
+        std::cout << "Some Error!";
+    ;
     return 0;
 }

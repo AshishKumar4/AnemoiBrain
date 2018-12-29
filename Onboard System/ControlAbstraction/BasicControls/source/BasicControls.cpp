@@ -38,7 +38,7 @@
 
 #define SHOW_STATUS_RC
 #define SHOW_STATUS_ARMED
-#define RC_VIEW_UPDATE_RATE     200 // Miliseconds
+#define RC_VIEW_UPDATE_RATE     100 // Miliseconds
 
 #if defined(MODE_AIRSIM)
 
@@ -67,7 +67,7 @@
         Data Gathering method
     */
 #define MSP_SERIAL_CLI_MONITOR
-
+#define MSP_SERIAL_FORWARDING
 /*
         Telemetry Type
     */
@@ -641,6 +641,52 @@ void Channel_ViewRefresh(int threadId)
 }
 
 #endif
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* ---------------------------------------------MSP Data stream forwarding------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+
+#if defined(MSP_SERIAL_FORWARDING)
+
+void Port_Forwarding_Init(int argc, int* argv[])
+{
+
+}
+/*
+void Port_Recieving_Thread(int tid)
+{
+    while(1)
+    {
+        mtx.lock();
+
+        mtx.unlock();
+    }
+}
+
+
+void Port_Transmitting_Thread(int tid)
+{
+    while(1)
+    {
+        mtx.lock();
+
+        mtx.unlock();
+    }
+}*/
+
+void Port_RxTx_Thread(int tid)
+{
+    while(1)
+    {
+        mtx.lock();
+
+        mtx.unlock();
+    }
+}
+
+#endif
+
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ----------------------------------------------General APIs for Control-------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
