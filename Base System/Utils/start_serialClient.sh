@@ -1,7 +1,9 @@
 #!/bin/bash
 
+pkill -f socat
+
 if [[ ! $1 ]]; then
-    sock="/dev/ttyUSB2"
+    sock="/dev/ttyS0"
 else 
     sock=$1
 fi
@@ -17,4 +19,4 @@ if [[ ! $3 ]]; then
 else 
     ip=$3
 fi
-socat pty,link=$sock,waitslave tcp:$ip:$port
+socat -d -d pty,link=$sock,waitslave tcp:$ip:$port

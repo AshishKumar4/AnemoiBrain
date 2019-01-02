@@ -24,37 +24,61 @@ namespace Onboard
 
 int opt = 1;
 
-const char HANDSHAKE_IN_MSG[] = "Hello Gardien!";
-const char HANDSHAKE_OUT_MSG[] = "Hello Overloard!";
-
-void AbstractServer::AddChannels(func_iii_t function) // Should be called once
+void AbstractServer::AddChannels(int index, func_iii_t function, func_iii_t initializer, int subchannel) // Should be called once
 {
-    server_fd.push_back(0);
-    addresses.push_back(NULL);
-    ChannelOperators.push_back(function);
+    if (ChannelOperators.size() <= index)
+    {
+        std::vector<func_iii_t> vec;
+        vec.push_back(function);
+        ChannelOperators.push_back(vec);
+        ChannelInitializers.push_back(initializer);
+        server_fd.push_back(0);
+        addresses.push_back(NULL);
+    }
+    else
+    {
+        if (ChannelOperators[index].size() <= subchannel)
+        {
+            ChannelOperators[index].push_back(function);
+        }
+        else
+        {
+            ChannelOperators[index][subchannel] = function;
+        }
+        ChannelInitializers[index] = initializer;
+    }
 }
 
-void AbstractServer::CreateChannels(func_iii_t function) // Should be called once
+void AbstractServer::CreateChannels(int index, func_iii_t function, func_iii_t initializer, int subchannel, bool initPort) // Should be called once
 {
-    AddChannels(function);
-    this->ListenerThreads.push_back(new std::thread(&AbstractServer::ChannelListeners, ChannelOperators.size() - 1, this));
+    AddChannels(index, function, initializer, subchannel);
+    if (initPort)
+    {
+        SetupChannel(PORT_BASE + index, index);
+    }
+    this->ListenerThreads.push_back(new std::thread(&AbstractServer::ChannelListener, index, this));
 }
 
-int AbstractServer::LaunchThreads()
+int AbstractServer::LaunchThreads(bool initPort)
 {
     if (!ListenerThreads.size())
     {
         for (int i = 0; i < ChannelOperators.size(); i++)
         {
-            this->ListenerThreads.push_back(new std::thread(&AbstractServer::ChannelListeners, i, this));
+            if (initPort)
+                SetupChannel(PORT_BASE + i, i);
+            this->ListenerThreads.push_back(new std::thread(&AbstractServer::ChannelListener, i, this));
         }
     }
+    return 0;
+}
 
+int AbstractServer::JoinThreads()
+{
     for (int i = 0; i < ChannelOperators.size(); i++)
     {
         ListenerThreads[i]->join();
     }
-    //std::cout << "Broken Pipe, Waiting for incoming Connections...";
     return 0;
 }
 
@@ -62,15 +86,31 @@ AbstractServer::AbstractServer(int portBase)
 {
     PORT_BASE = portBase;
 }
+
+AbstractServer::AbstractServer(AbstractServer *obj)
+{
+    PORT_BASE = obj->PORT_BASE;
+    // Make this up
+}
+
 AbstractServer::~AbstractServer()
 {
     // TODO: Release all the sockets here
 }
 
-void AbstractServer::ChannelListeners(int i, AbstractServer* thisObj)
+void AbstractServer::ChannelLogic(int i, int j, int fd, AbstractServer *thisObj)
+{
+    while (1)
+    {
+        if (thisObj->ChannelOperators[i][j](i, fd))
+            break;
+    }
+}
+
+void AbstractServer::ChannelListener(int i, AbstractServer *thisObj)
 {
     int PORT = i + thisObj->PORT_BASE;
-    thisObj->SetupChannel(PORT, i);
+    //thisObj->SetupChannel(PORT, i);
     int new_socket;
     ssize_t valread = 0;
 back:
@@ -79,7 +119,7 @@ back:
     struct sockaddr_in *address = thisObj->addresses[i];
     char *buff = new char[4096];
 
-    std::cout << "\n\nServer Initialized at port " << PORT << " Successfully...";
+    std::cout << "\n\nServer Started at port " << PORT << " Successfully...";
     if (listen(sfd, 5) < 0)
     {
         perror("listen");
@@ -95,40 +135,32 @@ back:
             //perror("accept");
             //exit(EXIT_FAILURE);
             printf("accept");
-            delete [] buff;
+            delete[] buff;
             goto back;
         }
         std::cout << "\nGot an incoming request...\n";
-        try
+        if (thisObj->ChannelInitializers[i](i, new_socket))
         {
-            thisObj->smtx.lock();
-            valread = read(new_socket, buff, 1024);
-            if (valread == 0)
-                continue;
-
-            if (strncmp(buff, HANDSHAKE_IN_MSG, strlen(HANDSHAKE_IN_MSG)))
-            {
-                std::cout << "Overloard Could not establish Connection / Handshake Failure...\n";
-                continue;
-            }
-            else
-            {
-                send(new_socket, HANDSHAKE_OUT_MSG, strlen(HANDSHAKE_OUT_MSG), 0);
-                std::cout << "Overloard Connected Successfully...\n";
-            }
-            thisObj->smtx.unlock();
-        }
-        catch (std::exception &e)
-        {
-            std::cout << "Some ERROR!!!" << e.what() << "\n";
+            std::cout << "\nHandshake Not Success!";
+            continue;
         }
         try
         {
-            while (1)
+            /*while (1)
             {
                 if (thisObj->ChannelOperators[i](i, new_socket))
                     break;
+            }*/
+            std::vector<std::thread *> reader;
+            for (int k = 0; k < thisObj->ChannelOperators[i].size(); k++)
+            {
+                reader.push_back(new std::thread(&(thisObj->ChannelLogic), i, k, new_socket, thisObj));
             }
+            for (int k = 0; k < thisObj->ChannelOperators[i].size(); k++)
+            {
+                reader[k]->join();
+            }
+            throw "Broken Pipe";
         }
         catch (std::exception &e)
         {

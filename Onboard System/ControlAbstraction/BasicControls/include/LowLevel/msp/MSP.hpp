@@ -190,7 +190,6 @@ public:
         wait = wait_us;
     }
 
-private:
     /**
      * @brief crc compute checksum of data package
      * @param id message ID
@@ -241,6 +240,7 @@ private:
      */
     void clear();
 
+private:
     std::string device;
     std::unique_ptr<SerialPortImpl> pimpl;
     std::mutex lock_write;

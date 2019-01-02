@@ -12,135 +12,13 @@
 
 #include "BasicControls.h"
 
-/* ------------------------------------------------------------------------------------------------------------------------ */
-/* --------------------------------------------------Some Configurations--------------------------------------------------- */
-/* ------------------------------------------------------------------------------------------------------------------------ */
-
-/*
-    Two Modes -> 
-        1. Aisim simulation mode, fake, simple flight controller using Airsim C++ APIs 
-        2. Real Drone Mode, To fly the real thing. Real Flight Controller required.
-*/
-//#define MODE_AIRSIM
-//#define MODE_MAVLINK_SIM
-//#define MODE_DEBUG_NO_FC
-
 #if !defined(MODE_AIRSIM) && !defined(MODE_MAVLINK_SIM) && !defined(MODE_DEBUG_NO_FC)
 #define MODE_REALDRONE
 #endif
 
-#define SYNCD_TRANSFER
-#define UPDATER_THREAD
-
-/*
-    Outputs to be shown on CLI
-*/
-
-#define SHOW_STATUS_RC
-#define SHOW_STATUS_ARMED
-#define RC_VIEW_UPDATE_RATE     100 // Miliseconds
-
-#if defined(MODE_AIRSIM)
-
-#define AIRSIM_MODE_API
-//#define AIRSIM_MODE_SOCKETS
-
+#if !defined(ONBOARD_SPI_PROTOCOL) && !defined(NRF24L01_SPI_PROTOCOL) && !defined(I2C_PROTOCOL) && !defined(MSP_Serial_PROTOCOL)
+#define FAKE_PROTOCOL
 #endif
-
-#if defined(MODE_REALDRONE)
-/*
-        There are two possible configurations, 
-        1) RPI unit is on board the drone and communicates with 
-            flight controller, and so the telemetry unit is connected to RPI directly.
-        2) RPI unit is off board the drone and communicates with the flight controller through Radio (wifi/ Xbee)
-    */
-
-/*
-        Telemetry Protocol
-    */
-//#define ONBOARD_SPI_PROTOCOL
-//#define NRF24L01_SPI_PROTOCOL
-//#define I2C_PROTOCOL
-#define MSP_Serial_PROTOCOL
-
-/*
-        Data Gathering method
-    */
-#define MSP_SERIAL_CLI_MONITOR
-#define MSP_SERIAL_FORWARDING
-/*
-        Telemetry Type
-    */
-//#define NRF24
-//#define WIFI
-//#define Xbee
-#endif
-
-/* ------------------------------------------------------------------------------------------------------------------------ */
-/* ---------------------------------------------------Some Definitions----------------------------------------------------- */
-/* ------------------------------------------------------------------------------------------------------------------------ */
-
-#define THROTTLE 0
-#define PITCH 1
-#define ROLL 2
-#define YAW 3
-#define AUX1 4
-#define AUX2 5
-
-uint8_t RC_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-using namespace std;
-mutex mtx;
-
-#if defined(ONBOARD_SPI_PROTOCOL) || defined(NRF24L01_SPI_PROTOCOL) || defined(I2C_PROTOCOL)
-struct ControlPackets
-{
-    unsigned char magic;
-    unsigned char throttle;
-    unsigned char pitch;
-    unsigned char roll;
-    unsigned char yaw;
-    unsigned char aux1;
-    unsigned char aux2;
-    unsigned char switches;
-    //unsigned char random[9];
-    unsigned char checksum;
-};
-
-struct ResponsePackets
-{
-    unsigned char magic;
-    unsigned char alt;
-    unsigned char pitch;
-    unsigned char roll;
-    unsigned char yaw;
-    unsigned char lat;
-    unsigned char lon;
-    unsigned char heading;
-    //unsigned char random[9];
-    unsigned char checksum;
-};
-
-struct CommandPackets
-{
-    uint8_t magic;
-    uint8_t value;
-    uint8_t channel;
-    uint8_t checksum;
-};
-
-ControlPackets defCp;
-ControlPackets oldDefCp;
-ResponsePackets rff;
-ControlPackets *pp = &defCp;
-ControlPackets *ppold = &oldDefCp;
-#else
-
-#endif
-
-timespec *t100n = new timespec;
-timespec *t1000n = new timespec;
-timespec *t10000n = new timespec;
-timespec *t100000n = new timespec;
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ---------------------------------------------For SPI Based Communication------------------------------------------------ */
@@ -194,7 +72,7 @@ int IssueCommand()
 #ifndef MODE_DEBUG_NO_FC
         SPI_ReadWrite((int)fd, (uintptr_t)ht, (uintptr_t)hr, (size_t)sizeof(ControlPackets));
 #endif
-        cout << "Successfully Issued Command\n";
+        std::cout << "Successfully Issued Command\n";
         return 0;
     }
     return 1;
@@ -202,7 +80,7 @@ int IssueCommand()
 
 void Channel_Updater(int threadid)
 {
-    cout << "\nSPI Updater Initialized...";
+    std::cout << "\nSPI Updater Initialized...";
     uint8_t *tbo = (uint8_t *)ppold;
     uint8_t *tb = (uint8_t *)pp;
     while (1)
@@ -220,7 +98,7 @@ void Channel_Updater(int threadid)
         memcpy((void *)tbo, (void *)tb, sizeof(ControlPackets));
         if (IssueCommand())
         {
-            cout << "Couldn't Issue the command\n";
+            std::cout << "Couldn't Issue the command\n";
         }
     skip:
         nanosleep(t10000n, NULL);
@@ -404,10 +282,9 @@ void Channel_Updater(int threadId)
         mtx.lock();
         FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE])); //, pp->aux1, pp->aux2, 1000, 1000);
         mtx.unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds(800));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
-
 
 void Raw_Init(int argc, char *argv[])
 {
@@ -417,7 +294,7 @@ void Raw_Init(int argc, char *argv[])
         msp::MSP msp(device, baudrate);
         msp.setWait(1);
     */
-    cout << "\n\tAttempting to connect to the Flight Controller...\n";
+    std::cout << "\n\tAttempting to connect to the Flight Controller...\n";
     std::chrono::high_resolution_clock::time_point start, end;
     bool feature_changed = false;
     FlController = new fcu::FlightController(device, baudrate);
@@ -534,7 +411,7 @@ def valMap(i, imin, imax, omin, omax):
 
 float rcShrink(uint8_t val, float omin = -1.0, float omax = 1.0)
 {
-    float aa = omin + (((omax - omin)/(255.0)) * int(val));
+    float aa = omin + (((omax - omin) / (255.0)) * int(val));
     return aa;
 }
 
@@ -581,7 +458,7 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
 /* --------------------------------------For Testing without FC, on development PC----------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
 
-#if defined MODE_DEBUG_NO_FC
+#if defined(MODE_DEBUG_NO_FC) || defined(FAKE_PROTOCOL)
 
 int IssueCommand()
 {
@@ -633,7 +510,7 @@ void Channel_ViewRefresh(int threadId)
 #if defined(SHOW_STATUS_RC)
         msp::msg::Rc rc;
         FlController->client.request(rc);
-        cout << rc;
+        std::cout << rc;
 #endif
         mtx.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(RC_VIEW_UPDATE_RATE));
@@ -642,51 +519,138 @@ void Channel_ViewRefresh(int threadId)
 
 #endif
 
+#if defined(MSP_REMOTE_TWEAKS)
+
+int MSP_SetPID(char* raw_data)
+{
+    return 0;
+}
+
+#endif 
+
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ---------------------------------------------MSP Data stream forwarding------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
 
-
 #if defined(MSP_SERIAL_FORWARDING)
 
-void Port_Forwarding_Init(int argc, int* argv[])
-{
+//#include "LowLevel/Serial.cpp"
 
+#include "LowLevel/msp/MSP.hpp"
+#include "LowLevel/msp/msg_print.hpp"
+#include "LowLevel/msp/msp_id.hpp"
+#include "LowLevel/msp/FlightController.hpp"
+
+char *bb = new char[4096];
+
+msp::MSP *msp_agent;
+
+MSP_Packet MSP_Agent(char *buf, int size)
+{
+    try
+    {
+        int j = 0;
+        std::vector<uint8_t> vec((uint8_t *)buf, (uint8_t *)(buf + size));
+        /*for (int i = 0; i < size; i++)
+        {
+            if (buf[i] == '$' && buf[i + 1] == 'M') // MSP Header
+            {
+                //buf[i+2] contains the direction
+                //buf[i+3] contains the size
+            }
+            printf("[%x]", vec[i]);
+        } //*/
+        printf("\n Sending...");
+        while (msp_agent->write(vec) != 1)
+            ;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+        if (msp_agent->hasData() < 1)
+        {
+            exit(0);
+            throw "No Data";
+        }
+
+        while (char(msp_agent->read()) != '$')
+            ;
+
+        printf("\n Got Data!");
+
+        uint8_t *rdat = (uint8_t *)bb;//malloc(1024); //sz + 1);
+        rdat[0] = '$';
+        rdat[1] = (uint8_t)msp_agent->read(); //hdr;
+        rdat[2] = (uint8_t)msp_agent->read(); //com_state;
+        rdat[3] = (uint8_t)msp_agent->read(); //data_size;
+        rdat[4] = (uint8_t)msp_agent->read(); //id;
+
+        int i;
+        int sz = rdat[3] + 6;
+        for (i = 5; i < rdat[3] + 5; i++)
+        {
+            rdat[i] = (uint8_t)msp_agent->read(); //data[i - 5];
+            //printf("{{%d}}", rdat[i]);
+        }
+
+        rdat[sz - 1] = (uint8_t)msp_agent->read(); //rcv_crc;
+        printf("Size: %d", sz);
+
+        /*for (int j = 0; j < sz; j++)
+        {
+            printf("<<%x>>", rdat[j]);
+        }*/
+
+        return MSP_Packet((char *)rdat, sz);
+    }
+    catch (std::exception &e)
+    {
+        printf("\n Some Error");
+        //while(1);
+        return MSP_Packet(NULL, 0);
+    }
+}
+
+//std::vector<SerialPort *> defaultPorts;
+
+void Port_Forwarding_Init(int argc, char *argv[])
+{
+    const std::string device = (argc > 1) ? std::string(argv[1]) : "/dev/ttyUSB0";
+    const size_t baudrate = (argc > 2) ? std::stoul(argv[2]) : 115200;
+    std::cout << "Opening Port " << device << std::endl;
+    msp_agent = new msp::MSP(device, baudrate);
+    //defaultPorts.push_back(new SerialPort(device.c_str(), baudrate));
+    /*char* buf = new char[4096];
+    for(int i = 0; i < 1000; i++)
+    {
+       // printf(".");
+        std::cout<<ReadFromPort(0, buf, 100)<<std::endl;
+        printf(buf);
+    }
+    while(1);*/
 }
 /*
-void Port_Recieving_Thread(int tid)
-{
-    while(1)
-    {
-        mtx.lock();
+std::mutex serial_mtx;
 
-        mtx.unlock();
-    }
+int WriteToPort(int portnum, char *buff, int size)
+{
+    //serial_mtx.lock();
+    int a = defaultPorts[portnum]->Write(buff, size);
+    //printf("..");
+    //serial_mtx.unlock();
+    return a;
 }
 
-
-void Port_Transmitting_Thread(int tid)
+int ReadFromPort(int portnum, char *buff, int size)
 {
-    while(1)
-    {
-        mtx.lock();
-
-        mtx.unlock();
-    }
+    //serial_mtx.lock();
+    int a = defaultPorts[portnum]->Read(buff, size);
+    //serial_mtx.unlock();
+    return a;
 }*/
-
-void Port_RxTx_Thread(int tid)
-{
-    while(1)
-    {
-        mtx.lock();
-
-        mtx.unlock();
-    }
-}
 
 #endif
 
+namespace BasicControls
+{
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ----------------------------------------------General APIs for Control-------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
@@ -762,6 +726,8 @@ void setAux2(int val)
     mtx.unlock();
     //IssueCommand();
 }
+} // namespace BasicControls
+
 /*
 ResponsePackets *getResponse()
 {
@@ -772,6 +738,9 @@ int BasicControls_init(int argc, char *argv[])
 {
     //int fd = wiringPiSPISetup(0, SPI_IOC_WR_MAX_SPEED_HZ);//SPI_init("/dev/spidev0.0");
     Raw_Init(argc, argv);
+#if defined(MSP_SERIAL_FORWARDING)
+    Port_Forwarding_Init(argc, argv);
+#endif
     /*
     pp->magic = CP_MAGIC;
     pp->throttle = 0;
@@ -792,10 +761,10 @@ int BasicControls_init(int argc, char *argv[])
     //IssueCommand();
 
 #if defined(MSP_SERIAL_CLI_MONITOR)
-    thread *chnl_refresh = new thread(Channel_ViewRefresh, 0);
+    std::thread *chnl_refresh = new std::thread(Channel_ViewRefresh, 0);
 #endif
 #if defined(UPDATER_THREAD)
-    thread *chnl_update = new thread(Channel_Updater, 1);
+    std::thread *chnl_update = new std::thread(Channel_Updater, 1);
 #endif
 
     return 0;

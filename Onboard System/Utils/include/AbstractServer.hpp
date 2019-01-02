@@ -53,16 +53,22 @@ class AbstractServer
     std::mutex smtx;
 
     int SetupChannel(int port, int channel); // This would create a port for a particular channel
-    static void ChannelListeners(int i, AbstractServer* thisObj);
+    static void ChannelListener(int i, AbstractServer* thisObj);
+    static void ChannelLogic(int i, int j, int fd, AbstractServer* thisObj);
   public:
     int PORT_BASE;
-    std::vector<func_iii_t> ChannelOperators;
+    std::vector<std::vector<func_iii_t>> ChannelOperators;
+    std::vector<func_iii_t> ChannelInitializers;
+    std::vector<func_vi_t> ChannelListeners;
 
     AbstractServer(int portBase = 8400);
+    AbstractServer(AbstractServer* obj);
     ~AbstractServer();
 
-    void AddChannels(func_iii_t function);      // Create now and launch later
-    void CreateChannels(func_iii_t function);   // Create and launch simultaneously
-    int LaunchThreads();
+    void AddChannels(int index, func_iii_t function, func_iii_t initializer, int subchannel = 0);      // Create now and launch later
+    void CreateChannels(int index, func_iii_t function, func_iii_t initializer, int subchannel = 0, bool initPort = true);   // Create and launch simultaneously
+    
+    int LaunchThreads(bool initPort = true);
+    int JoinThreads();
 };
 } // namespace Onboard
