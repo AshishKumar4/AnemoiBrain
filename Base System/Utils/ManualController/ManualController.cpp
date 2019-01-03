@@ -14,7 +14,7 @@
 #include <thread> // std::thread
 #include <algorithm>
 
-#include "../Controls/DirectControls/DirectControls.h"
+#include "../../Controls/DirectControls/DirectControls.h"
 //#include "../Controls/AirSimControls/AirSimControls.h"
 
 //#include "Indirect/SerialRX.h"
@@ -230,7 +230,7 @@ class ManualController
 
             controls->setThrottle(filter(t_val, THROTTLE)); // (double(t_val - t_min) * t_factor)));
             controls->setYaw(filter(y_val, YAW));           //(double(y_val - y_min) * y_factor)));
-            controls->setPitch(255 - filter(p_val, PITCH));   // Reversed Pitch     //(double(p_val - p_min) * p_factor)));
+            controls->setPitch(filter(p_val, PITCH));   // Reversed Pitch     //(double(p_val - p_min) * p_factor)));
             controls->setRoll(255 - filter(r_val, ROLL));  // Reversed Roll       //(double(r_val - r_min) * r_factor)));
             //controls->setAux1((a1_val));
             //controls->setAux2((a2_val));

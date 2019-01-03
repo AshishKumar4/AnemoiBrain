@@ -265,10 +265,8 @@ int IssueCommand()
 
 uint16_t rcExpand(uint8_t val) // Basically map val from 0, 255 to 1000 to 2000
 {
-    uint16_t aa = 1000 + (4 * uint16_t(val)); // The formula to map ranges
-    if (aa < 1000)
-        aa = 1000;
-    else if (aa > 2000)
+    uint16_t aa = 1000 + uint16_t(int(3.938 * double(val))); // The formula to map ranges
+    if (aa > 2000)
         aa = 2000;
 
     return aa;
@@ -296,7 +294,6 @@ void Raw_Init(int argc, char *argv[])
     */
     std::cout << "\n\tAttempting to connect to the Flight Controller...\n";
     std::chrono::high_resolution_clock::time_point start, end;
-    bool feature_changed = false;
     FlController = new fcu::FlightController(device, baudrate);
 
     // wait until connection is established
@@ -310,18 +307,6 @@ void Raw_Init(int argc, char *argv[])
     if (FlController->isFirmwareCleanflight())
     {
         std::cout << "\n\n\tCleanFlight/BetaFlight FC Identified and Successfully Connected\n\n";
-        /*if (FlController->enableRxMSP() == 1)
-        {
-            std::cout << "RX_MSP enabled, restart" << std::endl;
-            feature_changed = true;
-            goto start;
-        }*/
-
-        if (feature_changed)
-        {
-            // if we rebooted after updating the RX_MSP feature, we need to sleep for a while
-            std::this_thread::sleep_for(std::chrono::seconds(5));
-        }
     }
     else if (FlController->isFirmwareMultiWii())
     {
@@ -340,43 +325,6 @@ void Raw_Init(int argc, char *argv[])
     {
         std::cout << "disarmed after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
     }
-
-    // try connecting until first package is received
-    /*
-        {
-            std::cout << "Waiting for flight controller to become ready..." << std::endl;
-            auto start = std::chrono::steady_clock::now();
-            msp::msg::Ident ident;
-            if (msp.request_wait(ident, 10))
-            {
-                auto end = std::chrono::steady_clock::now();
-                std::cout << "MSP version " << (int)ident.version << " ready after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
-                std::cout << "\n\n\tMultiWii FC Identified and Successfully Connected\n\n";
-                // test update rate for reading Gyro messages
-                {
-                    const unsigned int max_msg = 1000;
-                    unsigned int n_msg = 0;
-                    auto start = std::chrono::steady_clock::now();
-                    while (n_msg != max_msg)
-                    {
-                        msp::msg::ImuRaw status;
-                        msp.request_block(status);
-                        n_msg++;
-                    }
-                    auto end = std::chrono::steady_clock::now();
-
-                    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-
-                    std::cout << "read " << max_msg << " messages in: " << duration << " ms" << std::endl;
-                    std::cout << "messages per second: " << max_msg / (duration / 1000.0) << " Hz" << std::endl;
-                }
-            }
-            else
-            {
-                std::cout << "error getting MSP version" << std::endl;
-                exit(0);
-            }
-        }*/
 }
 
 void sendCommand(uint8_t val, uint8_t channel)
