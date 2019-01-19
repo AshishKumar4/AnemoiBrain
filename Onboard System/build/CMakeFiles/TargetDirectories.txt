@@ -1,3 +1,0 @@
-/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/build/CMakeFiles/rebuild_cache.dir
-/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/build/CMakeFiles/GardienOnboard.dir
-/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/build/CMakeFiles/edit_cache.dir
