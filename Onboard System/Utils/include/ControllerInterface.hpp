@@ -18,7 +18,7 @@
 */
 //#define MODE_AIRSIM
 //#define MODE_MAVLINK_SIM
-#define MODE_DEBUG_NO_FC
+//#define MODE_DEBUG_NO_FC
 
 #define SYNCD_TRANSFER
 #define UPDATER_THREAD

@@ -286,7 +286,7 @@ void Channel_Updater(int threadId)
     while (1)
     {
         mtx.lock();
-        FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE])); //, pp->aux1, pp->aux2, 1000, 1000);
+        FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), rcExpand(RC_DATA[AUX1]), rcExpand(RC_DATA[AUX2]), 1000, 1000);
         mtx.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -337,7 +337,7 @@ void Raw_Init(int argc, char *argv[])
 
 void sendCommand(uint8_t val, uint8_t channel)
 {
-    FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), pp->aux1, pp->aux2, 1000, 1000);
+    FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), rcExpand(RC_DATA[AUX1]), rcExpand(RC_DATA[AUX2]), 1000, 1000);
 }
 
 #endif
