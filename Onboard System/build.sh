@@ -1,11 +1,14 @@
 #! /bin/bash
 
+cd Utils
+./build.sh $1 $2
+cd ../ControlAbstraction
+./build.sh $1
+cd ../SensorAbstraction
+./build.sh $1
+cd ..
+
 if [ ! -d "build" ]; then
-    if [[ $2 == "airsim" ]]; then
-        cp cmake_templates/CMakeLists_AirSim.txt CMakeLists.txt
-    else
-        cp cmake_templates/CMakeLists_Real.txt CMakeLists.txt
-    fi
     mkdir build 
     cd build 
     if [[ $1 == "gcc" ]]; then
@@ -22,10 +25,6 @@ fi
 cd build
 make
 cd ..
-if [ ! -d "lib" ]; then
-    mkdir lib 
-fi
-cp build/libOnboardUtils.* ./lib/
+cp build/GardienOnboard GardienOnboard
 
 echo "Compilation Completed!"
-

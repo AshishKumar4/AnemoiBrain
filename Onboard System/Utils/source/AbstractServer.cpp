@@ -3,7 +3,6 @@
 #include <sys/socket.h>
 #include <stdlib.h>
 #include <netinet/in.h>
-#include <string.h>
 
 #include <string>
 #include <iostream>
@@ -12,6 +11,8 @@
 #include <sstream>
 #include <thread> // std::thread
 #include <mutex>
+#include <stdexcept>
+
 
 #include "AbstractServer.hpp"
 
@@ -100,10 +101,17 @@ AbstractServer::~AbstractServer()
 
 void AbstractServer::ChannelLogic(int i, int j, int fd, AbstractServer *thisObj)
 {
-    while (1)
+    try
     {
-        if (thisObj->ChannelOperators[i][j](i, fd))
-            break;
+        while (1)
+        {
+            if (thisObj->ChannelOperators[i][j](i, fd))
+                break;
+        }
+    }
+    catch (std::exception &e)
+    {
+        std::cout << "Some ERROR!!!" << e.what() << "\n";
     }
 }
 
@@ -129,42 +137,49 @@ back:
     thisObj->smtx.unlock();
     while (1)
     {
-        int addrlen = sizeof(struct sockaddr);
-        if ((new_socket = accept(sfd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
-        {
-            //perror("accept");
-            //exit(EXIT_FAILURE);
-            printf("accept");
-            delete[] buff;
-            goto back;
-        }
-        std::cout << "\nGot an incoming request...\n";
-        if (thisObj->ChannelInitializers[i](i, new_socket))
-        {
-            std::cout << "\nHandshake Not Success!";
-            continue;
-        }
         try
         {
-            /*while (1)
+            int addrlen = sizeof(struct sockaddr);
+            if ((new_socket = accept(sfd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
+            {
+                //perror("accept");
+                //exit(EXIT_FAILURE);
+                printf("accept");
+                delete[] buff;
+                goto back;
+            }
+            std::cout << "\nGot an incoming request...\n";
+            if (thisObj->ChannelInitializers[i](i, new_socket))
+            {
+                std::cout << "\nHandshake Not Success!";
+                continue;
+            }
+            try
+            {
+                /*while (1)
             {
                 if (thisObj->ChannelOperators[i](i, new_socket))
                     break;
             }*/
-            std::vector<std::thread *> reader;
-            for (int k = 0; k < thisObj->ChannelOperators[i].size(); k++)
-            {
-                reader.push_back(new std::thread(&(thisObj->ChannelLogic), i, k, new_socket, thisObj));
+                std::vector<std::thread *> reader;
+                for (int k = 0; k < thisObj->ChannelOperators[i].size(); k++)
+                {
+                    reader.push_back(new std::thread(&(thisObj->ChannelLogic), i, k, new_socket, thisObj));
+                }
+                for (int k = 0; k < thisObj->ChannelOperators[i].size(); k++)
+                {
+                    reader[k]->join();
+                }
+                throw std::runtime_error("Broken Pipe");
             }
-            for (int k = 0; k < thisObj->ChannelOperators[i].size(); k++)
+            catch (std::exception &e)
             {
-                reader[k]->join();
+                std::cout << "Broken Pipe, Waiting for incoming Connections...";
             }
-            throw "Broken Pipe";
         }
         catch (std::exception &e)
         {
-            std::cout << "Broken Pipe, Waiting for incoming Connections...";
+            std::cout << "Some Serious ERROR!!!" << e.what() << "\n";
         }
     }
 }

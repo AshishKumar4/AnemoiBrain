@@ -10,13 +10,21 @@
 #include <unistd.h>
 #include <mutex>
 
-#include "BasicControls.h"
+#include "ControllerInterface.hpp"
+
+#if defined(MODE_AIRSIM)
+#undef MODE_DEBUG_NO_FC
+#undef FAKE_PROTOCOL
+
+#undef MSP_SERIAL_CLI_MONITOR // We don't use MSP with airsim; instead we may use mavlink
+#undef MSP_Serial_PROTOCOL
+#endif
 
 #if !defined(MODE_AIRSIM) && !defined(MODE_MAVLINK_SIM) && !defined(MODE_DEBUG_NO_FC)
 #define MODE_REALDRONE
 #endif
 
-#if !defined(ONBOARD_SPI_PROTOCOL) && !defined(NRF24L01_SPI_PROTOCOL) && !defined(I2C_PROTOCOL) && !defined(MSP_Serial_PROTOCOL)
+#if !defined(ONBOARD_SPI_PROTOCOL) && !defined(NRF24L01_SPI_PROTOCOL) && !defined(I2C_PROTOCOL) && !defined(MSP_Serial_PROTOCOL) && !defined(MODE_AIRSIM)
 #define FAKE_PROTOCOL
 #endif
 
@@ -374,7 +382,7 @@ void Channel_Updater(int threadid)
     while (1)
     {
         //mtx.lock();
-        client.moveByAngleThrottleAsync(rcShrink(RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 10), rcShrink(RC_DATA[YAW], -6.0, 6.0), TIMESLICE);
+        client.moveByAngleThrottleAsync(rcShrink(255 - RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 10), rcShrink(RC_DATA[YAW], -6.0, 6.0), TIMESLICE);
         //mtx.unlock();
         std::this_thread::sleep_for(std::chrono::microseconds(int(TIMESLICE * 1000 * 1000)));
     }
@@ -460,6 +468,9 @@ void Channel_ViewRefresh(int threadId)
         FlController->client.request(rc);
         std::cout << rc;
 #endif
+#if defined(SHOW_STATUS_IMU)
+
+#endif
         mtx.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(RC_VIEW_UPDATE_RATE));
     }
@@ -469,12 +480,12 @@ void Channel_ViewRefresh(int threadId)
 
 #if defined(MSP_REMOTE_TWEAKS)
 
-int MSP_SetPID(char* raw_data)
+int MSP_SetPID(char *raw_data)
 {
     return 0;
 }
 
-#endif 
+#endif
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ---------------------------------------------MSP Data stream forwarding------------------------------------------------- */
@@ -524,7 +535,7 @@ MSP_Packet MSP_Agent(char *buf, int size)
 
         printf("\n Got Data!");
 
-        uint8_t *rdat = (uint8_t *)bb;//malloc(1024); //sz + 1);
+        uint8_t *rdat = (uint8_t *)bb; //malloc(1024); //sz + 1);
         rdat[0] = '$';
         rdat[1] = (uint8_t)msp_agent->read(); //hdr;
         rdat[2] = (uint8_t)msp_agent->read(); //com_state;
@@ -597,7 +608,7 @@ int ReadFromPort(int portnum, char *buff, int size)
 
 #endif
 
-namespace BasicControls
+namespace ControllerInterface
 {
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ----------------------------------------------General APIs for Control-------------------------------------------------- */
@@ -674,16 +685,10 @@ void setAux2(int val)
     mtx.unlock();
     //IssueCommand();
 }
-} // namespace BasicControls
 
-/*
-ResponsePackets *getResponse()
+int ControllerInterface_init(int argc, char **argv)
 {
-    return &rff;
-}*/
-
-int BasicControls_init(int argc, char *argv[])
-{
+    printf("\n Initializing Flight Controller Interface...");
     //int fd = wiringPiSPISetup(0, SPI_IOC_WR_MAX_SPEED_HZ);//SPI_init("/dev/spidev0.0");
     Raw_Init(argc, argv);
 #if defined(MSP_SERIAL_FORWARDING)
@@ -717,3 +722,5 @@ int BasicControls_init(int argc, char *argv[])
 
     return 0;
 }
+
+} // namespace ControllerInterface

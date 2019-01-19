@@ -70,7 +70,6 @@
 /* ---------------------------------------------------Some Definitions----------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
 
-
 #define CP_MAGIC 110
 
 uint8_t checksum(uint8_t *buf, int len);
@@ -81,7 +80,6 @@ uint8_t checksum(uint8_t *buf, int len);
 #define RPACKET_MAGIC 120
 #define FALSE_PACKET 145
 #define ACK_GOT_PACKET 250
-
 
 #define THROTTLE 0
 #define PITCH 1
@@ -145,18 +143,17 @@ timespec *t1000n = new timespec;
 timespec *t10000n = new timespec;
 timespec *t100000n = new timespec;
 
-
 struct MSP_Packet
 {
-    char* buf;
+    char *buf;
     int size;
 
-    MSP_Packet(char* buf, int sz) : buf(buf), size(sz) {};
+    MSP_Packet(char *buf, int sz) : buf(buf), size(sz){};
 };
 
-MSP_Packet MSP_Agent(char* buf, int size);
+MSP_Packet MSP_Agent(char *buf, int size);
 
-namespace BasicControls
+namespace ControllerInterface
 {
 int WriteToPort(int portnum, char *buff, int size);
 int ReadFromPort(int portnum, char *buff, int size);
@@ -166,5 +163,5 @@ void setRoll(int roll);
 void setYaw(int yaw);
 void setAux1(int val);
 void setAux2(int val);
-} // namespace BasicControls
-int BasicControls_init(int argc, char *argv[]);
+int ControllerInterface_init(int argc, char **argv);
+} // namespace ControllerInterface

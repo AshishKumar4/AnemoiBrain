@@ -1,11 +1,6 @@
 #! /bin/bash
 
 if [ ! -d "build" ]; then
-    if [[ $2 == "airsim" ]]; then
-        cp cmake_templates/CMakeLists_AirSim.txt CMakeLists.txt
-    else
-        cp cmake_templates/CMakeLists_Real.txt CMakeLists.txt
-    fi
     mkdir build 
     cd build 
     if [[ $1 == "gcc" ]]; then
@@ -22,7 +17,6 @@ fi
 cd build
 make
 cd ..
-cp build/ControlServer ControlServer
 
 echo "Compilation Completed!"
 
