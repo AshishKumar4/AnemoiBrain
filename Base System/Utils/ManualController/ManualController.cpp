@@ -25,6 +25,8 @@
 #define ROLL 2
 #define YAW 3
 
+#define SHOW_RC_COMMAND
+
 float volatile delay_dump=0;
 
 using namespace std;
@@ -64,6 +66,8 @@ class RunningAverage
     }
 };
 
+int show_debug = 0;
+
 class ManualController
 {
     Controller *controls;
@@ -71,8 +75,8 @@ class ManualController
     string pitch = "200";
     string throttle = "300";
     string roll = "400";
-    string aux1 = "500";
-    string aux2 = "600";
+    string aux1 = "0";
+    string aux2 = "0";
 
     vector<double> lfactors;
     vector<double> rfactors;
@@ -84,8 +88,8 @@ class ManualController
     int p_val;
     int r_val;
     int y_val;
-    int a1_val;
-    int a2_val;
+    int a1_val = 0;
+    int a2_val = 0;
 
     vector<RunningAverage*> channelFilters;
 
@@ -93,6 +97,8 @@ class ManualController
 
   protected:
   public:
+    int* auxBuffers[2] = {&a1_val, &a2_val};
+
     ManualController(Controller *controlobj = new DirectController(), char *portName = "/dev/ttyACM0")
     {
         controls = controlobj;
@@ -226,15 +232,16 @@ class ManualController
         {
             parseSerialData_syncd(sz, scn_max);
 
-            cout << "Data: ";
-
             controls->setThrottle(filter(t_val, THROTTLE)); // (double(t_val - t_min) * t_factor)));
             controls->setYaw(filter(y_val, YAW));           //(double(y_val - y_min) * y_factor)));
             controls->setPitch(filter(p_val, PITCH));   // Reversed Pitch     //(double(p_val - p_min) * p_factor)));
             controls->setRoll(255 - filter(r_val, ROLL));  // Reversed Roll       //(double(r_val - r_min) * r_factor)));
-            //controls->setAux1((a1_val));
-            //controls->setAux2((a2_val));
-            cout << "\n";
+            controls->setAux1(a1_val);
+            controls->setAux2(a2_val);
+            /*controls->setAux3(a2_val);
+            controls->setAux4(a2_val);*/
+            if(show_debug) 
+                controls->printChannels();
             std::this_thread::sleep_for(std::chrono::microseconds(1000));
         }
         //serial->closeSerial();
@@ -270,8 +277,8 @@ class ManualController
                         y_val = atoi(yaw.c_str());
                         r_val = atoi(roll.c_str());
                         p_val = atoi(pitch.c_str());
-                        a1_val = atoi(aux1.c_str());
-                        a2_val = atoi(aux2.c_str());
+                        /*a1_val = atoi(aux1.c_str());
+                        a2_val = atoi(aux2.c_str());*/
 
                         t_val = channelFilters[0]->ExpFilter(t_val);
                         y_val = channelFilters[1]->ExpFilter(y_val);
@@ -322,8 +329,8 @@ class ManualController
                         y_val = atoi(yaw.c_str());
                         r_val = atoi(roll.c_str());
                         p_val = atoi(pitch.c_str());
-                        a1_val = atoi(aux1.c_str());
-                        a2_val = atoi(aux2.c_str());
+                        /*a1_val = atoi(aux1.c_str());
+                        a2_val = atoi(aux2.c_str());*/
 
                         t_val = channelFilters[0]->ExpFilter(t_val);
                         y_val = channelFilters[1]->ExpFilter(y_val);
@@ -370,10 +377,81 @@ class ManualController
         }
         if(vvv < 0) vvv = 0;
         else if(vvv > 255) vvv = 255;
-        cout << "[" << int(vvv) << " ]--";
         return int(vvv);
     }
 };
+
+typedef int (*func_t)(ManualController*); // function pointer
+typedef int (*func_i_t)(int); // function pointer
+
+int channel_select = 0;
+
+int event_keyPlus(ManualController* obj)
+{
+    if(*(obj->auxBuffers[channel_select]) >= 255)
+    {
+        *(obj->auxBuffers[channel_select]) = 0;
+    }
+    else 
+        *(obj->auxBuffers[channel_select]) += 30;
+    return *(obj->auxBuffers[channel_select]);
+}
+
+int event_keyMinus(ManualController* obj)
+{
+    if(*(obj->auxBuffers[channel_select]) <= 0)
+    {
+        *(obj->auxBuffers[channel_select]) = 0;
+    }
+    else 
+        *(obj->auxBuffers[channel_select]) -= 30;
+    return *(obj->auxBuffers[channel_select]);
+}
+
+int event_key1(ManualController* obj)
+{
+    channel_select = 0;
+    return 1;
+}
+
+int event_key2(ManualController* obj)
+{
+    channel_select = 1;
+    return 2;
+}
+
+int event_key_q(ManualController* obj)
+{
+    if(show_debug)
+        show_debug = 0;
+    else show_debug = 1;
+    return 1;
+}
+
+int event_other(ManualController* obj)
+{
+    return 1;
+}
+
+func_t KeyMap[256];
+
+
+int KeyBindings_thread(ManualController* obj)
+{
+    while(1)
+    {
+        try 
+        {
+            char key = getc(stdin);
+            //printf("\t\t>>> [%d] <<<", (int)key);
+            KeyMap[int(key)](obj);
+        }
+        catch(exception &e)
+        {
+            continue;
+        }
+    }
+}
 
 int main(int argc, char **argv)
 {
@@ -392,8 +470,20 @@ int main(int argc, char **argv)
     }
 
     //DirectController droneControl("0.0.0.0");
+    /*
+        Firstly install keybindings
+    */
+    for(int i = 0; i < 255; i++)
+        KeyMap[i] = &event_other;
+    KeyMap['+'] = event_keyPlus;
+    KeyMap['-'] = event_keyMinus;
+    KeyMap['1'] = event_key1;
+    KeyMap['2'] = event_key2;
+    KeyMap['q'] = event_key_q;
     ManualController remote(droneControl, serialport);
+    thread KeyBindings(KeyBindings_thread, &remote);
     //ManualController remote(droneControl, "/dev/ttyUSB0");
     remote.ExecutorSerial();
+    KeyBindings.join();
     return 0;
 }

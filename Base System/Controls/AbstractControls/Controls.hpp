@@ -65,7 +65,10 @@ class Controller // An Abstract Class to provide APIs for Controls
     virtual void setRoll(int val) = 0;
     virtual void setAux1(int val) = 0;
     virtual void setAux2(int val) = 0;
+    virtual void setAux3(int val) = 0;
+    virtual void setAux4(int val) = 0;
 
+    virtual void printChannels() = 0;
     /* APIs to get Data */
     virtual int startSensorsServer() = 0;
     virtual DroneState_t *getState() = 0;

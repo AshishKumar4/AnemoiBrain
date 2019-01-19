@@ -1,0 +1,76 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+.././ControlAbstraction/include/ControlServer.hpp
+LowLevel/Serial.hpp
+.././ControlAbstraction/include/LowLevel/Serial.hpp
+
+.././Utils/include/AbstractServer.hpp
+string.h
+-
+string
+-
+iostream
+-
+vector
+-
+iterator
+-
+sstream
+-
+thread
+-
+mutex
+-
+
+.././Utils/include/ControllerInterface.hpp
+stdint.h
+.././Utils/include/stdint.h
+string
+.././Utils/include/string
+iostream
+.././Utils/include/iostream
+vector
+.././Utils/include/vector
+algorithm
+.././Utils/include/algorithm
+mutex
+.././Utils/include/mutex
+
+.././Utils/include/LowLevel/Serial.hpp
+iostream
+.././Utils/include/LowLevel/iostream
+stdio.h
+-
+string.h
+-
+unistd.h
+-
+fcntl.h
+-
+errno.h
+-
+termios.h
+-
+
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/main.cpp
+iostream
+-
+stdio.h
+-
+string
+-
+vector
+-
+AbstractServer.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/AbstractServer.hpp
+ControllerInterface.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/ControllerInterface.hpp
+ControlServer.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/ControlServer.hpp
+

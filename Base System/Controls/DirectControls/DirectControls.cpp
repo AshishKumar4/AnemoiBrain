@@ -223,6 +223,13 @@ void DirectController::sendCommand(int val, int channel)
   }
 }
 
+void DirectController::printChannels()
+{
+  printf("\nData: ");
+  for(int i = 0; i < 6; i++)
+    printf("[%d]--", channelBuffs[i]);
+}
+
 void DirectController::setThrottle(int val)
 {
   sendCommand(val, 0);
@@ -253,6 +260,15 @@ void DirectController::setAux2(int val)
   sendCommand(val, 5);
 }
 
+void DirectController::setAux3(int val)
+{
+  sendCommand(val, 6);
+}
+
+void DirectController::setAux4(int val)
+{
+  sendCommand(val, 7);
+}
 /*
   Sensors APIs 
 */

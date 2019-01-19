@@ -41,7 +41,10 @@ public:
   void setRoll(int val);
   void setAux1(int val);
   void setAux2(int val);
+  void setAux3(int val);
+  void setAux4(int val);
 
+  void printChannels();
   /* APIs to get Data */
   int startSensorsServer();
   DroneState_t* getState();

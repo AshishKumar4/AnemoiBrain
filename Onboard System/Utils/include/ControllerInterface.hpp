@@ -18,7 +18,7 @@
 */
 //#define MODE_AIRSIM
 //#define MODE_MAVLINK_SIM
-//#define MODE_DEBUG_NO_FC
+#define MODE_DEBUG_NO_FC
 
 #define SYNCD_TRANSFER
 #define UPDATER_THREAD
@@ -31,12 +31,6 @@
 #define SHOW_STATUS_ARMED
 #define RC_VIEW_UPDATE_RATE 100 // Miliseconds
 
-#if defined(MODE_AIRSIM)
-
-#define AIRSIM_MODE_API
-//#define AIRSIM_MODE_SOCKETS
-
-#endif
 
 /*
         There are two possible configurations, 
@@ -48,15 +42,19 @@
 /*
         Telemetry Protocol
     */
+
+#if !defined(MODE_DEBUG_NO_FC)
 //#define ONBOARD_SPI_PROTOCOL
 //#define NRF24L01_SPI_PROTOCOL
 //#define I2C_PROTOCOL
 #define MSP_Serial_PROTOCOL
+#endif
 
 /*
         Data Gathering method
     */
-#define MSP_SERIAL_CLI_MONITOR
+
+//#define MSP_SERIAL_CLI_MONITOR
 //#define MSP_SERIAL_FORWARDING
 //#define MSP_REMOTE_TWEAKS
 /*
@@ -65,6 +63,13 @@
 //#define NRF24
 //#define WIFI
 //#define Xbee
+
+#if defined(MODE_AIRSIM)
+
+#define AIRSIM_MODE_API
+//#define AIRSIM_MODE_SOCKETS
+
+#endif
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ---------------------------------------------------Some Definitions----------------------------------------------------- */

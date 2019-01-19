@@ -337,7 +337,7 @@ void Raw_Init(int argc, char *argv[])
 
 void sendCommand(uint8_t val, uint8_t channel)
 {
-    FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE])); //, pp->aux1, pp->aux2, 1000, 1000);
+    FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), pp->aux1, pp->aux2, 1000, 1000);
 }
 
 #endif

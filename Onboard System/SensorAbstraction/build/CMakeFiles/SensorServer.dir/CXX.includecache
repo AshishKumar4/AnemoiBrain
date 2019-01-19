@@ -1,0 +1,60 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../../Utils/include/AbstractServer.hpp
+string.h
+-
+string
+-
+iostream
+-
+vector
+-
+iterator
+-
+sstream
+-
+thread
+-
+mutex
+-
+
+../include/Sensors.h
+
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/SensorAbstraction/source/SensorsServer.cpp
+unistd.h
+-
+stdio.h
+-
+sys/socket.h
+-
+stdlib.h
+-
+netinet/in.h
+-
+string.h
+-
+string
+-
+iostream
+-
+vector
+-
+iterator
+-
+sstream
+-
+thread
+-
+mutex
+-
+AbstractServer.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/SensorAbstraction/source/AbstractServer.hpp
+Sensors.h
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/SensorAbstraction/source/Sensors.h
+
