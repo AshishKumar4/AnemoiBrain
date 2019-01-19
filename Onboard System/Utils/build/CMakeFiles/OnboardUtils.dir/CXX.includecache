@@ -1,0 +1,152 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../include/ControllerInterface.hpp
+stdint.h
+../include/stdint.h
+string
+../include/string
+iostream
+../include/iostream
+vector
+../include/vector
+algorithm
+../include/algorithm
+mutex
+../include/mutex
+
+../include/LowLevel/I2Cdrivers.h
+
+../include/LowLevel/SPIdrivers.h
+
+../include/LowLevel/msp/Client.hpp
+string
+-
+thread
+-
+functional
+-
+mutex
+-
+condition_variable
+-
+map
+-
+types.hpp
+../include/LowLevel/msp/types.hpp
+
+../include/LowLevel/msp/FlightController.hpp
+Client.hpp
+../include/LowLevel/msp/Client.hpp
+msp_msg.hpp
+../include/LowLevel/msp/msp_msg.hpp
+
+../include/LowLevel/msp/MSP.hpp
+types.hpp
+../include/LowLevel/msp/types.hpp
+stdexcept
+-
+chrono
+-
+mutex
+-
+memory
+-
+
+../include/LowLevel/msp/deserialise.hpp
+types.hpp
+../include/LowLevel/msp/types.hpp
+cstdlib
+-
+
+../include/LowLevel/msp/msg_print.hpp
+msp_msg.hpp
+../include/LowLevel/msp/msp_msg.hpp
+ostream
+-
+
+../include/LowLevel/msp/msp_id.hpp
+
+../include/LowLevel/msp/msp_msg.hpp
+string
+-
+array
+-
+sstream
+-
+set
+-
+climits
+-
+cassert
+-
+types.hpp
+../include/LowLevel/msp/types.hpp
+deserialise.hpp
+../include/LowLevel/msp/deserialise.hpp
+
+../include/LowLevel/msp/types.hpp
+vector
+-
+stdint.h
+-
+msp_id.hpp
+../include/LowLevel/msp/msp_id.hpp
+
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/ControllerInterface.cpp
+sys/ioctl.h
+-
+linux/spi/spidev.h
+-
+fcntl.h
+-
+cstring
+-
+iostream
+-
+unistd.h
+-
+string
+-
+thread
+-
+unistd.h
+-
+mutex
+-
+ControllerInterface.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/ControllerInterface.hpp
+LowLevel/SPIdrivers.h
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/LowLevel/SPIdrivers.h
+wiringPiSPI.h
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/wiringPiSPI.h
+LowLevel/I2Cdrivers.h
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/LowLevel/I2Cdrivers.h
+RadioDrivers.cpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/RadioDrivers.cpp
+LowLevel/msp/MSP.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/LowLevel/msp/MSP.hpp
+LowLevel/msp/msg_print.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/LowLevel/msp/msg_print.hpp
+LowLevel/msp/msp_id.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/LowLevel/msp/msp_id.hpp
+LowLevel/msp/FlightController.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/LowLevel/msp/FlightController.hpp
+vehicles/multirotor/api/MultirotorRpcLibClient.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/vehicles/multirotor/api/MultirotorRpcLibClient.hpp
+rpc/server.h
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/rpc/server.h
+LowLevel/msp/MSP.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/LowLevel/msp/MSP.hpp
+LowLevel/msp/msg_print.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/LowLevel/msp/msg_print.hpp
+LowLevel/msp/msp_id.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/LowLevel/msp/msp_id.hpp
+LowLevel/msp/FlightController.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/Utils/source/LowLevel/msp/FlightController.hpp
+

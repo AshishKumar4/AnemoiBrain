@@ -54,9 +54,11 @@
         Data Gathering method
     */
 
-//#define MSP_SERIAL_CLI_MONITOR
+#if defined(MSP_Serial_PROTOCOL)
+#define MSP_SERIAL_CLI_MONITOR
 //#define MSP_SERIAL_FORWARDING
 //#define MSP_REMOTE_TWEAKS
+#endif
 /*
         Telemetry Type
     */
