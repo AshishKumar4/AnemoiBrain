@@ -27,7 +27,7 @@
 
 #define SHOW_RC_COMMAND
 
-float volatile delay_dump=0;
+float volatile delay_dump = 0;
 
 using namespace std;
 
@@ -55,7 +55,7 @@ class RunningAverage
     double ExpFilter(double valIn)
     {
         // an Exponential Moving Average
-        double y = (alpha * valIn) + ((1-alpha)*avgBuffs[0]);
+        double y = (alpha * valIn) + ((1 - alpha) * avgBuffs[0]);
         avgBuffs[0] = y;
         return y;
     }
@@ -91,13 +91,13 @@ class ManualController
     int a1_val = 0;
     int a2_val = 0;
 
-    vector<RunningAverage*> channelFilters;
+    vector<RunningAverage *> channelFilters;
 
     SerialRX *serial;
 
   protected:
   public:
-    int* auxBuffers[2] = {&a1_val, &a2_val};
+    int *auxBuffers[2] = {&a1_val, &a2_val};
 
     ManualController(Controller *controlobj = new DirectController(), char *portName = "/dev/ttyACM0")
     {
@@ -107,16 +107,16 @@ class ManualController
 
         /************************************************************************************************************/
         /*     Creating Moving Average Buffers, min max mid lfactor and rfactor buffers     */
-        for(int i = 0; i < 6; i++)
+        for (int i = 0; i < 6; i++)
         {
-            channelFilters.push_back(new RunningAverage(3, 1000, 0.45)); 
+            channelFilters.push_back(new RunningAverage(3, 1000, 0.45));
             //lfactors.push_back(0);
             //rfactors.push_back(0);
             mins.push_back(0);
             maxs.push_back(0);
             mids.push_back(0);
         }
-        // When we are initializing, We set the alpha value for moving average filter as 0.5 for calibration, but we 
+        // When we are initializing, We set the alpha value for moving average filter as 0.5 for calibration, but we
         // would increase it to higher value for normal usage.
         /************************************************************************************************************/
 
@@ -176,11 +176,11 @@ class ManualController
         printf("\n{%d %d %d %d}", t_val, p_val, r_val, y_val);
 
         /* In case you just decided to switch your controls to be mapped in opposite ways -_- */
-        for(int i = 0; i < 4; i++)
+        for (int i = 0; i < 4; i++)
         {
-            if(mins[i] > maxs[i])
+            if (mins[i] > maxs[i])
             {
-                // Swap them 
+                // Swap them
                 int tmp = mins[i];
                 mins[i] = maxs[i];
                 maxs[i] = tmp;
@@ -188,15 +188,15 @@ class ManualController
         }
 
         /* Calibration Computation */
-        for(int i = 0; i < 4; i++)
+        for (int i = 0; i < 4; i++)
         {
-            if(mids[i] - mins[i] != 0)
+            if (mids[i] - mins[i] != 0)
                 lfactors.push_back(127.5 / double(mids[i] - mins[i]));
-            else 
+            else
                 lfactors.push_back(1);
-            if(maxs[i] - mids[i] != 0)
+            if (maxs[i] - mids[i] != 0)
                 rfactors.push_back(127.5 / double(maxs[i] - mids[i]));
-            else 
+            else
                 rfactors.push_back(1);
         }
 
@@ -204,7 +204,7 @@ class ManualController
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
         // After Calibration, We shall tune the Moving Average filters a bit...
-        for(int i = 0; i < 6; i++)
+        for (int i = 0; i < 6; i++)
         {
             channelFilters[i]->Reset(0.5);
         }
@@ -226,7 +226,7 @@ class ManualController
         int scn_max = 1; //(sz / 30); // We would discard sections of data from start and end, for sanity
         // Basically Take in values from the remote over Serial, Probably via an Arduino as middleware
         // and filter it and send it over to the API layer for Controller, to control the drone.
-        
+
         //serial->openSerial();
         while (1)
         {
@@ -234,13 +234,13 @@ class ManualController
 
             controls->setThrottle(filter(t_val, THROTTLE)); // (double(t_val - t_min) * t_factor)));
             controls->setYaw(filter(y_val, YAW));           //(double(y_val - y_min) * y_factor)));
-            controls->setPitch(filter(p_val, PITCH));   // Reversed Pitch     //(double(p_val - p_min) * p_factor)));
-            controls->setRoll(255 - filter(r_val, ROLL));  // Reversed Roll       //(double(r_val - r_min) * r_factor)));
+            controls->setPitch(filter(p_val, PITCH));       // Reversed Pitch     //(double(p_val - p_min) * p_factor)));
+            controls->setRoll(255 - filter(r_val, ROLL));   // Reversed Roll       //(double(r_val - r_min) * r_factor)));
             controls->setAux1(a1_val);
             controls->setAux2(a2_val);
             /*controls->setAux3(a2_val);
             controls->setAux4(a2_val);*/
-            if(show_debug) 
+            if (show_debug)
                 controls->printChannels();
             std::this_thread::sleep_for(std::chrono::microseconds(1000));
         }
@@ -375,78 +375,80 @@ class ManualController
         {
             vvv = ((vvv - mids[channel]) * rfactors[channel]) + 127.5; // + mids[channel];
         }
-        if(vvv < 0) vvv = 0;
-        else if(vvv > 255) vvv = 255;
+        if (vvv < 0)
+            vvv = 0;
+        else if (vvv > 255)
+            vvv = 255;
         return int(vvv);
     }
 };
 
-typedef int (*func_t)(ManualController*); // function pointer
-typedef int (*func_i_t)(int); // function pointer
+typedef int (*func_t)(ManualController *); // function pointer
+typedef int (*func_i_t)(int);              // function pointer
 
 int channel_select = 0;
+int incVal[] = {15, 130};
 
-int event_keyPlus(ManualController* obj)
+int event_keyPlus(ManualController *obj)
 {
-    if(*(obj->auxBuffers[channel_select]) >= 255)
+    *(obj->auxBuffers[channel_select]) += incVal[channel_select];
+    if (*(obj->auxBuffers[channel_select]) >= 255)
     {
-        *(obj->auxBuffers[channel_select]) = 0;
+        *(obj->auxBuffers[channel_select]) = 255;
     }
-    else 
-        *(obj->auxBuffers[channel_select]) += 30;
     return *(obj->auxBuffers[channel_select]);
 }
 
-int event_keyMinus(ManualController* obj)
+int event_keyMinus(ManualController *obj)
 {
-    if(*(obj->auxBuffers[channel_select]) <= 0)
+    *(obj->auxBuffers[channel_select]) -= incVal[channel_select];
+    if (*(obj->auxBuffers[channel_select]) <= 0)
     {
         *(obj->auxBuffers[channel_select]) = 0;
     }
-    else 
-        *(obj->auxBuffers[channel_select]) -= 30;
+        
     return *(obj->auxBuffers[channel_select]);
 }
 
-int event_key1(ManualController* obj)
+int event_key1(ManualController *obj)
 {
     channel_select = 0;
     return 1;
 }
 
-int event_key2(ManualController* obj)
+int event_key2(ManualController *obj)
 {
     channel_select = 1;
     return 2;
 }
 
-int event_key_q(ManualController* obj)
+int event_key_q(ManualController *obj)
 {
-    if(show_debug)
+    if (show_debug)
         show_debug = 0;
-    else show_debug = 1;
+    else
+        show_debug = 1;
     return 1;
 }
 
-int event_other(ManualController* obj)
+int event_other(ManualController *obj)
 {
     return 1;
 }
 
 func_t KeyMap[256];
 
-
-int KeyBindings_thread(ManualController* obj)
+int KeyBindings_thread(ManualController *obj)
 {
-    while(1)
+    while (1)
     {
-        try 
+        try
         {
             char key = getc(stdin);
             //printf("\t\t>>> [%d] <<<", (int)key);
             KeyMap[int(key)](obj);
         }
-        catch(exception &e)
+        catch (exception &e)
         {
             continue;
         }
@@ -455,15 +457,15 @@ int KeyBindings_thread(ManualController* obj)
 
 int main(int argc, char **argv)
 {
-    char* serialport = "/dev/ttyUSB0";
-    DirectController* droneControl;
-    if(argc == 1)
+    char *serialport = "/dev/ttyUSB0";
+    DirectController *droneControl;
+    if (argc == 1)
         droneControl = new DirectController("0.0.0.0");
-    else if(argc == 2)
+    else if (argc == 2)
         droneControl = new DirectController(argv[1]);
-    else if(argc == 3)
+    else if (argc == 3)
         droneControl = new DirectController(argv[1], atoi(argv[2]));
-    else if(argc == 4)
+    else if (argc == 4)
     {
         droneControl = new DirectController(argv[1], atoi(argv[2]));
         serialport = argv[3];
@@ -473,7 +475,7 @@ int main(int argc, char **argv)
     /*
         Firstly install keybindings
     */
-    for(int i = 0; i < 255; i++)
+    for (int i = 0; i < 255; i++)
         KeyMap[i] = &event_other;
     KeyMap['+'] = event_keyPlus;
     KeyMap['-'] = event_keyMinus;

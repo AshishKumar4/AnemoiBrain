@@ -3,20 +3,21 @@
 pkill -f socat
 
 if [[ ! $1 ]]; then
-    sock="/dev/ttyS0"
+    ip=192.168.43.106
 else 
-    sock=$1
+    ip=$1
 fi
 
 if [[ ! $2 ]]; then
-    port=54321
+    sock="/dev/ttyS0"
 else 
-    port=$2
+    sock=$2
 fi
 
 if [[ ! $3 ]]; then
-    ip=0.0.0.0
+    port=54321
 else 
-    ip=$3
+    port=$3
 fi
+
 socat -d -d pty,link=$sock,waitslave tcp:$ip:$port
