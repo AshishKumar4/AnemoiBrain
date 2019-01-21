@@ -29,8 +29,8 @@ namespace Controls
 
 int opt = 1;
 
-func_vi_t CHANNEL_HANDLER_TABLES[] = {&ControllerInterface::setThrottle, &ControllerInterface::setPitch, &ControllerInterface::setRoll, &ControllerInterface::setYaw, &ControllerInterface::setAux1, &ControllerInterface::setAux2};
-std::string CHANNEL_NAME_TABLES[] = {"throttle", "pitch", "roll", "yaw", "aux1", "aux2"};
+func_vi_t CHANNEL_HANDLER_TABLES[] = {&ControllerInterface::setThrottle, &ControllerInterface::setPitch, &ControllerInterface::setRoll, &ControllerInterface::setYaw, &ControllerInterface::setAux1, &ControllerInterface::setAux2, &ControllerInterface::setAux3, &ControllerInterface::setAux4};
+std::string CHANNEL_NAME_TABLES[] = {"throttle", "pitch", "roll", "yaw", "aux1", "aux2", "aux3", "aux4"};
 
 char **ControlChannelBuffer = (char **)malloc(sizeof(char *) * 8);
 
@@ -147,8 +147,9 @@ int ControlListeners(int i, int fd) // Listens to Socket, Writes to Serial
         //ControllerInterface::WriteToPort(0, buff, valread);
         for (int i = 0; i < 1000; i++)
         {
-            int valread = 0; //ControllerInterface::ReadFromPort(0, buff2, 32);
+            int valread = ControllerInterface::ReadFromPort(0, buff2, 32);
             printf("{%s}", buff2);
+            write(fd, buff2, valread);
             memset(buff2, 0, strlen(buff2));
         }
         /*std::this_thread::sleep_for(std::chrono::miliseconds(10));
@@ -180,8 +181,9 @@ int ControlWriters(int i, int fd) // Listens to Serial, Writes to Socket
         // Write this onto the serial port
         for (int i = 0; i < 1000; i++)
         {
-            int valread = 0; //ControllerInterface::ReadFromPort(0, buff2, 32);
+            int valread = ControllerInterface::ReadFromPort(0, buff2, 32);
             printf("{%s}", buff2);
+            write(fd, buff2, valread);
             memset(buff2, 0, strlen(buff2));
         }
         //sock_locks[0]->unlock();
@@ -263,11 +265,8 @@ int Handshake(int i, int j)
 
 int ControlServer_init(int argc, char **argv)
 {
-#ifndef DRONELESS_LOCAL_TEST
-    ControllerInterface::ControllerInterface_init(argc, (char **)argv); // Maybe lower levels can make use of command line args
-#endif
     Onboard::AbstractServer ControlServer(8400);
-    for (int i = 0; i < 6; i++)
+    for (int i = 0; i < 8; i++)
     {
         Onboard::Controls::ControlChannelBuffer[i] = new char[4096];
         ControlServer.AddChannels(i, Onboard::Controls::ControlListeners, Onboard::Controls::ControlHandshake);

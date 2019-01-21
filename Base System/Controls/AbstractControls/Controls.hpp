@@ -63,10 +63,7 @@ class Controller // An Abstract Class to provide APIs for Controls
     virtual void setPitch(int val) = 0;
     virtual void setYaw(int val) = 0;
     virtual void setRoll(int val) = 0;
-    virtual void setAux1(int val) = 0;
-    virtual void setAux2(int val) = 0;
-    virtual void setAux3(int val) = 0;
-    virtual void setAux4(int val) = 0;
+    virtual void setAux(int channel, int val) = 0;
 
     virtual void printChannels() = 0;
     /* APIs to get Data */

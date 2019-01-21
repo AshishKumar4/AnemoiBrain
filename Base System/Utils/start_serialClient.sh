@@ -9,7 +9,7 @@ else
 fi
 
 if [[ ! $2 ]]; then
-    sock="/dev/ttyS0"
+    sock="/dev/ttyA0"
 else 
     sock=$2
 fi

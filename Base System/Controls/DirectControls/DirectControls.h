@@ -33,16 +33,13 @@ public:
   void balance();
   void altitudeHold();
   /*      APIs for channel Controls       */
-  void cmd(int throttle, int yaw, int roll, int pitch, int aux1 = 0, int aux2 = 0);
+  void cmd(int throttle, int yaw, int roll, int pitch, int aux1 = 0, int aux2 = 0, int aux3 = 0, int aux4 = 0);
 
   void setThrottle(int val);
   void setPitch(int val);
   void setYaw(int val);
   void setRoll(int val);
-  void setAux1(int val);
-  void setAux2(int val);
-  void setAux3(int val);
-  void setAux4(int val);
+  void setAux(int channel, int val);
 
   void printChannels();
   /* APIs to get Data */

@@ -28,9 +28,9 @@
 */
 
 #define SHOW_STATUS_RC
+#define SHOW_STATUS_PID
 #define SHOW_STATUS_ARMED
 #define RC_VIEW_UPDATE_RATE 100 // Miliseconds
-
 
 /*
         There are two possible configurations, 
@@ -88,12 +88,14 @@ uint8_t checksum(uint8_t *buf, int len);
 #define FALSE_PACKET 145
 #define ACK_GOT_PACKET 250
 
-#define THROTTLE 0
-#define PITCH 1
-#define ROLL 2
-#define YAW 3
-#define AUX1 4
-#define AUX2 5
+#define THROTTLE    0
+#define PITCH       1
+#define ROLL        2
+#define YAW         3
+#define AUX1       1
+#define AUX2       2
+#define AUX3       3
+#define AUX4       3
 
 uint8_t RC_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 //using namespace std;
@@ -150,6 +152,10 @@ timespec *t1000n = new timespec;
 timespec *t10000n = new timespec;
 timespec *t100000n = new timespec;
 
+uint8_t IMU_Raw[3][3] = { {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+uint8_t PID_Raw[3][3] = { {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+uint8_t Current_PID_Var = 0;
+
 struct MSP_Packet
 {
     char *buf;
@@ -170,5 +176,16 @@ void setRoll(int roll);
 void setYaw(int yaw);
 void setAux1(int val);
 void setAux2(int val);
+void setAux3(int val);
+void setAux4(int val);
+
+uint8_t getGyro(int axis);
+uint8_t getAcc(int axis);
+uint8_t getMag(int axis);
+uint8_t getPID_P(int axis);
+uint8_t getPID_I(int axis);
+uint8_t getPID_D(int axis);
+uint8_t getArmStatus(int block);
+
 int ControllerInterface_init(int argc, char **argv);
 } // namespace ControllerInterface

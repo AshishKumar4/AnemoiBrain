@@ -59,10 +59,16 @@ int main()
             controller.setRoll(val);
             break;
         case 5:
-            controller.setAux1(val);
+            controller.setAux(1, val);
             break;
         case 6:
-            controller.setAux2(val);
+            controller.setAux(2, val);
+            break;
+        case 7:
+            controller.setAux(3, val);
+            break;
+        case 8:
+            controller.setAux(4, val);
             break;
         case 0:
             exit(0);

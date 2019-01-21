@@ -51,7 +51,7 @@ int opt = 1;
 
 void DirectController::InitSequence()
 {
-  for (int i = 0; i < 6; i++)
+  for (int i = 0; i < 8; i++)
   {
     send(server_fd[i], HANDSHAKE_IN_MSG, strlen(HANDSHAKE_IN_MSG), 0);
     // TODO: Place mechanism to recieve back handshake and if not matching, Panic!
@@ -78,6 +78,8 @@ DirectController::DirectController(char *ip, int portBase)
   ConnectChannel(ip, portBase + 3, 3); //PORT_YAW
   ConnectChannel(ip, portBase + 4, 4); //PORT_AUX1
   ConnectChannel(ip, portBase + 5, 5); //PORT_AUX2
+  ConnectChannel(ip, portBase + 6, 6); //PORT_AUX3
+  ConnectChannel(ip, portBase + 7, 7); //PORT_AUX4
 
   InitSequence();
 }
@@ -169,14 +171,16 @@ void DirectController::altitudeHold()
 }
 
 /*      APIs for channel Controls       */
-void DirectController::cmd(int throttle, int yaw, int roll, int pitch, int aux1, int aux2)
+void DirectController::cmd(int throttle, int yaw, int roll, int pitch, int aux1, int aux2, int aux3, int aux4)
 {
   setThrottle(throttle);
   setYaw(yaw);
   setRoll(roll);
   setPitch(pitch);
-  setAux1(aux1);
-  setAux2(aux2);
+  setAux(1, aux1);
+  setAux(2, aux2);
+  setAux(3, aux3);
+  setAux(4, aux4);
 }
 
 void DirectController::sendCommand(int val, int channel)
@@ -250,24 +254,9 @@ void DirectController::setRoll(int val)
   sendCommand(val, 2);
 }
 
-void DirectController::setAux1(int val)
+void DirectController::setAux(int channel, int val)
 {
-  sendCommand(val, 4);
-}
-
-void DirectController::setAux2(int val)
-{
-  sendCommand(val, 5);
-}
-
-void DirectController::setAux3(int val)
-{
-  sendCommand(val, 6);
-}
-
-void DirectController::setAux4(int val)
-{
-  sendCommand(val, 7);
+  sendCommand(val, channel + 3);
 }
 /*
   Sensors APIs 

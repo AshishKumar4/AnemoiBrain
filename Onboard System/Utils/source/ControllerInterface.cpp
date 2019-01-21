@@ -286,7 +286,7 @@ void Channel_Updater(int threadId)
     while (1)
     {
         mtx.lock();
-        FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), rcExpand(RC_DATA[AUX1]), rcExpand(RC_DATA[AUX2]), 1000, 1000);
+        FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), rcExpand(RC_DATA[AUX1]), rcExpand(RC_DATA[AUX2]), rcExpand(RC_DATA[AUX3]), rcExpand(RC_DATA[AUX4]));
         mtx.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -337,7 +337,7 @@ void Raw_Init(int argc, char *argv[])
 
 void sendCommand(uint8_t val, uint8_t channel)
 {
-    FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), rcExpand(RC_DATA[AUX1]), rcExpand(RC_DATA[AUX2]), 1000, 1000);
+    FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), rcExpand(RC_DATA[AUX1]), rcExpand(RC_DATA[AUX2]), rcExpand(RC_DATA[AUX3]), rcExpand(RC_DATA[AUX4]));
 }
 
 #endif
@@ -469,7 +469,29 @@ void Channel_ViewRefresh(int threadId)
         std::cout << rc;
 #endif
 #if defined(SHOW_STATUS_IMU)
-
+        msp::msg::ImuRaw imu;
+        FlController->client.request(imu);
+        for(int i = 0; i < 3; i++)
+            IMU_Raw[0][i] = (uint8_t)imu.gyro[i];
+        for(int i = 0; i < 3; i++)
+            IMU_Raw[1][i] = (uint8_t)imu.acc[i];
+        for(int i = 0; i < 3; i++)
+            IMU_Raw[2][i] = (uint8_t)imu.mag[i];
+        std::cout<<imu;
+#endif
+#if defined(SHOW_STATUS_PID)
+        msp::msg::Pid pid;
+        FlController->client.request(pid);
+        std::cout<<pid;
+        PID_Raw[0][0] = (uint8_t)pid.roll.P;
+        PID_Raw[1][0] = (uint8_t)pid.roll.I;
+        PID_Raw[2][0] = (uint8_t)pid.roll.D;
+        PID_Raw[0][1] = (uint8_t)pid.pitch.P;
+        PID_Raw[1][1] = (uint8_t)pid.pitch.I;
+        PID_Raw[2][1] = (uint8_t)pid.pitch.D;
+        PID_Raw[0][2] = (uint8_t)pid.yaw.P;
+        PID_Raw[1][2] = (uint8_t)pid.yaw.I;
+        PID_Raw[2][2] = (uint8_t)pid.yaw.D;
 #endif
         mtx.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(RC_VIEW_UPDATE_RATE));
@@ -666,9 +688,10 @@ void setAux1(int val)
 {
     unsigned char t = (unsigned char)val;
     mtx.lock();
+    // AUX1 to be used for PID Tuning, should set which 
     RC_DATA[AUX1] = t;
 #if defined(SYNCD_TRANSFER)
-    sendCommand(val, 5);
+    sendCommand(val, 4);
 #endif
     mtx.unlock();
     //IssueCommand();
@@ -684,6 +707,65 @@ void setAux2(int val)
 #endif
     mtx.unlock();
     //IssueCommand();
+}
+
+void setAux3(int val)
+{
+    unsigned char t = (unsigned char)val;
+    mtx.lock();
+    RC_DATA[AUX2] = t;
+#if defined(SYNCD_TRANSFER)
+    sendCommand(val, 6);
+#endif
+    mtx.unlock();
+    //IssueCommand();
+}
+
+void setAux4(int val)
+{
+    unsigned char t = (unsigned char)val;
+    mtx.lock();
+    RC_DATA[AUX2] = t;
+#if defined(SYNCD_TRANSFER)
+    sendCommand(val, 7);
+#endif
+    mtx.unlock();
+    //IssueCommand();
+}
+
+uint8_t getGyro(int axis)
+{
+    return IMU_Raw[0][axis];
+}
+
+uint8_t getAcc(int axis)
+{
+    return IMU_Raw[1][axis];
+}
+
+uint8_t getMag(int axis)
+{
+    return IMU_Raw[2][axis];
+}
+
+uint8_t getPID_P(int axis)
+{
+    return PID_Raw[0][axis];
+}
+
+uint8_t getPID_I(int axis)
+{
+    return PID_Raw[1][axis];
+}
+
+uint8_t getPID_D(int axis)
+{
+    return PID_Raw[2][axis];
+}
+
+uint8_t getArmStatus(int block)
+{
+    return 0;
 }
 
 int ControllerInterface_init(int argc, char **argv)

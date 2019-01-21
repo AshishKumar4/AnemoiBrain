@@ -20,10 +20,14 @@
 //#include "Indirect/SerialRX.h"
 #include "Indirect/SerialRX.h"
 
-#define THROTTLE 0
-#define PITCH 1
-#define ROLL 2
-#define YAW 3
+#define THROTTLE    0
+#define PITCH       1
+#define ROLL        2
+#define YAW         3
+#define AUX_1       1
+#define AUX_2       2
+#define AUX_3       3
+#define AUX_4       4
 
 #define SHOW_RC_COMMAND
 
@@ -90,6 +94,8 @@ class ManualController
     int y_val;
     int a1_val = 0;
     int a2_val = 0;
+    int a3_val = 0;
+    int a4_val = 0;
 
     vector<RunningAverage *> channelFilters;
 
@@ -97,7 +103,7 @@ class ManualController
 
   protected:
   public:
-    int *auxBuffers[2] = {&a1_val, &a2_val};
+    int *auxBuffers[4] = {&a1_val, &a2_val, &a3_val, &a4_val};
 
     ManualController(Controller *controlobj = new DirectController(), char *portName = "/dev/ttyACM0")
     {
@@ -236,8 +242,10 @@ class ManualController
             controls->setYaw(filter(y_val, YAW));           //(double(y_val - y_min) * y_factor)));
             controls->setPitch(filter(p_val, PITCH));       // Reversed Pitch     //(double(p_val - p_min) * p_factor)));
             controls->setRoll(255 - filter(r_val, ROLL));   // Reversed Roll       //(double(r_val - r_min) * r_factor)));
-            controls->setAux1(a1_val);
-            controls->setAux2(a2_val);
+            controls->setAux(1, a1_val);
+            controls->setAux(2, a2_val);
+            controls->setAux(3, a3_val);
+            controls->setAux(4, a4_val);
             /*controls->setAux3(a2_val);
             controls->setAux4(a2_val);*/
             if (show_debug)
@@ -391,34 +399,49 @@ int incVal[] = {15, 130};
 
 int event_keyPlus(ManualController *obj)
 {
-    *(obj->auxBuffers[channel_select]) += incVal[channel_select];
-    if (*(obj->auxBuffers[channel_select]) >= 255)
-    {
-        *(obj->auxBuffers[channel_select]) = 255;
-    }
-    return *(obj->auxBuffers[channel_select]);
+    *(obj->auxBuffers[AUX_3]) = 140;
+    return *(obj->auxBuffers[1]);
 }
 
 int event_keyMinus(ManualController *obj)
 {
-    *(obj->auxBuffers[channel_select]) -= incVal[channel_select];
-    if (*(obj->auxBuffers[channel_select]) <= 0)
-    {
-        *(obj->auxBuffers[channel_select]) = 0;
-    }
-        
-    return *(obj->auxBuffers[channel_select]);
+    *(obj->auxBuffers[AUX_3]) = 110;
+    return *(obj->auxBuffers[1]);
 }
 
-int event_key1(ManualController *obj)
+int event_key_p(ManualController *obj)
 {
-    channel_select = 0;
+    *(obj->auxBuffers[AUX_2]) = 39; //1150;
     return 1;
 }
 
-int event_key2(ManualController *obj)
+int event_key_i(ManualController *obj)
 {
-    channel_select = 1;
+    *(obj->auxBuffers[AUX_2]) = 64; //1250;
+    return 2;
+}
+
+int event_key_d(ManualController *obj)
+{
+    *(obj->auxBuffers[AUX_2]) = 90; //1350;
+    return 2;
+}
+
+int event_key_1(ManualController *obj)
+{
+    *(obj->auxBuffers[AUX_1]) = 39; //1150;
+    return 1;
+}
+
+int event_key_2(ManualController *obj)
+{
+    *(obj->auxBuffers[AUX_1]) = 64; //1250;
+    return 2;
+}
+
+int event_key_3(ManualController *obj)
+{
+    *(obj->auxBuffers[AUX_1]) = 90; //1350;
     return 2;
 }
 
@@ -431,8 +454,15 @@ int event_key_q(ManualController *obj)
     return 1;
 }
 
+int event_key_w(ManualController *obj)
+{
+    // We need to show PID Status
+    return 1;
+}
+
 int event_other(ManualController *obj)
 {
+    *(obj->auxBuffers[0]) = 0;
     return 1;
 }
 
@@ -471,7 +501,6 @@ int main(int argc, char **argv)
         serialport = argv[3];
     }
 
-    //DirectController droneControl("0.0.0.0");
     /*
         Firstly install keybindings
     */
@@ -479,9 +508,14 @@ int main(int argc, char **argv)
         KeyMap[i] = &event_other;
     KeyMap['+'] = event_keyPlus;
     KeyMap['-'] = event_keyMinus;
-    KeyMap['1'] = event_key1;
-    KeyMap['2'] = event_key2;
     KeyMap['q'] = event_key_q;
+    KeyMap['w'] = event_key_w;
+    KeyMap['p'] = event_key_p;
+    KeyMap['i'] = event_key_i;
+    KeyMap['d'] = event_key_d;
+    KeyMap['1'] = event_key_1;
+    KeyMap['2'] = event_key_2;
+    KeyMap['3'] = event_key_3;
     ManualController remote(droneControl, serialport);
     thread KeyBindings(KeyBindings_thread, &remote);
     //ManualController remote(droneControl, "/dev/ttyUSB0");
