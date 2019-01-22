@@ -11,8 +11,10 @@
 #include <vector>
 #include <iterator>
 #include <sstream>
+#include <fstream>
 #include <thread> // std::thread
 #include <algorithm>
+#include <sys/stat.h>
 
 #include "../../Controls/DirectControls/DirectControls.h"
 //#include "../Controls/AirSimControls/AirSimControls.h"
@@ -20,14 +22,14 @@
 //#include "Indirect/SerialRX.h"
 #include "Indirect/SerialRX.h"
 
-#define THROTTLE    0
-#define PITCH       1
-#define ROLL        2
-#define YAW         3
-#define AUX_1       0
-#define AUX_2       1
-#define AUX_3       2
-#define AUX_4       3
+#define THROTTLE 0
+#define PITCH 1
+#define ROLL 2
+#define YAW 3
+#define AUX_1 0
+#define AUX_2 1
+#define AUX_3 2
+#define AUX_4 3
 
 #define SHOW_RC_COMMAND
 
@@ -97,6 +99,8 @@ class ManualController
     int a3_val = 0;
     int a4_val = 0;
 
+    bool ExecutionHold = false;
+
     vector<RunningAverage *> channelFilters;
 
     SerialRX *serial;
@@ -110,17 +114,65 @@ class ManualController
         controls = controlobj;
         // TODO: Add code to Calibrate the Remote data, and add a filter
         serial = new SerialRX(portName);
+        for (int i = 0; i < 6; i++)
+        {
+            channelFilters.push_back(new RunningAverage(3, 1000, 0.45));
+        }
 
+        // Load saved Calibration Data. If file not found, Calibrate it! FileName: calibration.dat
+        // Check if calibration.dat exists -->
+        std::string fname = "calibration.dat";
+        struct stat buffer;
+        if (stat(fname.c_str(), &buffer) == 0)
+        {
+            std::fstream fin(fname, std::fstream::in);
+            double tmp = 0;
+            for (int i = 0; i < 6; i++)
+            {
+                fin >> tmp;
+                mins.push_back(tmp);
+                //cout<<tmp<<" ";
+                fin >> tmp;
+                maxs.push_back(tmp);
+                //cout<<tmp<<" ";
+                fin >> tmp;
+                mids.push_back(tmp);
+                //cout<<tmp<<" ";
+                fin >> tmp;
+                lfactors.push_back(tmp);
+                //cout<<tmp<<" ";
+                fin >> tmp;
+                rfactors.push_back(tmp);
+                //cout<<tmp<<" ";
+            }
+            fin.close();
+        }
+        else
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                lfactors.push_back(0);
+                rfactors.push_back(0);
+                mins.push_back(0);
+                maxs.push_back(0);
+                mids.push_back(0);
+            }
+            // We need to Calibrate it
+            CalibrateController();
+        }
+        for (int i = 0; i < 6; i++)
+        {
+            channelFilters[i]->Reset(0.5);
+        }
+    }
+
+    void CalibrateController()
+    {
         /************************************************************************************************************/
         /*     Creating Moving Average Buffers, min max mid lfactor and rfactor buffers     */
         for (int i = 0; i < 6; i++)
         {
-            channelFilters.push_back(new RunningAverage(3, 1000, 0.45));
-            //lfactors.push_back(0);
-            //rfactors.push_back(0);
-            mins.push_back(0);
-            maxs.push_back(0);
-            mids.push_back(0);
+            channelFilters[i]->Reset(0.45);
         }
         // When we are initializing, We set the alpha value for moving average filter as 0.5 for calibration, but we
         // would increase it to higher value for normal usage.
@@ -197,14 +249,29 @@ class ManualController
         for (int i = 0; i < 4; i++)
         {
             if (mids[i] - mins[i] != 0)
-                lfactors.push_back(127.5 / double(mids[i] - mins[i]));
+                lfactors[i] = (127.5 / double(mids[i] - mins[i]));
+            //lfactors.push_back(127.5 / double(mids[i] - mins[i]));
             else
-                lfactors.push_back(1);
+                lfactors[i] = (1);
+            //lfactors.push_back(1);
             if (maxs[i] - mids[i] != 0)
-                rfactors.push_back(127.5 / double(maxs[i] - mids[i]));
+                rfactors[i] = (127.5 / double(maxs[i] - mids[i]));
+            //rfactors.push_back(127.5 / double(maxs[i] - mids[i]));
             else
-                rfactors.push_back(1);
+                rfactors[i] = (1);
+            //rfactors.push_back(1);
         }
+        // Save these settings
+        std::fstream fin("calibration.dat", std::fstream::out);
+        for (int i = 0; i < 6; i++)
+        {
+            fin << mins[i] << endl;
+            fin << maxs[i] << endl;
+            fin << mids[i] << endl;
+            fin << lfactors[i] << endl;
+            fin << rfactors[i] << endl;
+        }
+        fin.close();
 
         cout << "\nCalibration Completed!!!";
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -214,8 +281,6 @@ class ManualController
         {
             channelFilters[i]->Reset(0.5);
         }
-
-        printf("\n\nCalibration Parameters --> ");
         //cout<<"\nRange: "<<t_range<<" "<<r_range<<" "<<y_range<<" "<<p_range<<"\n";
         //cout<<"\nFactors: "<<t_lfactor<<" "<<r_lfactor<<" "<<y_lfactor<<" "<<p_lfactor<<"\n";
         /************************************************************************************************************/
@@ -236,6 +301,11 @@ class ManualController
         //serial->openSerial();
         while (1)
         {
+            if (ExecutionHold)
+            {
+                std::this_thread::sleep_for(std::chrono::microseconds(1000));
+                continue;
+            }
             parseSerialData_syncd(sz, scn_max);
 
             controls->setThrottle(filter(t_val, THROTTLE)); // (double(t_val - t_min) * t_factor)));
@@ -296,74 +366,14 @@ class ManualController
                 }
                 catch (exception &e)
                 {
-                    cout << "Error! " << e.what();
+                    cout << "Error! PANIC!!!!" << e.what();
                     break;
                 }
             }
         }
         catch (exception &e)
         {
-            cout << e.what();
-        }
-    }
-
-    void parseSerialData(int sz, int scn_max)
-    {
-        try
-        {
-            string pparsed;
-            stringstream input_stringstream(serial->getBuff(sz));
-            getline(input_stringstream, throttle, '\n'); // Discard the first entry
-            int scn = 0;
-            while (scn < scn_max && getline(input_stringstream, pparsed, '\n'))
-            {
-                try
-                {
-                    // Still allow only those lines to influence which have complete sets os characters
-                    if (count(pparsed.begin(), pparsed.end(), ' ') == 5)
-                    {
-                        ++scn;
-                        string buff(pparsed);
-                        //cout << " Got Data [" << pparsed << "]\n";
-                        stringstream input_stringstream(buff);
-                        getline(input_stringstream, throttle, ' ');
-                        getline(input_stringstream, yaw, ' ');
-                        getline(input_stringstream, pitch, ' ');
-                        getline(input_stringstream, roll, ' ');
-                        getline(input_stringstream, aux1, ' ');
-                        getline(input_stringstream, aux2, ' ');
-
-                        t_val = atoi(throttle.c_str());
-                        y_val = atoi(yaw.c_str());
-                        r_val = atoi(roll.c_str());
-                        p_val = atoi(pitch.c_str());
-                        /*a1_val = atoi(aux1.c_str());
-                        a2_val = atoi(aux2.c_str());*/
-
-                        t_val = channelFilters[0]->ExpFilter(t_val);
-                        y_val = channelFilters[1]->ExpFilter(y_val);
-                        r_val = channelFilters[2]->ExpFilter(r_val);
-                        p_val = channelFilters[3]->ExpFilter(p_val);
-
-                        /*controls->setThrottle(filter(atoi(throttle.c_str())));
-                        controls->setYaw(filter(atoi(yaw.c_str())));
-                        controls->setPitch(filter(atoi(pitch.c_str())));
-                        controls->setRoll(filter(atoi(roll.c_str())));
-                        controls->setAux1(filter(atoi(aux1.c_str())));
-                        controls->setAux2(filter(atoi(aux2.c_str())));*/
-                        //sleep(0.01);
-                    }
-                }
-                catch (exception &e)
-                {
-                    cout << "Error! " << e.what();
-                    break;
-                }
-            }
-        }
-        catch (exception &e)
-        {
-            cout << e.what();
+            cout << "FUCK THIS ERROR! "<<e.what();
         }
     }
 
@@ -389,6 +399,16 @@ class ManualController
             vvv = 255;
         return int(vvv);
     }
+
+    void StopExecutor()
+    {
+        ExecutionHold = false;
+    }
+
+    void ResumeExecutor()
+    {
+        ExecutionHold = false;
+    }
 };
 
 typedef int (*func_t)(ManualController *); // function pointer
@@ -396,12 +416,12 @@ typedef int (*func_i_t)(int);              // function pointer
 
 int channel_select = 0;
 int incVal[] = {15, 130};
-int PID_Controls[3][3] = {{26, 26*2, 26*3}, {26*4, 26*5, 26*6}, {26*7, 26*8, 26*9}};
+int PID_Controls[3][3] = {{26, 26 * 2, 26 * 3}, {26 * 4, 26 * 5, 26 * 6}, {26 * 7, 26 * 8, 26 * 9}};
 //{{1100, 1200, 1300}, {1400, 1500, 1600}, {1700, 1800, 1900}};
 
 int event_keyPlus(ManualController *obj)
 {
-    *(obj->auxBuffers[AUX_3]) = 215;
+    *(obj->auxBuffers[AUX_3]) = 255;
     return *(obj->auxBuffers[1]);
 }
 
@@ -413,38 +433,40 @@ int event_keyMinus(ManualController *obj)
 
 int event_key_p(ManualController *obj)
 {
-    *(obj->auxBuffers[AUX_2]) = PID_Controls[channel_select][0]; 
-    *(obj->auxBuffers[AUX_3]) = 125;
+    *(obj->auxBuffers[AUX_2]) = PID_Controls[channel_select][0];
+    *(obj->auxBuffers[AUX_3]) = 127;
     return 1;
 }
 
 int event_key_i(ManualController *obj)
 {
-    *(obj->auxBuffers[AUX_2]) = PID_Controls[channel_select][1]; 
-    *(obj->auxBuffers[AUX_3]) = 125;
+    *(obj->auxBuffers[AUX_2]) = PID_Controls[channel_select][1];
+    *(obj->auxBuffers[AUX_3]) = 127;
     return 2;
 }
 
 int event_key_d(ManualController *obj)
 {
-    *(obj->auxBuffers[AUX_2]) = PID_Controls[channel_select][2]; 
-    *(obj->auxBuffers[AUX_3]) = 125;
+    *(obj->auxBuffers[AUX_2]) = PID_Controls[channel_select][2];
+    *(obj->auxBuffers[AUX_3]) = 127;
     return 2;
 }
 
 int event_key_1(ManualController *obj)
 {
     //*(obj->auxBuffers[AUX_1]) = 39; //1150;
-    channel_select = 0;     // Do Nothing --> 1000
-    *(obj->auxBuffers[AUX_3]) = 125;
+    channel_select = 0; // Do Nothing --> 1000
+    *(obj->auxBuffers[AUX_2]) = 0;
+    *(obj->auxBuffers[AUX_3]) = 127;
     return 1;
 }
 
 int event_key_2(ManualController *obj)
 {
     //*(obj->auxBuffers[AUX_1]) = 64; //1250;
-    channel_select = 1;    // Do nothing --> 1349
-    *(obj->auxBuffers[AUX_3]) = 125;
+    channel_select = 1; // Do nothing --> 1349
+    *(obj->auxBuffers[AUX_2]) = 0;
+    *(obj->auxBuffers[AUX_3]) = 127;
     return 2;
 }
 
@@ -452,7 +474,8 @@ int event_key_3(ManualController *obj)
 {
     //*(obj->auxBuffers[AUX_1]) = 90; //1350;
     channel_select = 2;
-    *(obj->auxBuffers[AUX_3]) = 125;
+    *(obj->auxBuffers[AUX_2]) = 0;
+    *(obj->auxBuffers[AUX_3]) = 127;
     return 2;
 }
 
@@ -468,6 +491,21 @@ int event_key_q(ManualController *obj)
 int event_key_w(ManualController *obj)
 {
     // We need to show PID Status
+    return 1;
+}
+
+int event_key_e(ManualController *obj)
+{
+    // We need to show IMU Status
+    return 1;
+}
+
+int event_key_c(ManualController *obj)
+{
+    // Calibrate
+    obj->StopExecutor();
+    obj->CalibrateController();
+    obj->ResumeExecutor();
     return 1;
 }
 
@@ -493,7 +531,7 @@ int KeyBindings_thread(ManualController *obj)
         try
         {
             char key = getc(stdin);
-            printf("\t\t>>> [%d] <<<", (int)key);
+            //printf("\t\t>>> [%d] <<<", (int)key);
             KeyMap[int(key)](obj);
         }
         catch (exception &e)
@@ -534,6 +572,7 @@ int main(int argc, char **argv)
     KeyMap['1'] = event_key_1;
     KeyMap['2'] = event_key_2;
     KeyMap['3'] = event_key_3;
+    KeyMap['c'] = event_key_c;
     KeyMap['\n'] = event_key_enter;
     KeyMap['\r'] = event_key_enter;
     ManualController remote(droneControl, serialport);

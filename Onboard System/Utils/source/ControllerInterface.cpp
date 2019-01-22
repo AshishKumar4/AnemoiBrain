@@ -774,7 +774,7 @@ void setAux3(int val)
 {
     unsigned char t = (unsigned char)val;
     mtx.lock();
-    RC_DATA[AUX2] = t;
+    RC_DATA[AUX3] = t;
 #if defined(SYNCD_TRANSFER)
     sendCommand(val, 6);
 #endif
@@ -786,7 +786,7 @@ void setAux4(int val)
 {
     unsigned char t = (unsigned char)val;
     mtx.lock();
-    RC_DATA[AUX2] = t;
+    RC_DATA[AUX4] = t;
 #if defined(SYNCD_TRANSFER)
     sendCommand(val, 7);
 #endif
