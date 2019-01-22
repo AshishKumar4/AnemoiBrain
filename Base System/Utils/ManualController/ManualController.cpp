@@ -24,10 +24,10 @@
 #define PITCH       1
 #define ROLL        2
 #define YAW         3
-#define AUX_1       1
-#define AUX_2       2
-#define AUX_3       3
-#define AUX_4       4
+#define AUX_1       0
+#define AUX_2       1
+#define AUX_3       2
+#define AUX_4       3
 
 #define SHOW_RC_COMMAND
 
@@ -396,52 +396,63 @@ typedef int (*func_i_t)(int);              // function pointer
 
 int channel_select = 0;
 int incVal[] = {15, 130};
+int PID_Controls[3][3] = {{26, 26*2, 26*3}, {26*4, 26*5, 26*6}, {26*7, 26*8, 26*9}};
+//{{1100, 1200, 1300}, {1400, 1500, 1600}, {1700, 1800, 1900}};
 
 int event_keyPlus(ManualController *obj)
 {
-    *(obj->auxBuffers[AUX_3]) = 140;
+    *(obj->auxBuffers[AUX_3]) = 215;
     return *(obj->auxBuffers[1]);
 }
 
 int event_keyMinus(ManualController *obj)
 {
-    *(obj->auxBuffers[AUX_3]) = 110;
+    *(obj->auxBuffers[AUX_3]) = 50;
     return *(obj->auxBuffers[1]);
 }
 
 int event_key_p(ManualController *obj)
 {
-    *(obj->auxBuffers[AUX_2]) = 39; //1150;
+    *(obj->auxBuffers[AUX_2]) = PID_Controls[channel_select][0]; 
+    *(obj->auxBuffers[AUX_3]) = 125;
     return 1;
 }
 
 int event_key_i(ManualController *obj)
 {
-    *(obj->auxBuffers[AUX_2]) = 64; //1250;
+    *(obj->auxBuffers[AUX_2]) = PID_Controls[channel_select][1]; 
+    *(obj->auxBuffers[AUX_3]) = 125;
     return 2;
 }
 
 int event_key_d(ManualController *obj)
 {
-    *(obj->auxBuffers[AUX_2]) = 90; //1350;
+    *(obj->auxBuffers[AUX_2]) = PID_Controls[channel_select][2]; 
+    *(obj->auxBuffers[AUX_3]) = 125;
     return 2;
 }
 
 int event_key_1(ManualController *obj)
 {
-    *(obj->auxBuffers[AUX_1]) = 39; //1150;
+    //*(obj->auxBuffers[AUX_1]) = 39; //1150;
+    channel_select = 0;     // Do Nothing --> 1000
+    *(obj->auxBuffers[AUX_3]) = 125;
     return 1;
 }
 
 int event_key_2(ManualController *obj)
 {
-    *(obj->auxBuffers[AUX_1]) = 64; //1250;
+    //*(obj->auxBuffers[AUX_1]) = 64; //1250;
+    channel_select = 1;    // Do nothing --> 1349
+    *(obj->auxBuffers[AUX_3]) = 125;
     return 2;
 }
 
 int event_key_3(ManualController *obj)
 {
-    *(obj->auxBuffers[AUX_1]) = 90; //1350;
+    //*(obj->auxBuffers[AUX_1]) = 90; //1350;
+    channel_select = 2;
+    *(obj->auxBuffers[AUX_3]) = 125;
     return 2;
 }
 
@@ -463,6 +474,13 @@ int event_key_w(ManualController *obj)
 int event_other(ManualController *obj)
 {
     *(obj->auxBuffers[0]) = 0;
+    *(obj->auxBuffers[1]) = 0;
+    *(obj->auxBuffers[2]) = 0;
+    return 1;
+}
+
+int event_key_enter(ManualController *obj)
+{
     return 1;
 }
 
@@ -475,7 +493,7 @@ int KeyBindings_thread(ManualController *obj)
         try
         {
             char key = getc(stdin);
-            //printf("\t\t>>> [%d] <<<", (int)key);
+            printf("\t\t>>> [%d] <<<", (int)key);
             KeyMap[int(key)](obj);
         }
         catch (exception &e)
@@ -505,7 +523,7 @@ int main(int argc, char **argv)
         Firstly install keybindings
     */
     for (int i = 0; i < 255; i++)
-        KeyMap[i] = &event_other;
+        KeyMap[i] = event_other;
     KeyMap['+'] = event_keyPlus;
     KeyMap['-'] = event_keyMinus;
     KeyMap['q'] = event_key_q;
@@ -516,6 +534,8 @@ int main(int argc, char **argv)
     KeyMap['1'] = event_key_1;
     KeyMap['2'] = event_key_2;
     KeyMap['3'] = event_key_3;
+    KeyMap['\n'] = event_key_enter;
+    KeyMap['\r'] = event_key_enter;
     ManualController remote(droneControl, serialport);
     thread KeyBindings(KeyBindings_thread, &remote);
     //ManualController remote(droneControl, "/dev/ttyUSB0");

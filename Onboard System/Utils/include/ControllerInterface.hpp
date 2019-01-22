@@ -19,6 +19,7 @@
 //#define MODE_AIRSIM
 //#define MODE_MAVLINK_SIM
 //#define MODE_DEBUG_NO_FC
+#define MODE_REALDRONE
 
 #define SYNCD_TRANSFER
 #define UPDATER_THREAD
@@ -29,6 +30,7 @@
 
 #define SHOW_STATUS_RC
 #define SHOW_STATUS_PID
+#define SHOW_STATUS_IMU
 #define SHOW_STATUS_ARMED
 #define RC_VIEW_UPDATE_RATE 100 // Miliseconds
 
@@ -40,8 +42,8 @@
     */
 
 /*
-        Telemetry Protocol
-    */
+    Telemetry Protocol
+*/
 
 #if !defined(MODE_DEBUG_NO_FC)
 //#define ONBOARD_SPI_PROTOCOL
@@ -92,10 +94,10 @@ uint8_t checksum(uint8_t *buf, int len);
 #define PITCH       1
 #define ROLL        2
 #define YAW         3
-#define AUX1       1
-#define AUX2       2
-#define AUX3       3
-#define AUX4       3
+#define AUX1       4
+#define AUX2       5
+#define AUX3       6
+#define AUX4       7
 
 uint8_t RC_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 //using namespace std;

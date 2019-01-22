@@ -1,0 +1,80 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../../Utils/include/AbstractServer.hpp
+string.h
+-
+string
+-
+iostream
+-
+vector
+-
+iterator
+-
+sstream
+-
+thread
+-
+mutex
+-
+
+../../Utils/include/ControllerInterface.hpp
+stdint.h
+../../Utils/include/stdint.h
+string
+../../Utils/include/string
+iostream
+../../Utils/include/iostream
+vector
+../../Utils/include/vector
+algorithm
+../../Utils/include/algorithm
+mutex
+../../Utils/include/mutex
+
+../include/Sensors.h
+
+../include/SensorsServer.hpp
+
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/SensorAbstraction/source/SensorsServer.cpp
+unistd.h
+-
+stdio.h
+-
+sys/socket.h
+-
+stdlib.h
+-
+netinet/in.h
+-
+string.h
+-
+string
+-
+iostream
+-
+vector
+-
+iterator
+-
+sstream
+-
+thread
+-
+mutex
+-
+AbstractServer.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/SensorAbstraction/source/AbstractServer.hpp
+ControllerInterface.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/SensorAbstraction/source/ControllerInterface.hpp
+Sensors.h
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/SensorAbstraction/source/Sensors.h
+SensorsServer.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/SensorAbstraction/source/SensorsServer.hpp
+

@@ -283,11 +283,8 @@ int ControlServer_init(int argc, char **argv)
 
 #if defined(MSP_SERIAL_FORWARDING)
     Onboard::AbstractServer SerialForwardServer(8500);
-
     Onboard::SerialForwarding::sock_locks.push_back(new std::mutex);
-
     SerialForwardServer.CreateChannels(0, Onboard::SerialForwarding::MSP_Forward, Onboard::SerialForwarding::Handshake);
-
     SerialForwardServer.JoinThreads();
 #endif //*/
     ControlServer.JoinThreads();

@@ -230,7 +230,7 @@ void DirectController::sendCommand(int val, int channel)
 void DirectController::printChannels()
 {
   printf("\nData: ");
-  for(int i = 0; i < 6; i++)
+  for(int i = 0; i < 8; i++)
     printf("[%d]--", channelBuffs[i]);
 }
 

@@ -20,4 +20,4 @@ else
     port=$3
 fi
 
-socat -d -d pty,link=$sock,waitslave tcp:$ip:$port
+python -c "import os;exec(\"os.system('socat -d -d pty,link=$sock,waitslave tcp:$ip:$port');\");"

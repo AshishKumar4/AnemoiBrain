@@ -18,6 +18,7 @@ int main(int argc, char *argv[])
     ControllerInterface::ControllerInterface_init(argc, (char **)argv); // Maybe lower levels can make use of command line args
 #endif
     Onboard::ControlServer_init(argc, (char **)argv);
-    Onboard::SensorsServer_init(argc, (char **)argv);
+    //Onboard::SensorsServer_init(argc, (char **)argv);
+    while(1);
     return 0;
 }

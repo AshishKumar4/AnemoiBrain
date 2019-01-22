@@ -13,9 +13,6 @@
 #include "ControllerInterface.hpp"
 
 #if defined(MODE_AIRSIM)
-#undef MODE_DEBUG_NO_FC
-#undef FAKE_PROTOCOL
-
 #undef MSP_SERIAL_CLI_MONITOR // We don't use MSP with airsim; instead we may use mavlink
 #undef MSP_Serial_PROTOCOL
 #endif
@@ -24,7 +21,7 @@
 #define MODE_REALDRONE
 #endif
 
-#if !defined(ONBOARD_SPI_PROTOCOL) && !defined(NRF24L01_SPI_PROTOCOL) && !defined(I2C_PROTOCOL) && !defined(MSP_Serial_PROTOCOL) && !defined(MODE_AIRSIM)
+#if defined(MODE_DEBUG_FC) || (!defined(ONBOARD_SPI_PROTOCOL) && !defined(NRF24L01_SPI_PROTOCOL) && !defined(I2C_PROTOCOL) && !defined(MSP_Serial_PROTOCOL) && !defined(MODE_AIRSIM))
 #define FAKE_PROTOCOL
 #endif
 
@@ -448,6 +445,8 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
 
 #if defined(MSP_SERIAL_CLI_MONITOR)
 
+int show_RC = 1, show_PID = 0, show_IMU = 0;
+
 void Channel_ViewRefresh(int threadId)
 {
     while (1)
@@ -464,37 +463,99 @@ void Channel_ViewRefresh(int threadId)
         }
 #endif
 #if defined(SHOW_STATUS_RC)
-        msp::msg::Rc rc;
-        FlController->client.request(rc);
-        std::cout << rc;
+        if (show_RC)
+        {
+            msp::msg::Rc rc;
+            FlController->client.request(rc);
+            std::cout << rc;
+        }
 #endif
 #if defined(SHOW_STATUS_IMU)
-        msp::msg::ImuRaw imu;
-        FlController->client.request(imu);
-        for(int i = 0; i < 3; i++)
-            IMU_Raw[0][i] = (uint8_t)imu.gyro[i];
-        for(int i = 0; i < 3; i++)
-            IMU_Raw[1][i] = (uint8_t)imu.acc[i];
-        for(int i = 0; i < 3; i++)
-            IMU_Raw[2][i] = (uint8_t)imu.mag[i];
-        std::cout<<imu;
+        if (show_IMU)
+        {
+            msp::msg::ImuRaw imu;
+            FlController->client.request(imu);
+            for (int i = 0; i < 3; i++)
+                IMU_Raw[0][i] = (uint8_t)imu.gyro[i];
+            for (int i = 0; i < 3; i++)
+                IMU_Raw[1][i] = (uint8_t)imu.acc[i];
+            for (int i = 0; i < 3; i++)
+                IMU_Raw[2][i] = (uint8_t)imu.magn[i];
+            std::cout << imu;
+        }
 #endif
 #if defined(SHOW_STATUS_PID)
-        msp::msg::Pid pid;
-        FlController->client.request(pid);
-        std::cout<<pid;
-        PID_Raw[0][0] = (uint8_t)pid.roll.P;
-        PID_Raw[1][0] = (uint8_t)pid.roll.I;
-        PID_Raw[2][0] = (uint8_t)pid.roll.D;
-        PID_Raw[0][1] = (uint8_t)pid.pitch.P;
-        PID_Raw[1][1] = (uint8_t)pid.pitch.I;
-        PID_Raw[2][1] = (uint8_t)pid.pitch.D;
-        PID_Raw[0][2] = (uint8_t)pid.yaw.P;
-        PID_Raw[1][2] = (uint8_t)pid.yaw.I;
-        PID_Raw[2][2] = (uint8_t)pid.yaw.D;
+        if (show_PID)
+        {
+            msp::msg::Pid pid;
+            FlController->client.request(pid);
+            std::cout << pid;
+            PID_Raw[0][0] = (uint8_t)pid.roll.P;
+            PID_Raw[1][0] = (uint8_t)pid.roll.I;
+            PID_Raw[2][0] = (uint8_t)pid.roll.D;
+            PID_Raw[0][1] = (uint8_t)pid.pitch.P;
+            PID_Raw[1][1] = (uint8_t)pid.pitch.I;
+            PID_Raw[2][1] = (uint8_t)pid.pitch.D;
+            PID_Raw[0][2] = (uint8_t)pid.yaw.P;
+            PID_Raw[1][2] = (uint8_t)pid.yaw.I;
+            PID_Raw[2][2] = (uint8_t)pid.yaw.D;
+        }
 #endif
         mtx.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(RC_VIEW_UPDATE_RATE));
+    }
+}
+
+int event_key_q()
+{
+    if (!show_RC)
+        show_RC = 1;
+    else
+        show_RC = 0;
+    return 0;
+}
+
+int event_key_w()
+{
+    if (!show_PID)
+        show_PID = 1;
+    else
+        show_PID = 0;
+    return 0;
+}
+
+int event_key_e()
+{
+    if (!show_IMU)
+        show_IMU = 1;
+    else
+        show_IMU = 0;
+    return 0;
+}
+
+int event_key_other()
+{
+    return 0;
+}
+
+typedef int (*func_t)(); // function pointer
+func_t KeyMap[256];
+
+int Keyboard_handler(int id)
+{
+    while (1)
+    {
+        try
+        {
+            char key = getc(stdin);
+            //printf("\t\t>>> [%d] <<<", (int)key);
+            KeyMap[int(key)]();
+        }
+        catch (std::exception &e)
+        {
+            std::cout<<e.what();
+            continue;
+        }
     }
 }
 
@@ -688,7 +749,7 @@ void setAux1(int val)
 {
     unsigned char t = (unsigned char)val;
     mtx.lock();
-    // AUX1 to be used for PID Tuning, should set which 
+    // AUX1 to be used for PID Tuning, should set which
     RC_DATA[AUX1] = t;
 #if defined(SYNCD_TRANSFER)
     sendCommand(val, 4);
@@ -797,6 +858,12 @@ int ControllerInterface_init(int argc, char **argv)
 
 #if defined(MSP_SERIAL_CLI_MONITOR)
     std::thread *chnl_refresh = new std::thread(Channel_ViewRefresh, 0);
+    for(int i = 0; i < 256; i++)
+        KeyMap[i] = event_key_other;
+    KeyMap['q'] = event_key_q;
+    KeyMap['w'] = event_key_w;
+    KeyMap['e'] = event_key_e;
+    std::thread *keyboard_handler = new std::thread(Keyboard_handler, 2);
 #endif
 #if defined(UPDATER_THREAD)
     std::thread *chnl_update = new std::thread(Channel_Updater, 1);
