@@ -553,7 +553,7 @@ int Keyboard_handler(int id)
         }
         catch (std::exception &e)
         {
-            std::cout<<e.what();
+            std::cout << e.what();
             continue;
         }
     }
@@ -829,6 +829,20 @@ uint8_t getArmStatus(int block)
     return 0;
 }
 
+void ResumeHandler()
+{
+#if defined(MSP_Serial_PROTOCOL)
+    mtx.unlock();     // Grab the lock and don't release until the fault is fixed
+#endif
+}
+
+void FaultHandler()
+{
+#if defined(MSP_Serial_PROTOCOL)
+    mtx.lock();     // Grab the lock and don't release until the fault is fixed
+#endif
+}
+
 int ControllerInterface_init(int argc, char **argv)
 {
     printf("\n Initializing Flight Controller Interface...");
@@ -858,7 +872,7 @@ int ControllerInterface_init(int argc, char **argv)
 
 #if defined(MSP_SERIAL_CLI_MONITOR)
     std::thread *chnl_refresh = new std::thread(Channel_ViewRefresh, 0);
-    for(int i = 0; i < 256; i++)
+    for (int i = 0; i < 256; i++)
         KeyMap[i] = event_key_other;
     KeyMap['q'] = event_key_q;
     KeyMap['w'] = event_key_w;

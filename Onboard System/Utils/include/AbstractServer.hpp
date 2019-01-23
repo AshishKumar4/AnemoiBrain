@@ -56,6 +56,8 @@ class AbstractServer
     static void ChannelListener(int i, AbstractServer* thisObj);
     static void ChannelLogic(int i, int j, int fd, AbstractServer* thisObj);
   public:
+    int (*ExceptionHandler)();
+    int (*ResumeHandler)();
     int PORT_BASE;
     std::vector<std::vector<func_iii_t>> ChannelOperators;
     std::vector<func_iii_t> ChannelInitializers;

@@ -509,6 +509,18 @@ int event_key_c(ManualController *obj)
     return 1;
 }
 
+int event_key_a(ManualController *obj)
+{
+    *(obj->auxBuffers[AUX_1]) = 250;
+    return 1;
+}
+
+int event_key_s(ManualController *obj)
+{
+    *(obj->auxBuffers[AUX_1]) = 0;
+    return 1;
+}
+
 int event_other(ManualController *obj)
 {
     *(obj->auxBuffers[0]) = 0;
@@ -562,6 +574,15 @@ int main(int argc, char **argv)
     */
     for (int i = 0; i < 255; i++)
         KeyMap[i] = event_other;
+
+    /*
+        1,2,3 to select Pitch, Roll or Yaw; p, i, d to select PID param of that channel, +, - to increase/decrease values 
+        q -> hide/show RC Data 
+        w -> hide/show PID data 
+        e -> hide/show IMU data 
+        s -> disarm 
+        a -> arm
+    */
     KeyMap['+'] = event_keyPlus;
     KeyMap['-'] = event_keyMinus;
     KeyMap['q'] = event_key_q;
@@ -573,6 +594,8 @@ int main(int argc, char **argv)
     KeyMap['2'] = event_key_2;
     KeyMap['3'] = event_key_3;
     KeyMap['c'] = event_key_c;
+    KeyMap['a'] = event_key_a;
+    KeyMap['s'] = event_key_s;
     KeyMap['\n'] = event_key_enter;
     KeyMap['\r'] = event_key_enter;
     ManualController remote(droneControl, serialport);

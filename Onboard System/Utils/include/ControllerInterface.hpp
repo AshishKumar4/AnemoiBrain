@@ -189,5 +189,8 @@ uint8_t getPID_I(int axis);
 uint8_t getPID_D(int axis);
 uint8_t getArmStatus(int block);
 
+void ResumeHandler();
+void FaultHandler();
+
 int ControllerInterface_init(int argc, char **argv);
 } // namespace ControllerInterface

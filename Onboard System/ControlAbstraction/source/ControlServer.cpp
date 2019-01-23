@@ -63,6 +63,18 @@ int ControlHandshake(int i, int fd)
     return 0;
 }
 
+int ControlExceptionHandler()
+{
+    ControllerInterface::FaultHandler();
+    return 1;
+}
+
+int ControlResumeHandler()
+{
+    ControllerInterface::ResumeHandler();
+    return 1;
+}
+
 int ControlListeners(int i, int fd)
 {
     try
@@ -271,6 +283,8 @@ int ControlServer_init(int argc, char **argv)
         Onboard::Controls::ControlChannelBuffer[i] = new char[4096];
         ControlServer.AddChannels(i, Onboard::Controls::ControlListeners, Onboard::Controls::ControlHandshake);
     }
+    ControlServer.ExceptionHandler = Onboard::Controls::ControlExceptionHandler;
+    ControlServer.ResumeHandler = Onboard::Controls::ControlResumeHandler;
     ControlServer.LaunchThreads(); //*/
 
 #if defined(MSP_REMOTE_TWEAKS)

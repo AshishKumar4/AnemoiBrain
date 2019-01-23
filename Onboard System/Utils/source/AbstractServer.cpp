@@ -115,6 +115,8 @@ void AbstractServer::ChannelLogic(int i, int j, int fd, AbstractServer *thisObj)
     }
 }
 
+int faultOccured = false;
+
 void AbstractServer::ChannelListener(int i, AbstractServer *thisObj)
 {
     int PORT = i + thisObj->PORT_BASE;
@@ -139,6 +141,11 @@ back:
     {
         try
         {
+            if(faultOccured)
+            {
+                faultOccured = false;
+                thisObj->ResumeHandler();
+            }
             int addrlen = sizeof(struct sockaddr);
             if ((new_socket = accept(sfd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
             {
@@ -175,11 +182,15 @@ back:
             catch (std::exception &e)
             {
                 std::cout << "Broken Pipe, Waiting for incoming Connections...";
+                thisObj->ExceptionHandler();
+                faultOccured = true;
             }
         }
         catch (std::exception &e)
         {
             std::cout << "Some Serious ERROR!!!" << e.what() << "\n";
+            thisObj->ExceptionHandler();
+            faultOccured = true;
         }
     }
 }

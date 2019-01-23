@@ -7,7 +7,7 @@ set (CMAKE_CXX_STANDARD 11)
 
 LIST(APPEND CMAKE_MODULE_PATH "cmake_templates") 
 INCLUDE("Utils/cmake_templates/CommonSetup.cmake")
-#CommonSetup()
+CommonSetup()
 
 # Include the Necessary Headers
 include_directories(${ONBOARD_ROOT}/Utils/include

@@ -29,6 +29,18 @@ std::string CHANNEL_NAME_TABLES[] = {"gyro", "acc", "mag", "P", "I", "D", "arm"}
 
 char **SensorsChannelBuffer = (char **)malloc(sizeof(char *) * 8);
 
+int SensorExceptionHandler()
+{
+    ControllerInterface::FaultHandler();
+    return 1;
+}
+
+int SensorResumeHandler()
+{
+    ControllerInterface::ResumeHandler();
+    return 1;
+}
+
 int SensorsHandshake(int i, int fd)
 {
     try
@@ -86,6 +98,8 @@ int SensorsServer_init(int argc, char **argv)
         Onboard::Sensors::SensorsChannelBuffer[i] = new char[2];
         SensorsServer.AddChannels(i, Onboard::Sensors::SensorsListeners, Onboard::Sensors::SensorsHandshake);
     }
+    SensorsServer.ExceptionHandler = Onboard::Sensors::SensorExceptionHandler;
+    SensorsServer.ResumeHandler = Onboard::Sensors::SensorResumeHandler;
     SensorsServer.LaunchThreads();
     while (1)
         std::cout << "Some Error!";
