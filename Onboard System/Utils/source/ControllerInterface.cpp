@@ -833,6 +833,7 @@ void ResumeHandler()
 {
 #if defined(MSP_Serial_PROTOCOL)
     mtx.unlock();     // Grab the lock and don't release until the fault is fixed
+    std::cout<<"Fault Resumed and Managed!\n";
 #endif
 }
 
@@ -840,6 +841,7 @@ void FaultHandler()
 {
 #if defined(MSP_Serial_PROTOCOL)
     mtx.lock();     // Grab the lock and don't release until the fault is fixed
+    std::cout<<"Fault Occured!\n";
 #endif
 }
 

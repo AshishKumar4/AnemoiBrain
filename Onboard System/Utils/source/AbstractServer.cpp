@@ -141,11 +141,6 @@ back:
     {
         try
         {
-            if(faultOccured)
-            {
-                faultOccured = false;
-                thisObj->ResumeHandler();
-            }
             int addrlen = sizeof(struct sockaddr);
             if ((new_socket = accept(sfd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
             {
@@ -154,6 +149,11 @@ back:
                 printf("accept");
                 delete[] buff;
                 goto back;
+            }
+            if(faultOccured)
+            {
+                faultOccured = false;
+                thisObj->ResumeHandler();
             }
             std::cout << "\nGot an incoming request...\n";
             if (thisObj->ChannelInitializers[i](i, new_socket))
