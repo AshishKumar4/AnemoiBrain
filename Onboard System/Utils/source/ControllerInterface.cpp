@@ -445,7 +445,7 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
 
 #if defined(MSP_SERIAL_CLI_MONITOR)
 
-int show_RC = 1, show_PID = 0, show_IMU = 0;
+int show_RC = 1, show_PID = 0, show_IMU = 0, show_Wifi = 0, show_armed = 1;
 
 void Channel_ViewRefresh(int threadId)
 {
@@ -453,24 +453,29 @@ void Channel_ViewRefresh(int threadId)
     {
         mtx.lock();
 #if defined(SHOW_STATUS_ARMED)
-        if (FlController->isArmed())
+        if(show_armed)
         {
-            std::cout << "Armed\t"; // after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
-        }
-        else
-        {
-            std::cout << "Disarmed\t";
+            if (FlController->isArmed())
+            {
+                std::cout << "Armed\t"; // after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
+            }
+            else
+            {
+                std::cout << "Disarmed\t";
+            }
         }
 #endif
-#if defined(SHOW_STATUS_RC)
+#if defined(UPDATE_STATUS_RC)
         if (show_RC)
         {
             msp::msg::Rc rc;
             FlController->client.request(rc);
+    #if defined(SHOW_STATUS_RC)
             std::cout << rc;
+    #endif
         }
 #endif
-#if defined(SHOW_STATUS_IMU)
+#if defined(UPDATE_STATUS_IMU)
         if (show_IMU)
         {
             msp::msg::ImuRaw imu;
@@ -481,15 +486,19 @@ void Channel_ViewRefresh(int threadId)
                 IMU_Raw[1][i] = (uint8_t)imu.acc[i];
             for (int i = 0; i < 3; i++)
                 IMU_Raw[2][i] = (uint8_t)imu.magn[i];
+    #if defined(SHOW_STATUS_IMU)
             std::cout << imu;
+    #endif
         }
 #endif
-#if defined(SHOW_STATUS_PID)
+#if defined(UPDATE_STATUS_PID)
         if (show_PID)
         {
             msp::msg::Pid pid;
             FlController->client.request(pid);
+    #if defined(SHOW_STATUS_PID)
             std::cout << pid;
+    #endif
             PID_Raw[0][0] = (uint8_t)pid.roll.P;
             PID_Raw[1][0] = (uint8_t)pid.roll.I;
             PID_Raw[2][0] = (uint8_t)pid.roll.D;
@@ -501,9 +510,35 @@ void Channel_ViewRefresh(int threadId)
             PID_Raw[2][2] = (uint8_t)pid.yaw.D;
         }
 #endif
+#if defined(UPDATE_STATUS_WIFI_STRENGTH)
+    #if defined(SHOW_STATUS_WIFI_STRENGTH)
+        if(show_Wifi)
+        {
+            system("awk 'NR==3 {print \"WiFi Signal Strength = \" \$3 \"00 %\"}''' /proc/net/wireless");
+        }
+    #endif 
+#endif
         mtx.unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds(RC_VIEW_UPDATE_RATE));
+        std::this_thread::sleep_for(std::chrono::milliseconds(CLI_UPDATE_RATE));
     }
+}
+
+int event_key_A()
+{
+    if (!show_armed)
+        show_armed = 1;
+    else
+        show_armed = 0;
+    return 0;
+}
+
+int event_key_r()
+{
+    if (!show_Wifi)
+        show_Wifi = 1;
+    else
+        show_Wifi = 0;
+    return 0;
 }
 
 int event_key_q()
@@ -876,9 +911,11 @@ int ControllerInterface_init(int argc, char **argv)
     std::thread *chnl_refresh = new std::thread(Channel_ViewRefresh, 0);
     for (int i = 0; i < 256; i++)
         KeyMap[i] = event_key_other;
-    KeyMap['q'] = event_key_q;
-    KeyMap['w'] = event_key_w;
-    KeyMap['e'] = event_key_e;
+    KeyMap['q'] = event_key_q;      // Show RC Values
+    KeyMap['w'] = event_key_w;      // show PID Values
+    KeyMap['e'] = event_key_e;      // show IMU Data
+    KeyMap['r'] = event_key_r;      // show Wifi Strength
+    KeyMap['A'] = event_key_A;      // show Armed
     std::thread *keyboard_handler = new std::thread(Keyboard_handler, 2);
 #endif
 #if defined(UPDATER_THREAD)

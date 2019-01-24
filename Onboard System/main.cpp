@@ -11,7 +11,6 @@
 
 #include "ControlServer.hpp"
 #include "SensorsServer.hpp"
-
 int main(int argc, char *argv[])
 {
 #ifndef DRONELESS_LOCAL_TEST

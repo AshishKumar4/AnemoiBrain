@@ -28,11 +28,18 @@
     Outputs to be shown on CLI
 */
 
+#define UPDATE_STATUS_RC
+#define UPDATE_STATUS_PID
+#define UPDATE_STATUS_IMU
+#define UPDATE_STATUS_WIFI_STRENGTH
+
 #define SHOW_STATUS_RC
 #define SHOW_STATUS_PID
 #define SHOW_STATUS_IMU
 #define SHOW_STATUS_ARMED
-#define RC_VIEW_UPDATE_RATE 100 // Miliseconds
+#define SHOW_STATUS_WIFI_STRENGTH
+
+#define CLI_UPDATE_RATE 100 // Miliseconds
 
 /*
         There are two possible configurations, 
