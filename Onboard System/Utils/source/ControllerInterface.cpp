@@ -869,12 +869,13 @@ void FailSafeMechanism()
     try
     {
         // Decrease the throttle at constant rate to land
+        std::cout<<"\nInitiating FailSafe...";
         setYaw(127);
         setRoll(127);
         setPitch(127);
         setYaw(127);
         int a = RC_DATA[THROTTLE];
-        for(int i = a; i = 0; i--)
+        for(int i = a; i > 0; i--)
         {
             failsafe.lock();
             if(FaultManaged)
@@ -882,6 +883,7 @@ void FailSafeMechanism()
                 failsafe.unlock();
                 return;
             }
+            std::cout<<"\nLowering the throttle to "<<i;
             setThrottle(i);
             failsafe.unlock();
             std::this_thread::sleep_for(std::chrono::milliseconds(FAILSAFE_LANDING_RATE));
@@ -889,6 +891,7 @@ void FailSafeMechanism()
         // Disarm and send FailSafe!
         FailSafeTrigger = true;
         setAux1(51);    // Trigger Failsafe
+        std::cout<<"\nFailSafe Locked!";
         mtx.lock();     // Grab the lock and don't release until the fault is fixed
     }
     catch(std::exception &e)
@@ -904,6 +907,7 @@ void ResumeHandler()
     {
         failsafe.lock();
         FaultManaged = true;
+        delete FailSafeThread;
         failsafe.unlock();
         if(FailSafeTrigger)
         {
