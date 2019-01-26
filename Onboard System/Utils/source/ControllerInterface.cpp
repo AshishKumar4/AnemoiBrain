@@ -381,7 +381,7 @@ void Channel_Updater(int threadid)
         //mtx.lock();
         client.moveByAngleThrottleAsync(rcShrink(255 - RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 10), rcShrink(RC_DATA[YAW], -6.0, 6.0), TIMESLICE);
         //mtx.unlock();
-        std::this_thread::sleep_for(std::chrono::microseconds(int(TIMESLICE * 1000 * 1000)));
+        std::this_thread::sleep_for(std::chrono::microseconds(int(TIMESLICE * 1000.0 * 1000.0)));
     }
 }
 
@@ -864,19 +864,74 @@ uint8_t getArmStatus(int block)
     return 0;
 }
 
+void FailSafeMechanism()
+{
+    try
+    {
+        // Decrease the throttle at constant rate to land
+        setYaw(127);
+        setRoll(127);
+        setPitch(127);
+        setYaw(127);
+        int a = RC_DATA[THROTTLE];
+        for(uint8_t i = a; i >= 0; i--)
+        {
+            failsafe.lock();
+            if(FaultManaged)
+            {
+                failsafe.unlock();
+                return;
+            }
+            setThrottle(i);
+            failsafe.unlock();
+            std::this_thread::sleep_for(std::chrono::milliseconds(FAILSAFE_LANDING_RATE));
+        }
+        // Disarm and send FailSafe!
+        FailSafeTrigger = true;
+        setAux1(51);    // Trigger Failsafe
+        mtx.lock();     // Grab the lock and don't release until the fault is fixed
+    }
+    catch(std::exception &e)
+    {
+        std::cout<<"Some More Error 2!"<<e.what();
+    }
+}
+
 void ResumeHandler()
 {
 #if defined(MSP_Serial_PROTOCOL)
-    mtx.unlock();     // Grab the lock and don't release until the fault is fixed
-    std::cout<<"Fault Resumed and Managed!\n";
+    try
+    {
+        failsafe.lock();
+        FaultManaged = true;
+        failsafe.unlock();
+        if(FailSafeTrigger)
+        {
+            mtx.unlock();     // Grab the lock and don't release until the fault is fixed
+            FailSafeTrigger = false;
+        }
+        std::cout<<"Fault Resumed and Managed!\n";
+    }
+    catch(std::exception &e)
+    {
+        std::cout<<"Some More Error 3!"<<e.what();
+    }
 #endif
 }
 
 void FaultHandler()
 {
 #if defined(MSP_Serial_PROTOCOL)
-    mtx.lock();     // Grab the lock and don't release until the fault is fixed
-    std::cout<<"Fault Occured!\n";
+    try
+    {
+        std::cout<<"Fault Occured!\nTriggering FailSafe!!!";
+        FaultManaged = false;
+        FailSafeThread = new std::thread(FailSafeMechanism);
+    }
+    catch(std::exception &e)
+    {
+        std::cout<<"Some More Error 1!"<<e.what();
+    }
 #endif
 }
 

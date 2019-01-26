@@ -13,7 +13,6 @@
 #include <mutex>
 #include <stdexcept>
 
-
 #include "AbstractServer.hpp"
 
 namespace Onboard
@@ -117,6 +116,8 @@ void AbstractServer::ChannelLogic(int i, int j, int fd, AbstractServer *thisObj)
 
 int faultOccured = false;
 
+std::mutex FaultTrigger;
+
 void AbstractServer::ChannelListener(int i, AbstractServer *thisObj)
 {
     int PORT = i + thisObj->PORT_BASE;
@@ -150,10 +151,13 @@ back:
                 delete[] buff;
                 goto back;
             }
-            if(faultOccured)
+            if (faultOccured)
             {
+                FaultTrigger.lock();        // Only let a Single thread trigger the Fault!
+                if(faultOccured)
+                    thisObj->ResumeHandler();
                 faultOccured = false;
-                thisObj->ResumeHandler();
+                FaultTrigger.unlock();
             }
             std::cout << "\nGot an incoming request...\n";
             if (thisObj->ChannelInitializers[i](i, new_socket))
@@ -181,16 +185,22 @@ back:
             }
             catch (std::exception &e)
             {
-                std::cout << "Broken Pipe, Waiting for incoming Connections...";
-                thisObj->ExceptionHandler();
+                std::cout << "\nBroken Pipe, Waiting for incoming Connections...";
+                FaultTrigger.lock();
+                if (!faultOccured)
+                    thisObj->ExceptionHandler();
                 faultOccured = true;
+                FaultTrigger.unlock();
             }
         }
         catch (std::exception &e)
         {
             std::cout << "Some Serious ERROR!!!" << e.what() << "\n";
-            thisObj->ExceptionHandler();
+            FaultTrigger.lock();
+            if (!faultOccured)
+                thisObj->ExceptionHandler();
             faultOccured = true;
+            FaultTrigger.unlock();
         }
     }
 }

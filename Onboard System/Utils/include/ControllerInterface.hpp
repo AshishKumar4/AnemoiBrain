@@ -6,6 +6,7 @@
 #include "vector"
 #include "algorithm"
 #include "mutex"
+#include "thread"
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* --------------------------------------------------Some Configurations--------------------------------------------------- */
@@ -40,6 +41,7 @@
 #define SHOW_STATUS_WIFI_STRENGTH
 
 #define CLI_UPDATE_RATE 100 // Miliseconds
+#define FAILSAFE_LANDING_RATE 10
 
 /*
         There are two possible configurations, 
@@ -48,10 +50,10 @@
         2) RPI unit is off board the drone and communicates with the flight controller through Radio (wifi/ Xbee)
     */
 
+
 /*
     Telemetry Protocol
 */
-
 #if !defined(MODE_DEBUG_NO_FC)
 //#define ONBOARD_SPI_PROTOCOL
 //#define NRF24L01_SPI_PROTOCOL
@@ -59,27 +61,29 @@
 #define MSP_Serial_PROTOCOL
 #endif
 
+
 /*
-        Data Gathering method
-    */
+    Telemetry Type
+*/
+//#define NRF24
+//#define WIFI
+//#define Xbee
+
+/*
+    Data Gathering method
+*/
 
 #if defined(MSP_Serial_PROTOCOL)
 #define MSP_SERIAL_CLI_MONITOR
 //#define MSP_SERIAL_FORWARDING
 //#define MSP_REMOTE_TWEAKS
+
+
 #endif
-/*
-        Telemetry Type
-    */
-//#define NRF24
-//#define WIFI
-//#define Xbee
 
-#if defined(MODE_AIRSIM)
-
-#define AIRSIM_MODE_API
-//#define AIRSIM_MODE_SOCKETS
-
+    #if defined(MODE_AIRSIM)
+    #define AIRSIM_MODE_API
+    //#define AIRSIM_MODE_SOCKETS
 #endif
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
@@ -89,6 +93,7 @@
 #define CP_MAGIC 110
 
 uint8_t checksum(uint8_t *buf, int len);
+
 #define CPACKET_MAGIC 110
 #define REQ_SIGNAL 251
 #define REQ2_SIGNAL 101
@@ -109,6 +114,12 @@ uint8_t checksum(uint8_t *buf, int len);
 uint8_t RC_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 //using namespace std;
 std::mutex mtx;
+std::mutex failsafe;
+
+std::thread *FailSafeThread;
+
+bool FaultManaged = false;
+bool FailSafeTrigger = false;
 
 #if defined(ONBOARD_SPI_PROTOCOL) || defined(NRF24L01_SPI_PROTOCOL) || defined(I2C_PROTOCOL)
 struct ControlPackets
