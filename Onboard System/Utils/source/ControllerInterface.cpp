@@ -874,7 +874,7 @@ void FailSafeMechanism()
         setPitch(127);
         setYaw(127);
         int a = RC_DATA[THROTTLE];
-        for(uint8_t i = a; i >= 0; i--)
+        for(int i = a; i = 0; i--)
         {
             failsafe.lock();
             if(FaultManaged)
