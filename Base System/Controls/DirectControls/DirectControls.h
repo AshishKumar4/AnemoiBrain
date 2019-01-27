@@ -10,12 +10,14 @@
 
 #include "../AbstractControls/Controls.hpp"
 
+#define CHANNEL_COUNT   9
+
 class DirectController : public Controller
 {
   vector<int> server_fd;
   vector<int> socket_num;
   vector<struct sockaddr_in *> addresses;
-  int channelBuffs[6] =     {0, 0, 0, 0, 0, 0};
+  int channelBuffs[CHANNEL_COUNT] =     {0, 0, 0, 0, 0, 0, 0, 0, 0};
   DronePosition_t*          currentPosition;
   DroneState_t*             currentState;
   vector<DroneCamera_t>     cameras;
@@ -40,6 +42,7 @@ public:
   void setYaw(int val);
   void setRoll(int val);
   void setAux(int channel, int val);
+  void callRAPI(int code, int val);
 
   void printChannels();
   /* APIs to get Data */

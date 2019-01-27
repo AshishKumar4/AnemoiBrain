@@ -97,3 +97,4 @@ class DirectControl:
             self.a2 = val
         ss = bytes(str(val), "utf-8")
         self.s[5].send(b'.[:'+ss+b':]')
+    

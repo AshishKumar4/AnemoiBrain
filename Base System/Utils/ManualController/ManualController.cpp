@@ -76,7 +76,6 @@ int show_debug = 0;
 
 class ManualController
 {
-    Controller *controls;
     string yaw = "100";
     string pitch = "200";
     string throttle = "300";
@@ -107,6 +106,8 @@ class ManualController
 
   protected:
   public:
+    Controller *controls;
+
     int *auxBuffers[4] = {&a1_val, &a2_val, &a3_val, &a4_val};
 
     ManualController(Controller *controlobj = new DirectController(), char *portName = "/dev/ttyACM0")
@@ -318,6 +319,7 @@ class ManualController
             controls->setAux(4, a4_val);
             /*controls->setAux3(a2_val);
             controls->setAux4(a2_val);*/
+            //std::cout<<"Help!";
             if (show_debug)
                 controls->printChannels();
             std::this_thread::sleep_for(std::chrono::microseconds(1000));
@@ -521,6 +523,13 @@ int event_key_s(ManualController *obj)
     return 1;
 }
 
+int event_key_h(ManualController *obj)
+{
+    printf("\nRAPI CALLED!!!");
+    obj->controls->callRAPI(111, 0);
+    return 1;
+}
+
 int event_other(ManualController *obj)
 {
     *(obj->auxBuffers[0]) = 0;
@@ -596,6 +605,7 @@ int main(int argc, char **argv)
     KeyMap['c'] = event_key_c;
     KeyMap['a'] = event_key_a;
     KeyMap['s'] = event_key_s;
+    KeyMap['h'] = event_key_h;
     KeyMap['\n'] = event_key_enter;
     KeyMap['\r'] = event_key_enter;
     ManualController remote(droneControl, serialport);

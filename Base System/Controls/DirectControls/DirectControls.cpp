@@ -51,7 +51,7 @@ int opt = 1;
 
 void DirectController::InitSequence()
 {
-  for (int i = 0; i < 8; i++)
+  for (int i = 0; i < CHANNEL_COUNT; i++)
   {
     send(server_fd[i], HANDSHAKE_IN_MSG, strlen(HANDSHAKE_IN_MSG), 0);
     // TODO: Place mechanism to recieve back handshake and if not matching, Panic!
@@ -80,6 +80,7 @@ DirectController::DirectController(char *ip, int portBase)
   ConnectChannel(ip, portBase + 5, 5); //PORT_AUX2
   ConnectChannel(ip, portBase + 6, 6); //PORT_AUX3
   ConnectChannel(ip, portBase + 7, 7); //PORT_AUX4
+  ConnectChannel(ip, portBase + 8, 8); //RAPI_INVOKER
 
   InitSequence();
 }
@@ -230,8 +231,9 @@ void DirectController::sendCommand(int val, int channel)
 void DirectController::printChannels()
 {
   printf("\nData: ");
-  for(int i = 0; i < 8; i++)
+  for(int i = 0; i < 9; i++)
     printf("[%d]--", channelBuffs[i]);
+  fflush(stdout);
 }
 
 void DirectController::setThrottle(int val)
@@ -257,6 +259,16 @@ void DirectController::setRoll(int val)
 void DirectController::setAux(int channel, int val)
 {
   sendCommand(val, channel + 3);
+}
+
+void DirectController::callRAPI(int code, int val)
+{
+    char *bmsg;
+    int blen = 0;
+    uint8_t gm[1] = {uint8_t(code)};
+    bmsg = (char*)gm;
+    blen = 1;
+    send(server_fd[8], bmsg, blen, 0);
 }
 /*
   Sensors APIs 

@@ -73,15 +73,16 @@
     Data Gathering method
 */
 
+#define CLI_MONITOR
+
 #if defined(MSP_Serial_PROTOCOL)
-#define MSP_SERIAL_CLI_MONITOR
 //#define MSP_SERIAL_FORWARDING
 //#define MSP_REMOTE_TWEAKS
 
 
 #endif
 
-    #if defined(MODE_AIRSIM)
+#if defined(MODE_AIRSIM)
     #define AIRSIM_MODE_API
     //#define AIRSIM_MODE_SOCKETS
 #endif
@@ -110,6 +111,9 @@ uint8_t checksum(uint8_t *buf, int len);
 #define AUX2       5
 #define AUX3       6
 #define AUX4       7
+
+#define HEADING_YAW_I 1
+#define HEADING_YAW_DAMPING 0.7
 
 uint8_t RC_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 //using namespace std;
@@ -186,6 +190,33 @@ struct MSP_Packet
 
 MSP_Packet MSP_Agent(char *buf, int size);
 
+class vector3D_t
+{
+public:
+    float x;
+    float y;
+    float z;
+
+    vector3D_t()
+    {
+        x = 0;
+        y = 0;
+        z = 0;
+    }
+    
+    vector3D_t(float xval, float yval, float zval)
+    {
+        x = xval;
+        y = yval; 
+        z = zval;
+    }
+};
+
+typedef int (*func_i_t)(int);              // function pointer
+typedef int (*func_vs_t)(std::vector<std::string>);              // function pointer
+
+func_vs_t API_ProcedureInvokeTable[256];
+
 namespace ControllerInterface
 {
 int WriteToPort(int portnum, char *buff, int size);
@@ -207,6 +238,23 @@ uint8_t getPID_I(int axis);
 uint8_t getPID_D(int axis);
 uint8_t getArmStatus(int block);
 
+float getHeading();
+int setHeading(float heading);
+int testHeading(int test);
+void setAlititude(float altitude);
+void takeOff(float altitude = 5);
+vector3D_t getVelocity();
+vector3D_t getPosition();
+/*
+    High Level APIs 
+*/
+
+int autoNavPID(vector3D_t start, vector3D_t destination, float maxAltitude = 0);
+int setDestination(vector3D_t position, bool start_now = true);
+int returnToHome();
+
+//void Remote_API_Invoker(int code, std::vector<std::string> args);
+void RemoteAPI_Invoker(int code, int count);
 void ResumeHandler();
 void FaultHandler();
 

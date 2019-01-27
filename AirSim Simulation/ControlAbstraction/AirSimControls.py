@@ -31,7 +31,7 @@ def valMapMids(i, imin, imax, mid, omin, omax):
 class AirSimControls:
     def __init__(self, ip="0.0.0.0", portBase=8400):
         # We Spawn 'n' threads corresponding to number of channels
-        self.channels = 6
+        self.channels = 9
         self.ports = list()
         self.ip = ip
         self.threads = list()
@@ -48,7 +48,7 @@ class AirSimControls:
         }
         # self.channelDescriptors
         print("Spawning Listener Threads to listen to the Base Station...")
-        for i in range(0, 6):
+        for i in range(0, self.channels):
             self.ports.append(portBase + i)
             self.threads.append(Thread(target=self.ChannelControllers, args=(i,)))
         self.MainThread = Thread(target = self.ChannelSyncToSim)
@@ -69,15 +69,15 @@ class AirSimControls:
         self.ymin = -6
         self.ymax = 6
         self.tmin = 0
-        self.tmax = 10
+        self.tmax = 6
         self.t = self.r = self.y = self.p = self.a1 = self.a2 = 0
         # moveByAngleThrottleAsync --> pitch, roll, throttle, yaw_rate
         ###########################################################################################
     def launchThreads(self):
-        for i in range(0, 6):
+        for i in range(0, self.channels):
             self.threads[i].start()
         self.MainThread.start()
-        for i in range(0, 6):
+        for i in range(0, self.channels):
             self.threads[i].join()
         self.MainThread.join()
         return None

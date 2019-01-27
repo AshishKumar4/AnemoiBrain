@@ -379,7 +379,7 @@ void Channel_Updater(int threadid)
     while (1)
     {
         //mtx.lock();
-        client.moveByAngleThrottleAsync(rcShrink(255 - RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 10), rcShrink(RC_DATA[YAW], -6.0, 6.0), TIMESLICE);
+        client.moveByAngleThrottleAsync(rcShrink(255 - RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 5), rcShrink(RC_DATA[YAW], -6.0, 6.0), TIMESLICE);
         //mtx.unlock();
         std::this_thread::sleep_for(std::chrono::microseconds(int(TIMESLICE * 1000.0 * 1000.0)));
     }
@@ -440,10 +440,20 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
 /* ------------------------------------------------------------------------------------------------------------------------ */
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
-/* -------------------------------------MSP Data stream for Multiwii/Betaflight FC----------------------------------------- */
+/* ------------------------------------------Protocol Specific Data Gathering---------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
 
-#if defined(MSP_SERIAL_CLI_MONITOR)
+#if defined(MSP_Serial_PROTOCOL)
+#endif
+
+#if defined(MODE_AIRSIM)
+#endif
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* ------------------------------------------------------Cli Monitor------------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+#if defined(CLI_MONITOR)
 
 int show_RC = 1, show_PID = 0, show_IMU = 0, show_Wifi = 0, show_armed = 1;
 
@@ -452,8 +462,8 @@ void Channel_ViewRefresh(int threadId)
     while (1)
     {
         mtx.lock();
-#if defined(SHOW_STATUS_ARMED)
-        if(show_armed)
+#if defined(MSP_Serial_PROTOCOL)
+        if (show_armed)
         {
             if (FlController->isArmed())
             {
@@ -464,18 +474,17 @@ void Channel_ViewRefresh(int threadId)
                 std::cout << "Disarmed\t";
             }
         }
-#endif
-#if defined(UPDATE_STATUS_RC)
+    #if defined(UPDATE_STATUS_RC)
         if (show_RC)
         {
             msp::msg::Rc rc;
             FlController->client.request(rc);
-    #if defined(SHOW_STATUS_RC)
+        #if defined(SHOW_STATUS_RC)
             std::cout << rc;
-    #endif
+        #endif
         }
-#endif
-#if defined(UPDATE_STATUS_IMU)
+    #endif
+    #if defined(UPDATE_STATUS_IMU)
         if (show_IMU)
         {
             msp::msg::ImuRaw imu;
@@ -486,19 +495,19 @@ void Channel_ViewRefresh(int threadId)
                 IMU_Raw[1][i] = (uint8_t)imu.acc[i];
             for (int i = 0; i < 3; i++)
                 IMU_Raw[2][i] = (uint8_t)imu.magn[i];
-    #if defined(SHOW_STATUS_IMU)
+        #if defined(SHOW_STATUS_IMU)
             std::cout << imu;
-    #endif
+        #endif
         }
-#endif
-#if defined(UPDATE_STATUS_PID)
+    #endif
+    #if defined(UPDATE_STATUS_PID)
         if (show_PID)
         {
             msp::msg::Pid pid;
             FlController->client.request(pid);
-    #if defined(SHOW_STATUS_PID)
+        #if defined(SHOW_STATUS_PID)
             std::cout << pid;
-    #endif
+        #endif
             PID_Raw[0][0] = (uint8_t)pid.roll.P;
             PID_Raw[1][0] = (uint8_t)pid.roll.I;
             PID_Raw[2][0] = (uint8_t)pid.roll.D;
@@ -509,15 +518,41 @@ void Channel_ViewRefresh(int threadId)
             PID_Raw[1][2] = (uint8_t)pid.yaw.I;
             PID_Raw[2][2] = (uint8_t)pid.yaw.D;
         }
-#endif
+    #endif
+#endif // MSP 
+/*
+    For AisSim
+*/
+#if defined(MODE_AIRSIM)
+    #if defined(UPDATE_STATUS_RC)
+        if (show_RC)
+        {
+        #if defined(SHOW_STATUS_RC)
+            printf("\n[%d]-[%d]-[%d]-[%d]", RC_DATA[PITCH], RC_DATA[ROLL], RC_DATA[THROTTLE], RC_DATA[YAW]);
+        #endif
+        }
+    #endif
+    #if defined(UPDATE_STATUS_IMU)
+        if (show_IMU)
+        {
+        #if defined(SHOW_STATUS_IMU)
+            printf("\nHeading: %f", ControllerInterface::getHeading());
+        #endif
+        }
+    #endif
+#endif 
+/*
+    General
+*/
 #if defined(UPDATE_STATUS_WIFI_STRENGTH)
-    #if defined(SHOW_STATUS_WIFI_STRENGTH)
-        if(show_Wifi)
+#if defined(SHOW_STATUS_WIFI_STRENGTH)
+        if (show_Wifi)
         {
             system("awk 'NR==3 {print \"WiFi Signal Strength = \" \$3 \"00 %\"}''' /proc/net/wireless");
         }
-    #endif 
 #endif
+#endif
+        fflush(stdout);
         mtx.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(CLI_UPDATE_RATE));
     }
@@ -726,6 +761,16 @@ int ReadFromPort(int portnum, char *buff, int size)
 
 #endif
 
+/*
+    General Purpose tools
+*/
+
+float clamp(float val, float imin, float imax, float omin, float omax)
+{
+    float aa = omin + (((omax - omin) / (imax - imin)) * (val - imin));
+    return aa;
+}
+
 namespace ControllerInterface
 {
 /* ------------------------------------------------------------------------------------------------------------------------ */
@@ -864,39 +909,206 @@ uint8_t getArmStatus(int block)
     return 0;
 }
 
+/*
+    GPS/Barometer/Compass assisted
+    All SI Units, Meters, Degrees
+*/
+
+float y_min = 0, y_max = 0;
+
+vector3D_t getOrientation()
+{
+    vector3D_t oo;
+#if defined(MODE_AIRSIM)
+    auto orien = client.getMultirotorState().getOrientation();
+    std::cout<<">>>"<<orien<<"<<<"<<std::endl;
+    oo.x = orien.x();
+    oo.y = orien.y();
+    if(orien.z() > y_max)   y_max = orien.z();
+    if(orien.z() < y_min)   y_min = orien.z();
+    printf("\n\t-->%f %f", y_min, y_max);
+    printf("\t->%f", orien.w()*orien.z());
+    oo.z = clamp(orien.z(), -1, 1, -180, 180);// 0, 360);
+#else 
+#endif
+    return oo;
+}
+
+vector3D_t getVelocity()
+{
+    vector3D_t vel;
+    return vel;
+}
+
+vector3D_t getPosition()
+{
+    vector3D_t pos;
+    return pos;
+}
+float getHeading()
+{
+    // 90 -> north
+    // 0 -> east 
+    // 180 -> west 
+    // 270 ->south
+#if defined(MODE_AIRSIM)
+    return getOrientation().z;
+#else 
+    return 0;
+#endif
+}
+
+#define HEADING_YAW_P 0.6
+#define HEADING_YAW_DAMPING 1
+#define HEADING_YAW_DAMPING_2 0.8
+
+int setHeading(float heading)
+{
+    // 90 -> north
+    // 0 -> east 
+    // 180 -> west 
+    // 270 ->south
+
+    /*
+        A Simple Control Loop
+    */
+    try
+    {
+        float h = getHeading();     // Heading should be between 180 and -180
+        printf("\n{Heading: %f", h);
+        float errorScale = HEADING_YAW_P;
+
+        float yawVal = 127;
+        float currentYaw = 127;
+        float oldError = h - heading;
+        float oldAbsError = abs(oldError);
+        printf("\nInitial Errors: %f %f %f ", oldError);
+        while(true)
+        {
+            h = getHeading();
+            float newError = h - heading;
+            float absNewError = abs(newError);
+            //float newErrorSign = absNewError/newError;
+            if(absNewError <= 2)
+            {
+                setYaw(127);    // Make it not move anymore
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));  // Wait for it to stabilize
+                if(abs(getHeading() - h) > 2)
+                    continue;
+                printf("\nDone...%f %f", newError, h);
+                return 1;
+            }
+            /* Our Equation */
+            float clampedVal = clamp(newError*errorScale, -180, 180, -127, 127);
+            yawVal = ((clampedVal) + (oldAbsError - absNewError) + (newError/oldError)) + currentYaw;//(newError/error);
+
+            if(yawVal > 255) yawVal = 255;
+            else if(yawVal < 0) yawVal = 0;
+            printf("\n{Errors: <%f> %f %f %f [%f]}", h, newError, yawVal, clampedVal, errorScale);
+            setYaw(int(yawVal));
+            oldError = newError;
+            oldAbsError = absNewError;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    }
+    catch(std::exception &e)
+    {
+        std::cout<<e.what();
+    }
+    return 0;
+}
+
+int testHeading(std::vector<std::string> test)
+{
+    std::cout<<"Testing Auto Heading feature...";
+    return setHeading(90);
+}
+
+void setAltitude(float altitude)
+{
+    
+}
+
+void takeOff(float altitude)
+{
+    setAltitude(5);
+}
+
+/*
+    High Level APIs 
+*/
+
+int autoNavPID(vector3D_t start, vector3D_t destination, float maxAltitude)
+{
+    // Firstly move to the direction to face the destination 
+
+    // Then Throttle Up to maintain an altitude.
+    return 0;
+}
+
+std::vector<vector3D_t>  destinationBuffer;
+
+int setDestination(vector3D_t position, bool start_now)
+{
+    if(start_now)
+        autoNavPID(getPosition(), position);
+    return 0;
+}
+
+int returnToHome()
+{
+    return 0;
+}
+
+/*
+    Some other Mechanisms
+*/
+
+int unusedAPIhandler(std::vector<std::string> test)
+{
+    std::cout<<"\nOops! Seems someone sent me some wrong code!";
+}
+
+void RemoteAPI_Invoker(int code, int count)
+{
+    std::vector<std::string> aa;
+    printf("<<%d, %d>>", code, count);
+    std::cout<<API_ProcedureInvokeTable[code](aa);
+}
+
 void FailSafeMechanism()
 {
     try
     {
         // Decrease the throttle at constant rate to land
-        std::cout<<"\nInitiating FailSafe...";
+        std::cout << "\nInitiating FailSafe...";
         setYaw(127);
         setRoll(127);
         setPitch(127);
         setYaw(127);
         int a = RC_DATA[THROTTLE];
-        for(int i = a; i > 0; i--)
+        for (int i = a; i > 0; i--)
         {
             failsafe.lock();
-            if(FaultManaged)
+            if (FaultManaged)
             {
                 failsafe.unlock();
                 return;
             }
-            std::cout<<"\nLowering the throttle to "<<i;
+            std::cout << "\nLowering the throttle to " << i;
             setThrottle(i);
             failsafe.unlock();
             std::this_thread::sleep_for(std::chrono::milliseconds(FAILSAFE_LANDING_RATE));
         }
         // Disarm and send FailSafe!
         FailSafeTrigger = true;
-        setAux1(51);    // Trigger Failsafe
-        std::cout<<"\nFailSafe Locked!";
-        mtx.lock();     // Grab the lock and don't release until the fault is fixed
+        setAux1(51); // Trigger Failsafe
+        std::cout << "\nFailSafe Locked!";
+        mtx.lock(); // Grab the lock and don't release until the fault is fixed
     }
-    catch(std::exception &e)
+    catch (std::exception &e)
     {
-        std::cout<<"Some More Error 2!"<<e.what();
+        std::cout << "Some More Error 2!" << e.what();
     }
 }
 
@@ -907,18 +1119,18 @@ void ResumeHandler()
     {
         failsafe.lock();
         FaultManaged = true;
-        delete FailSafeThread;
         failsafe.unlock();
-        if(FailSafeTrigger)
+        FailSafeThread->join();
+        if (FailSafeTrigger)
         {
-            mtx.unlock();     // Grab the lock and don't release until the fault is fixed
+            mtx.unlock(); // Grab the lock and don't release until the fault is fixed
             FailSafeTrigger = false;
         }
-        std::cout<<"Fault Resumed and Managed!\n";
+        std::cout << "Fault Resumed and Managed!\n";
     }
-    catch(std::exception &e)
+    catch (std::exception &e)
     {
-        std::cout<<"Some More Error 3!"<<e.what();
+        std::cout << "Some More Error 3!" << e.what();
     }
 #endif
 }
@@ -928,13 +1140,13 @@ void FaultHandler()
 #if defined(MSP_Serial_PROTOCOL)
     try
     {
-        std::cout<<"Fault Occured!\nTriggering FailSafe!!!";
+        std::cout << "Fault Occured!\nTriggering FailSafe!!!";
         FaultManaged = false;
         FailSafeThread = new std::thread(FailSafeMechanism);
     }
-    catch(std::exception &e)
+    catch (std::exception &e)
     {
-        std::cout<<"Some More Error 1!"<<e.what();
+        std::cout << "Some More Error 1!" << e.what();
     }
 #endif
 }
@@ -966,15 +1178,21 @@ int ControllerInterface_init(int argc, char **argv)
     //SPI_handshake();
     //IssueCommand();
 
-#if defined(MSP_SERIAL_CLI_MONITOR)
+    for(int i = 0; i < 256; i++)
+    {
+        API_ProcedureInvokeTable[i] = unusedAPIhandler;
+    }
+    API_ProcedureInvokeTable[111] = testHeading;
+
+#if defined(CLI_MONITOR)
     std::thread *chnl_refresh = new std::thread(Channel_ViewRefresh, 0);
     for (int i = 0; i < 256; i++)
         KeyMap[i] = event_key_other;
-    KeyMap['q'] = event_key_q;      // Show RC Values
-    KeyMap['w'] = event_key_w;      // show PID Values
-    KeyMap['e'] = event_key_e;      // show IMU Data
-    KeyMap['r'] = event_key_r;      // show Wifi Strength
-    KeyMap['A'] = event_key_A;      // show Armed
+    KeyMap['q'] = event_key_q; // Show RC Values
+    KeyMap['w'] = event_key_w; // show PID Values
+    KeyMap['e'] = event_key_e; // show IMU Data
+    KeyMap['r'] = event_key_r; // show Wifi Strength
+    KeyMap['A'] = event_key_A; // show Armed
     std::thread *keyboard_handler = new std::thread(Keyboard_handler, 2);
 #endif
 #if defined(UPDATER_THREAD)

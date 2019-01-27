@@ -32,7 +32,7 @@ int opt = 1;
 func_vi_t CHANNEL_HANDLER_TABLES[] = {&ControllerInterface::setThrottle, &ControllerInterface::setPitch, &ControllerInterface::setRoll, &ControllerInterface::setYaw, &ControllerInterface::setAux1, &ControllerInterface::setAux2, &ControllerInterface::setAux3, &ControllerInterface::setAux4};
 std::string CHANNEL_NAME_TABLES[] = {"throttle", "pitch", "roll", "yaw", "aux1", "aux2", "aux3", "aux4"};
 
-char **ControlChannelBuffer = (char **)malloc(sizeof(char *) * 8);
+char **ControlChannelBuffer = (char **)malloc(sizeof(char *) * 12);
 
 int ControlHandshake(int i, int fd)
 {
@@ -73,6 +73,34 @@ int ControlResumeHandler()
 {
     ControllerInterface::ResumeHandler();
     return 1;
+}
+
+int RemoteAPI_Listener(int i, int fd)
+{
+    try 
+    {
+        memset(ControlChannelBuffer[i], 0, 4096);
+        printf("\nInsiteRAPI");
+        int valread = read(fd, ControlChannelBuffer[i], 4096);
+        if (valread == 0 || valread == -1)
+            return 1;
+        // Implement a protocol over here to pass on codes 
+
+        // for now, lets just test if it works 
+        //std::vector<std::string> test;
+        printf("\nRAPI CALLED!!!");
+        for(int j = 0; j < valread; j++)
+        {
+            ControllerInterface::RemoteAPI_Invoker((int)ControlChannelBuffer[i][j], j);
+        }
+        printf("\n Exiting...");
+    }
+    catch(std::exception &e)
+    {
+        std::cout<<"ERROR!!!";
+        return 1;
+    }
+    return 0;
 }
 
 int ControlListeners(int i, int fd)
@@ -283,6 +311,9 @@ int ControlServer_init(int argc, char **argv)
         Onboard::Controls::ControlChannelBuffer[i] = new char[4096];
         ControlServer.AddChannels(i, Onboard::Controls::ControlListeners, Onboard::Controls::ControlHandshake);
     }
+    Onboard::Controls::ControlChannelBuffer[8] = new char[4096];
+    ControlServer.AddChannels(8, Onboard::Controls::RemoteAPI_Listener, Onboard::Controls::ControlHandshake);
+
     ControlServer.ExceptionHandler = Onboard::Controls::ControlExceptionHandler;
     ControlServer.ResumeHandler = Onboard::Controls::ControlResumeHandler;
     ControlServer.LaunchThreads(); //*/
