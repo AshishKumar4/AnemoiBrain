@@ -2,12 +2,14 @@ cmake_minimum_required(VERSION 3.0.0)
 project(GardienOnboard)
 set (ONBOARD_ROOT ./)
 
-set (AIRSIM_ROOT /opt/AirSim)
-set (CMAKE_CXX_STANDARD 11)
-
-LIST(APPEND CMAKE_MODULE_PATH "cmake_templates") 
-INCLUDE("Utils/cmake_templates/CommonSetup.cmake")
-CommonSetup()
+if(COMPILE_MODE STREQUAL "airsim")
+    message("AIRSIM MODE")
+    set (AIRSIM_ROOT /opt/AirSim)
+    set (CMAKE_CXX_STANDARD 11)
+    LIST(APPEND CMAKE_MODULE_PATH "cmake_templates") 
+    INCLUDE("Utils/cmake_templates/CommonSetup.cmake")
+    CommonSetup()
+endif()
 
 # Include the Necessary Headers
 include_directories(${ONBOARD_ROOT}/Utils/include
@@ -20,6 +22,7 @@ include_directories(${ONBOARD_ROOT}/Utils/include
 link_directories(${ONBOARD_ROOT}/Utils/build/
     ${ONBOARD_ROOT}/ControlAbstraction/build/
     ${ONBOARD_ROOT}/SensorAbstraction/build/
+    ${AIRSIM_ROOT}/cmake/output/lib/
     )
 
 # Some global configurations
@@ -33,3 +36,4 @@ target_link_libraries(${PROJECT_NAME} Threads::Threads)
 target_link_libraries(${PROJECT_NAME} ControlServer)
 target_link_libraries(${PROJECT_NAME} SensorServer)
 target_link_libraries(${PROJECT_NAME} OnboardUtils)
+target_link_libraries(${PROJECT_NAME} rpc)

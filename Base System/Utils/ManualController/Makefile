@@ -1,29 +1,31 @@
 OBJ:=objs
-CC:=gcc
-CPP:=g++
+CC:=clang
+CPP:=clang++
 LD:=ld
-DIRECTCONTROL:=../../Controls/DirectControls
+DRONESRC:=../../Drone
 SERIALRX:= Indirect
 
 libs:= *.so
 
 OBJ_DIR:=./
 CPP_OBJ_FILES := $(patsubst ./%.cpp, $(OBJ_DIR)/%.o,$(wildcard ./*.cpp)) \
-			$(patsubst ./$(DIRECTCONTROL)/%.cpp,./$(DIRECTCONTROL)/%.o,$(wildcard ./$(DIRECTCONTROL)/*.cpp)) \
 			$(patsubst ./$(SERIALRX)/%.cpp,./$(SERIALRX)/%.o,$(wildcard ./$(SERIALRX)/*.cpp)) 
 obj = $(CPP_OBJ_FILES) #$(libs)
 
 MAIN:=ManualController.o
 OUTPUT:=ManualController
 
-INCLUDED:=	#-I$(LIBRARY) -I$(SOURCE)
+INCLUDED:= -I$(DRONESRC)/include	#-I$(LIBRARY) -I$(SOURCE)
 
-CXXFLAGS:= -w -lstdc++ -O2 -std=gnu++11 -Wall -Wextra -g -D_GLIBCXX_RELEASE $(INCLUDED)
-LDFLAGS+=-lutil -lpthread
+CXXFLAGS:= -w -lstdc++ -O2 -std=gnu++11 -Wall -Wextra -g -D_GLIBCXX_RELEASE -fPIC $(INCLUDED) 
+LDFLAGS+=-lutil -lpthread -lDrone -lrpc
+LIBRARIES:= -L$(DRONESRC)/lib/
+
 all: clean build clean 
 
 build: $(obj)
-	$(CXX) -o $(OUTPUT) $^ $(LDFLAGS)
+	$(CPP) -o $(OUTPUT) $^ $(LIBRARIES) $(LDFLAGS)
+	make clean
 	chmod +x $(OUTPUT)
 
 run:

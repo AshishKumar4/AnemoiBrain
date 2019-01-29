@@ -13,7 +13,7 @@
 #include <sstream>
 #include <thread> // std::thread
 
-#include "DirectControls.h"
+#include "DirectControls.hpp"
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* --------------------------------------------------Some Configurations--------------------------------------------------- */
@@ -70,7 +70,7 @@ void DirectController::InitSequence()
   cout << "Initialization Sequence Completed...\n";
 }
 
-DirectController::DirectController(char *ip, int portBase)
+DirectController::DirectController(std::string ip, int portBase)
 {
   ConnectChannel(ip, portBase + 0, 0); //PORT_THROTTLE
   ConnectChannel(ip, portBase + 1, 1); //PORT_PITCH
@@ -89,7 +89,7 @@ DirectController::~DirectController()
 {
 }
 
-int DirectController::ConnectChannel(char *ip, int port, int channel) // This would create a port for a particular channel
+int DirectController::ConnectChannel(std::string ip, int port, int channel) // This would create a port for a particular channel
 {
   int sfd;
   struct sockaddr_in *address = new struct sockaddr_in;
@@ -104,7 +104,7 @@ int DirectController::ConnectChannel(char *ip, int port, int channel) // This wo
   address->sin_port = htons(port);
 
   // Convert IPv4 and IPv6 addresses from text to binary form
-  if (inet_pton(AF_INET, ip, &(address->sin_addr)) <= 0)
+  if (inet_pton(AF_INET, ip.c_str(), &(address->sin_addr)) <= 0)
   {
     printf("\nInvalid address/ Address not supported \n");
     return -1;
@@ -162,7 +162,7 @@ void DirectController::balance()
 {
   // TODO: Instead of manipulating via RC, make and use APIs directly to FC
   cmd(-1, -1, 255, 255);
-  sleep(0.01);
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
   cmd(-1, -1, 127, 127);
 }
 

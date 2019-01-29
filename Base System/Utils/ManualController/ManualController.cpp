@@ -16,7 +16,8 @@
 #include <algorithm>
 #include <sys/stat.h>
 
-#include "../../Controls/DirectControls/DirectControls.h"
+#include "Drone.hpp"
+#include "Controls/DirectControls.hpp"
 //#include "../Controls/AirSimControls/AirSimControls.h"
 
 //#include "Indirect/SerialRX.h"
@@ -106,13 +107,13 @@ class ManualController
 
   protected:
   public:
-    Controller *controls;
+    Drone *uavObject;
 
     int *auxBuffers[4] = {&a1_val, &a2_val, &a3_val, &a4_val};
 
-    ManualController(Controller *controlobj = new DirectController(), char *portName = "/dev/ttyACM0")
+    ManualController(Drone *droneObj = new Drone(), char *portName = "/dev/ttyACM0")
     {
-        controls = controlobj;
+        uavObject = droneObj;
         // TODO: Add code to Calibrate the Remote data, and add a filter
         serial = new SerialRX(portName);
         for (int i = 0; i < 6; i++)
@@ -234,7 +235,7 @@ class ManualController
         mids[YAW] = y_val;
         printf("\n{%d %d %d %d}", t_val, p_val, r_val, y_val);
 
-        /* In case you just decided to switch your controls to be mapped in opposite ways -_- */
+        /* In case you just decided to switch your uavObject to be mapped in opposite ways -_- */
         for (int i = 0; i < 4; i++)
         {
             if (mins[i] > maxs[i])
@@ -309,19 +310,19 @@ class ManualController
             }
             parseSerialData_syncd(sz, scn_max);
 
-            controls->setThrottle(filter(t_val, THROTTLE)); // (double(t_val - t_min) * t_factor)));
-            controls->setYaw(filter(y_val, YAW));           //(double(y_val - y_min) * y_factor)));
-            controls->setPitch(filter(p_val, PITCH));       // Reversed Pitch     //(double(p_val - p_min) * p_factor)));
-            controls->setRoll(255 - filter(r_val, ROLL));   // Reversed Roll       //(double(r_val - r_min) * r_factor)));
-            controls->setAux(1, a1_val);
-            controls->setAux(2, a2_val);
-            controls->setAux(3, a3_val);
-            controls->setAux(4, a4_val);
-            /*controls->setAux3(a2_val);
-            controls->setAux4(a2_val);*/
+            uavObject->setThrottle(filter(t_val, THROTTLE)); // (double(t_val - t_min) * t_factor)));
+            uavObject->setYaw(filter(y_val, YAW));           //(double(y_val - y_min) * y_factor)));
+            uavObject->setPitch(filter(p_val, PITCH));       // Reversed Pitch     //(double(p_val - p_min) * p_factor)));
+            uavObject->setRoll(255 - filter(r_val, ROLL));   // Reversed Roll       //(double(r_val - r_min) * r_factor)));
+            uavObject->setAux(1, a1_val);
+            uavObject->setAux(2, a2_val);
+            uavObject->setAux(3, a3_val);
+            uavObject->setAux(4, a4_val);
+            /*uavObject->setAux3(a2_val);
+            uavObject->setAux4(a2_val);*/
             //std::cout<<"Help!";
             if (show_debug)
-                controls->printChannels();
+                uavObject->printChannels();
             std::this_thread::sleep_for(std::chrono::microseconds(1000));
         }
         //serial->closeSerial();
@@ -526,7 +527,10 @@ int event_key_s(ManualController *obj)
 int event_key_h(ManualController *obj)
 {
     printf("\nRAPI CALLED!!!");
-    obj->controls->callRAPI(111, 0);
+    //obj->uavObject->callRAPI(111, 0);
+    int angle;
+    std::cin>>angle;
+    obj->uavObject->setHeading(angle);
     return 1;
 }
 
@@ -565,16 +569,16 @@ int KeyBindings_thread(ManualController *obj)
 int main(int argc, char **argv)
 {
     char *serialport = "/dev/ttyUSB0";
-    DirectController *droneControl;
+    Drone *droneControl;
     if (argc == 1)
-        droneControl = new DirectController("0.0.0.0");
+        droneControl = new Drone("0.0.0.0");
     else if (argc == 2)
-        droneControl = new DirectController(argv[1]);
+        droneControl = new Drone(argv[1]);
     else if (argc == 3)
-        droneControl = new DirectController(argv[1], atoi(argv[2]));
+        droneControl = new Drone(argv[1], atoi(argv[2]));
     else if (argc == 4)
     {
-        droneControl = new DirectController(argv[1], atoi(argv[2]));
+        droneControl = new Drone(argv[1], atoi(argv[2]));
         serialport = argv[3];
     }
 

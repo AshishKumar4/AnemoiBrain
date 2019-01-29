@@ -9,8 +9,94 @@
 #include <thread> // std::thread
 #include <unistd.h>
 #include <mutex>
+#include <future>
 
 #include "ControllerInterface.hpp"
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* -----------------------------------------Some Pretty Definitions we may need-------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+uint8_t RC_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+//using namespace std;
+std::mutex mtx;
+std::mutex failsafe;
+
+std::thread *FailSafeThread;
+
+bool FaultManaged = false;
+bool FailSafeTrigger = false;
+
+#if defined(ONBOARD_SPI_PROTOCOL) || defined(NRF24L01_SPI_PROTOCOL) || defined(I2C_PROTOCOL)
+struct ControlPackets
+{
+    unsigned char magic;
+    unsigned char throttle;
+    unsigned char pitch;
+    unsigned char roll;
+    unsigned char yaw;
+    unsigned char aux1;
+    unsigned char aux2;
+    unsigned char switches;
+    //unsigned char random[9];
+    unsigned char checksum;
+};
+
+struct ResponsePackets
+{
+    unsigned char magic;
+    unsigned char alt;
+    unsigned char pitch;
+    unsigned char roll;
+    unsigned char yaw;
+    unsigned char lat;
+    unsigned char lon;
+    unsigned char heading;
+    //unsigned char random[9];
+    unsigned char checksum;
+};
+
+struct CommandPackets
+{
+    uint8_t magic;
+    uint8_t value;
+    uint8_t channel;
+    uint8_t checksum;
+};
+
+ControlPackets defCp;
+ControlPackets oldDefCp;
+ResponsePackets rff;
+ControlPackets *pp = &defCp;
+ControlPackets *ppold = &oldDefCp;
+#else
+
+#endif
+
+timespec *t100n = new timespec;
+timespec *t1000n = new timespec;
+timespec *t10000n = new timespec;
+timespec *t100000n = new timespec;
+
+uint8_t IMU_Raw[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+uint8_t PID_Raw[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+uint8_t Current_PID_Var = 0;
+
+struct MSP_Packet
+{
+    char *buf;
+    int size;
+
+    MSP_Packet(char *buf, int sz) : buf(buf), size(sz){};
+};
+
+MSP_Packet MSP_Agent(char *buf, int size);
+
+func_vs_t API_ProcedureInvokeTable[256];
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* ----------------------------------------------Some Preprocessor Checkups------------------------------------------------ */
+/* ------------------------------------------------------------------------------------------------------------------------ */
 
 #if defined(MODE_AIRSIM)
 #undef MSP_SERIAL_CLI_MONITOR // We don't use MSP with airsim; instead we may use mavlink
@@ -282,11 +368,26 @@ void Channel_Updater(int threadId)
     // Basicaly, make sure to update every 5 seconds to convey the FC that everything is fine.
     while (1)
     {
-        mtx.lock();
-        FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), rcExpand(RC_DATA[AUX1]), rcExpand(RC_DATA[AUX2]), rcExpand(RC_DATA[AUX3]), rcExpand(RC_DATA[AUX4]));
-        mtx.unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        try
+        {
+            mtx.lock();
+            FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), rcExpand(RC_DATA[AUX1]), rcExpand(RC_DATA[AUX2]), rcExpand(RC_DATA[AUX3]), rcExpand(RC_DATA[AUX4]));
+            mtx.unlock();
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in CLI Monitor " << e.what();
+            mtx.unlock();
+        }
+        catch (const std::future_error &e)
+        {
+            std::cout << "Caught a future_error with code \"" << e.code()
+                      << "\"\nMessage: \"" << e.what() << "\"\n";
+            mtx.unlock();
+        }
     }
+}
 }
 
 void Raw_Init(int argc, char *argv[])
@@ -378,10 +479,24 @@ void Channel_Updater(int threadid)
 {
     while (1)
     {
-        //mtx.lock();
-        client.moveByAngleThrottleAsync(rcShrink(255 - RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 5), rcShrink(RC_DATA[YAW], -6.0, 6.0), TIMESLICE);
-        //mtx.unlock();
-        std::this_thread::sleep_for(std::chrono::microseconds(int(TIMESLICE * 1000.0 * 1000.0)));
+        try
+        { 
+            //mtx.lock();
+            client.moveByAngleThrottleAsync(rcShrink(255 - RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 5), rcShrink(RC_DATA[YAW], -6.0, 6.0), TIMESLICE);
+            //mtx.unlock();
+            std::this_thread::sleep_for(std::chrono::microseconds(int(TIMESLICE * 1000.0 * 1000.0)));
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in CLI Monitor " << e.what();
+            //mtx.unlock();
+        }
+        catch (const std::future_error &e)
+        {
+            std::cout << "Caught a future_error with code \"" << e.code()
+                      << "\"\nMessage: \"" << e.what() << "\"\n";
+            //mtx.unlock();
+        }
     }
 }
 
@@ -455,106 +570,120 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
 
 #if defined(CLI_MONITOR)
 
-int show_RC = 1, show_PID = 0, show_IMU = 0, show_Wifi = 0, show_armed = 1;
+int show_RC = 0, show_PID = 0, show_IMU = 0, show_Wifi = 0, show_armed = 1;
 
 void Channel_ViewRefresh(int threadId)
 {
     while (1)
     {
-        mtx.lock();
+        try
+        {
+            mtx.lock();
 #if defined(MSP_Serial_PROTOCOL)
-        if (show_armed)
-        {
-            if (FlController->isArmed())
+            if (show_armed)
             {
-                std::cout << "Armed\t"; // after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
+                if (FlController->isArmed())
+                {
+                    std::cout << "Armed\t"; // after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
+                }
+                else
+                {
+                    std::cout << "Disarmed\t";
+                }
             }
-            else
+#if defined(UPDATE_STATUS_RC)
+            if (show_RC)
             {
-                std::cout << "Disarmed\t";
+                msp::msg::Rc rc;
+                FlController->client.request(rc);
+#if defined(SHOW_STATUS_RC)
+                std::cout << rc;
+#endif
             }
-        }
-    #if defined(UPDATE_STATUS_RC)
-        if (show_RC)
-        {
-            msp::msg::Rc rc;
-            FlController->client.request(rc);
-        #if defined(SHOW_STATUS_RC)
-            std::cout << rc;
-        #endif
-        }
-    #endif
-    #if defined(UPDATE_STATUS_IMU)
-        if (show_IMU)
-        {
-            msp::msg::ImuRaw imu;
-            FlController->client.request(imu);
-            for (int i = 0; i < 3; i++)
-                IMU_Raw[0][i] = (uint8_t)imu.gyro[i];
-            for (int i = 0; i < 3; i++)
-                IMU_Raw[1][i] = (uint8_t)imu.acc[i];
-            for (int i = 0; i < 3; i++)
-                IMU_Raw[2][i] = (uint8_t)imu.magn[i];
-        #if defined(SHOW_STATUS_IMU)
-            std::cout << imu;
-        #endif
-        }
-    #endif
-    #if defined(UPDATE_STATUS_PID)
-        if (show_PID)
-        {
-            msp::msg::Pid pid;
-            FlController->client.request(pid);
-        #if defined(SHOW_STATUS_PID)
-            std::cout << pid;
-        #endif
-            PID_Raw[0][0] = (uint8_t)pid.roll.P;
-            PID_Raw[1][0] = (uint8_t)pid.roll.I;
-            PID_Raw[2][0] = (uint8_t)pid.roll.D;
-            PID_Raw[0][1] = (uint8_t)pid.pitch.P;
-            PID_Raw[1][1] = (uint8_t)pid.pitch.I;
-            PID_Raw[2][1] = (uint8_t)pid.pitch.D;
-            PID_Raw[0][2] = (uint8_t)pid.yaw.P;
-            PID_Raw[1][2] = (uint8_t)pid.yaw.I;
-            PID_Raw[2][2] = (uint8_t)pid.yaw.D;
-        }
-    #endif
-#endif // MSP 
+#endif
+#if defined(UPDATE_STATUS_IMU)
+            if (show_IMU)
+            {
+                msp::msg::ImuRaw imu;
+                FlController->client.request(imu);
+                for (int i = 0; i < 3; i++)
+                    IMU_Raw[0][i] = (uint8_t)imu.gyro[i];
+                for (int i = 0; i < 3; i++)
+                    IMU_Raw[1][i] = (uint8_t)imu.acc[i];
+                for (int i = 0; i < 3; i++)
+                    IMU_Raw[2][i] = (uint8_t)imu.magn[i];
+#if defined(SHOW_STATUS_IMU)
+                std::cout << imu;
+#endif
+            }
+#endif
+#if defined(UPDATE_STATUS_PID)
+            if (show_PID)
+            {
+                msp::msg::Pid pid;
+                FlController->client.request(pid);
+#if defined(SHOW_STATUS_PID)
+                std::cout << pid;
+#endif
+                PID_Raw[0][0] = (uint8_t)pid.roll.P;
+                PID_Raw[1][0] = (uint8_t)pid.roll.I;
+                PID_Raw[2][0] = (uint8_t)pid.roll.D;
+                PID_Raw[0][1] = (uint8_t)pid.pitch.P;
+                PID_Raw[1][1] = (uint8_t)pid.pitch.I;
+                PID_Raw[2][1] = (uint8_t)pid.pitch.D;
+                PID_Raw[0][2] = (uint8_t)pid.yaw.P;
+                PID_Raw[1][2] = (uint8_t)pid.yaw.I;
+                PID_Raw[2][2] = (uint8_t)pid.yaw.D;
+            }
+#endif
+#endif // MSP
 /*
     For AisSim
 */
 #if defined(MODE_AIRSIM)
-    #if defined(UPDATE_STATUS_RC)
-        if (show_RC)
-        {
-        #if defined(SHOW_STATUS_RC)
-            printf("\n[%d]-[%d]-[%d]-[%d]", RC_DATA[PITCH], RC_DATA[ROLL], RC_DATA[THROTTLE], RC_DATA[YAW]);
-        #endif
-        }
-    #endif
-    #if defined(UPDATE_STATUS_IMU)
-        if (show_IMU)
-        {
-        #if defined(SHOW_STATUS_IMU)
-            printf("\nHeading: %f", ControllerInterface::getHeading());
-        #endif
-        }
-    #endif
-#endif 
+#if defined(UPDATE_STATUS_RC)
+            if (show_RC)
+            {
+#if defined(SHOW_STATUS_RC)
+                printf("\n[%d]-[%d]-[%d]-[%d]", RC_DATA[PITCH], RC_DATA[ROLL], RC_DATA[THROTTLE], RC_DATA[YAW]);
+#endif
+            }
+#endif
+#if defined(UPDATE_STATUS_IMU)
+            if (show_IMU)
+            {
+#if defined(SHOW_STATUS_IMU)
+                printf("\nHeading: %f", ControllerInterface::getHeading());
+#endif
+            }
+#endif
+#endif
 /*
     General
 */
 #if defined(UPDATE_STATUS_WIFI_STRENGTH)
 #if defined(SHOW_STATUS_WIFI_STRENGTH)
-        if (show_Wifi)
-        {
-            system("awk 'NR==3 {print \"WiFi Signal Strength = \" \$3 \"00 %\"}''' /proc/net/wireless");
+            if (show_Wifi)
+            {
+                system("awk 'NR==3 {print \"WiFi Signal Strength = \" \$3 \"00 %\"}''' /proc/net/wireless");
+            }
+#endif
+#endif
+            fflush(stdout);
+            mtx.unlock();
+            std::this_thread::sleep_for(std::chrono::milliseconds(CLI_UPDATE_RATE));
         }
-#endif
-#endif
-        fflush(stdout);
-        mtx.unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds(CLI_UPDATE_RATE));
+        catch (std::exception &e)
+        {
+            std::cout << "Error in CLI Monitor " << e.what();
+            mtx.unlock();
+        }
+        catch (const std::future_error &e)
+        {
+            std::cout << "Caught a future_error with code \"" << e.code()
+                      << "\"\nMessage: \"" << e.what() << "\"\n";
+            mtx.unlock();
+        }
     }
 }
 
@@ -773,6 +902,7 @@ float clamp(float val, float imin, float imax, float omin, float omax)
 
 namespace ControllerInterface
 {
+
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ----------------------------------------------General APIs for Control-------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
@@ -914,24 +1044,271 @@ uint8_t getArmStatus(int block)
     All SI Units, Meters, Degrees
 */
 
-float y_min = 0, y_max = 0;
+namespace // Anonymous Namespace
+{
+vector3D_t *controlledPosition;
+vector3D_t *controlledOrientation;
 
-vector3D_t getOrientation()
+std::thread *YawControllerThread;
+std::thread *RollControllerThread;
+std::thread *PitchControllerThread;
+std::thread *AltitudeControllerThread;
+
+std::mutex YawControllerlock;
+std::mutex PitchControllerlock;
+std::mutex RollControllerlock;
+std::mutex AltitudeControllerlock;
+
+float Controlled_IntendedYawHeading = 0;
+float Controlled_IntendedPitchHeading = 0;
+float Controlled_IntendedRollHeading = 0;
+float Controlled_IntendedAltitude = 0;
+
+void YawController()
+{
+    /*
+        Continous Feedback loop for maintaining a constant orientation and altitude
+    */
+    /*
+        A Simple Control Loop
+    */
+    try
+    {
+        float h = 1;
+        float errorScale = HEADING_YAW_P;
+        float yawVal = 127;
+        float currentYaw = 127;
+        float oldError = 1;
+        float oldAbsError = 1;
+        float deltaTime = 5;
+        while (true)
+        {
+            try
+            {
+                YawControllerlock.lock();
+                h = (getHeadingDegrees());
+                float newError = h - Controlled_IntendedYawHeading;
+                if (newError > 180 || newError < -180)
+                {
+                    newError -= 360;
+                }
+                float absNewError = std::abs(newError);
+                if (absNewError <= 2)
+                {
+                    //direc *= 0.99;
+                    setYaw(127);                                               // Make it not move anymore
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1)); // Wait for it to stabilize
+                    if (std::abs(getHeadingDegrees() - h) < 2)
+                        printf("\nDone...%f %f", newError, h);
+                    YawControllerlock.unlock();
+                    //std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    continue;
+                    //return 1;
+                }
+                // Our Equation
+                float clampedVal = newError * errorScale;                                                            //clamp(newError * errorScale, -180, 180, -127, 127);
+                yawVal = ((clampedVal) + ((newError - oldError) / deltaTime) * HEADING_YAW_D) + RC_MASTER_DATA[YAW]; //currentYaw; //(newError/error); // - (newError / oldError)*(absNewError/newError)*2.0 // 2*(oldAbsError - 1*absNewError)
+
+                if (yawVal > 255)
+                    yawVal = 255;
+                else if (yawVal < 0)
+                    yawVal = 0;
+
+                printf("\n{Errors: <%f> %f %f %f [%f]}", h, newError, yawVal, clampedVal, errorScale);
+                setYaw(int(yawVal));
+                oldError = newError;
+                oldAbsError = absNewError;
+                YawControllerlock.unlock();
+                std::this_thread::sleep_for(std::chrono::milliseconds(int(deltaTime)));
+            }
+            catch (std::exception &e)
+            {
+                std::cout << "Error Occured! inside " << e.what();
+                YawControllerlock.unlock();
+            }
+            catch (const std::future_error &e)
+            {
+                std::cout << "Caught a future_error with code \"" << e.code()
+                          << "\"\nMessage: \"" << e.what() << "\"\n";
+                YawControllerlock.unlock();
+            }
+        }
+    }
+    catch (...)
+    {
+        std::cout << "Error Occured! outside";
+    }
+} // namespace
+
+vector3D_t eulerFromQuaternion(quaternion_t orien)
 {
     vector3D_t oo;
+    /*
+        Quaternion to Euler
+    */
+    //std::cout << ">>>" << orien << "<<<" << std::endl;
+    double heading = 0, roll, pitch, yaw;
+    double ysqr = orien.y() * orien.y();
+
+    // roll (x-axis rotation)
+    double t0 = +2.0f * (orien.w() * orien.x() + orien.y() * orien.z());
+    double t1 = +1.0f - 2.0f * (orien.x() * orien.x() + ysqr);
+    roll = std::atan2(t0, t1);
+
+    // pitch (y-axis rotation)
+    double t2 = +2.0f * (orien.w() * orien.y() - orien.z() * orien.x());
+    t2 = ((t2 > 1.0f) ? 1.0f : t2);
+    t2 = ((t2 < -1.0f) ? -1.0f : t2);
+    pitch = std::asin(t2);
+
+    // yaw (z-axis rotation)
+    double t3 = +2.0f * (orien.w() * orien.z() + orien.x() * orien.y());
+    double t4 = +1.0f - 2.0f * (ysqr + orien.z() * orien.z());
+    yaw = std::atan2(t3, t4);
+    //heading = yaw;
+    //printf("->Roll %f, Pitch %f, Yaw %f", roll, pitch, yaw);
+    //printf("->Heading: { %f %f}", orien.z(), orien.w());
+    oo.x = pitch;
+    oo.y = roll;
+    oo.z = yaw; // // 0, 360);
+    return oo;
+}
+
+} // namespace
+
+int init_SpacialControllers()
+{
+    YawControllerThread = new std::thread(YawController);
+    return 0;
+}
+
+int destroy_SpacialControllers()
+{
+    YawControllerThread->join();
+    return 0;
+}
+
+int pauseControllers()
+{
+    YawControllerlock.lock();
+    return 1;
+}
+
+int resumeControllers()
+{
+    YawControllerlock.unlock();
+    return 0;
+}
+
+quaternion_t getOrientationQuaternion()
+{
 #if defined(MODE_AIRSIM)
     auto orien = client.getMultirotorState().getOrientation();
-    std::cout<<">>>"<<orien<<"<<<"<<std::endl;
-    oo.x = orien.x();
-    oo.y = orien.y();
-    if(orien.z() > y_max)   y_max = orien.z();
-    if(orien.z() < y_min)   y_min = orien.z();
-    printf("\n\t-->%f %f", y_min, y_max);
-    printf("\t->%f", orien.w()*orien.z());
-    oo.z = clamp(orien.z(), -1, 1, -180, 180);// 0, 360);
-#else 
+    return quaternion_t(orien.w(), orien.x(), orien.y(), orien.z());
+#else
+    return quaternion_t(1, 0, 0, 0);
 #endif
-    return oo;
+}
+
+vector3D_t getOrientation() // Returns Euler angle orientation
+{
+    return eulerFromQuaternion(getOrientationQuaternion());
+}
+
+float getYaw() // Gives in Radians
+{
+    float h = getOrientation().z;
+    return h;
+}
+
+float getRoll() // Gives in Radians
+{
+    float h = getOrientation().y;
+    return h;
+}
+
+float getPitch() // Gives in Radians
+{
+    float h = getOrientation().x;
+    return h;
+}
+
+/*
+    This is our convention, counter clockwise, 0 to 360 in every direction
+*/
+
+float getConventionalDegrees(float rads)
+{
+    // 0 -> North
+    // 90 -> east
+    // 180 -> south
+    // 270 ->west
+    float h = clamp(rads, -3.14159265358979323846, 3.14159265358979323846, 180, -180);
+    if (h < 0)
+    {
+        h = 360 + h;
+    }
+    return h;
+}
+
+float getYawDegrees()
+{
+    return getConventionalDegrees(getYaw());
+}
+
+float getRollDegrees()
+{
+    return getConventionalDegrees(getRoll());
+}
+
+float getPitchDegrees()
+{
+    return getConventionalDegrees(getPitch());
+}
+
+float getHeadingDegrees() // Gives in Degrees
+{
+    return getYawDegrees();
+}
+
+float getHeading()
+{
+    return getHeadingDegrees();
+}
+
+int setAutoYaw(float heading)
+{
+    YawControllerlock.lock();
+    Controlled_IntendedYawHeading = heading;
+    YawControllerlock.unlock();
+    return 0;
+}
+
+int setAutoRoll(float heading)
+{
+    RollControllerlock.lock();
+    Controlled_IntendedRollHeading = heading;
+    RollControllerlock.unlock();
+    return 0;
+}
+
+int setAutoPitch(float heading)
+{
+    PitchControllerlock.lock();
+    Controlled_IntendedPitchHeading = heading;
+    PitchControllerlock.unlock();
+    return 0;
+}
+
+int setHeading(float heading)
+{
+    return setAutoYaw(heading);
+}
+
+int testHeading(std::vector<std::string> test)
+{
+    std::cout << "Testing Auto Heading feature...";
+    return setHeading(90);
 }
 
 vector3D_t getVelocity()
@@ -945,93 +1322,22 @@ vector3D_t getPosition()
     vector3D_t pos;
     return pos;
 }
-float getHeading()
-{
-    // 90 -> north
-    // 0 -> east 
-    // 180 -> west 
-    // 270 ->south
-#if defined(MODE_AIRSIM)
-    return getOrientation().z;
-#else 
-    return 0;
-#endif
-}
-
-#define HEADING_YAW_P 0.6
-#define HEADING_YAW_DAMPING 1
-#define HEADING_YAW_DAMPING_2 0.8
-
-int setHeading(float heading)
-{
-    // 90 -> north
-    // 0 -> east 
-    // 180 -> west 
-    // 270 ->south
-
-    /*
-        A Simple Control Loop
-    */
-    try
-    {
-        float h = getHeading();     // Heading should be between 180 and -180
-        printf("\n{Heading: %f", h);
-        float errorScale = HEADING_YAW_P;
-
-        float yawVal = 127;
-        float currentYaw = 127;
-        float oldError = h - heading;
-        float oldAbsError = abs(oldError);
-        printf("\nInitial Errors: %f %f %f ", oldError);
-        while(true)
-        {
-            h = getHeading();
-            float newError = h - heading;
-            float absNewError = abs(newError);
-            //float newErrorSign = absNewError/newError;
-            if(absNewError <= 2)
-            {
-                setYaw(127);    // Make it not move anymore
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));  // Wait for it to stabilize
-                if(abs(getHeading() - h) > 2)
-                    continue;
-                printf("\nDone...%f %f", newError, h);
-                return 1;
-            }
-            /* Our Equation */
-            float clampedVal = clamp(newError*errorScale, -180, 180, -127, 127);
-            yawVal = ((clampedVal) + (oldAbsError - absNewError) + (newError/oldError)) + currentYaw;//(newError/error);
-
-            if(yawVal > 255) yawVal = 255;
-            else if(yawVal < 0) yawVal = 0;
-            printf("\n{Errors: <%f> %f %f %f [%f]}", h, newError, yawVal, clampedVal, errorScale);
-            setYaw(int(yawVal));
-            oldError = newError;
-            oldAbsError = absNewError;
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }
-    }
-    catch(std::exception &e)
-    {
-        std::cout<<e.what();
-    }
-    return 0;
-}
-
-int testHeading(std::vector<std::string> test)
-{
-    std::cout<<"Testing Auto Heading feature...";
-    return setHeading(90);
-}
 
 void setAltitude(float altitude)
 {
-    
 }
 
 void takeOff(float altitude)
 {
     setAltitude(5);
+}
+
+void holdPosition()
+{
+}
+
+void moveToRelativePosition(float x, float y, float z)
+{
 }
 
 /*
@@ -1040,17 +1346,17 @@ void takeOff(float altitude)
 
 int autoNavPID(vector3D_t start, vector3D_t destination, float maxAltitude)
 {
-    // Firstly move to the direction to face the destination 
+    // Firstly move to the direction to face the destination
 
     // Then Throttle Up to maintain an altitude.
     return 0;
 }
 
-std::vector<vector3D_t>  destinationBuffer;
+std::vector<vector3D_t> destinationBuffer;
 
 int setDestination(vector3D_t position, bool start_now)
 {
-    if(start_now)
+    if (start_now)
         autoNavPID(getPosition(), position);
     return 0;
 }
@@ -1066,14 +1372,14 @@ int returnToHome()
 
 int unusedAPIhandler(std::vector<std::string> test)
 {
-    std::cout<<"\nOops! Seems someone sent me some wrong code!";
+    std::cout << "\nOops! Seems someone sent me some wrong code!";
 }
 
 void RemoteAPI_Invoker(int code, int count)
 {
     std::vector<std::string> aa;
     printf("<<%d, %d>>", code, count);
-    std::cout<<API_ProcedureInvokeTable[code](aa);
+    std::cout << API_ProcedureInvokeTable[code](aa);
 }
 
 void FailSafeMechanism()
@@ -1178,11 +1484,13 @@ int ControllerInterface_init(int argc, char **argv)
     //SPI_handshake();
     //IssueCommand();
 
-    for(int i = 0; i < 256; i++)
+    for (int i = 0; i < 256; i++)
     {
         API_ProcedureInvokeTable[i] = unusedAPIhandler;
     }
     API_ProcedureInvokeTable[111] = testHeading;
+
+    init_SpacialControllers();
 
 #if defined(CLI_MONITOR)
     std::thread *chnl_refresh = new std::thread(Channel_ViewRefresh, 0);

@@ -112,83 +112,11 @@ uint8_t checksum(uint8_t *buf, int len);
 #define AUX3       6
 #define AUX4       7
 
+#define HEADING_YAW_P 0.8
 #define HEADING_YAW_I 1
-#define HEADING_YAW_DAMPING 0.7
-
-uint8_t RC_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-//using namespace std;
-std::mutex mtx;
-std::mutex failsafe;
-
-std::thread *FailSafeThread;
-
-bool FaultManaged = false;
-bool FailSafeTrigger = false;
-
-#if defined(ONBOARD_SPI_PROTOCOL) || defined(NRF24L01_SPI_PROTOCOL) || defined(I2C_PROTOCOL)
-struct ControlPackets
-{
-    unsigned char magic;
-    unsigned char throttle;
-    unsigned char pitch;
-    unsigned char roll;
-    unsigned char yaw;
-    unsigned char aux1;
-    unsigned char aux2;
-    unsigned char switches;
-    //unsigned char random[9];
-    unsigned char checksum;
-};
-
-struct ResponsePackets
-{
-    unsigned char magic;
-    unsigned char alt;
-    unsigned char pitch;
-    unsigned char roll;
-    unsigned char yaw;
-    unsigned char lat;
-    unsigned char lon;
-    unsigned char heading;
-    //unsigned char random[9];
-    unsigned char checksum;
-};
-
-struct CommandPackets
-{
-    uint8_t magic;
-    uint8_t value;
-    uint8_t channel;
-    uint8_t checksum;
-};
-
-ControlPackets defCp;
-ControlPackets oldDefCp;
-ResponsePackets rff;
-ControlPackets *pp = &defCp;
-ControlPackets *ppold = &oldDefCp;
-#else
-
-#endif
-
-timespec *t100n = new timespec;
-timespec *t1000n = new timespec;
-timespec *t10000n = new timespec;
-timespec *t100000n = new timespec;
-
-uint8_t IMU_Raw[3][3] = { {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
-uint8_t PID_Raw[3][3] = { {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
-uint8_t Current_PID_Var = 0;
-
-struct MSP_Packet
-{
-    char *buf;
-    int size;
-
-    MSP_Packet(char *buf, int sz) : buf(buf), size(sz){};
-};
-
-MSP_Packet MSP_Agent(char *buf, int size);
+#define HEADING_YAW_D 200
+#define HEADING_YAW_DAMPING 1
+#define HEADING_YAW_DAMPING_2 0.8
 
 class vector3D_t
 {
@@ -212,13 +140,58 @@ public:
     }
 };
 
+class quaternion_t 
+{
+    float _w;
+    float _x;
+    float _y;
+    float _z;
+public: 
+
+    quaternion_t()
+    {
+        _w = 1;
+        _x = 0;
+        _y = 0;
+        _z = 0;
+    }
+
+    quaternion_t(float w, float x, float y, float z)
+    {
+        this->_w = w;
+        this->_x = x;
+        this->_y = y;
+        this->_z = z;
+    }
+
+    float w()
+    {
+        return _w;
+    }
+
+    float x()
+    {
+        return _x;
+    }
+
+    float y()
+    {
+        return _y;
+    }
+
+    float z()
+    {
+        return _z;
+    }
+};
+
 typedef int (*func_i_t)(int);              // function pointer
 typedef int (*func_vs_t)(std::vector<std::string>);              // function pointer
 
-func_vs_t API_ProcedureInvokeTable[256];
-
 namespace ControllerInterface
 {
+uint8_t RC_MASTER_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
 int WriteToPort(int portnum, char *buff, int size);
 int ReadFromPort(int portnum, char *buff, int size);
 void setThrottle(int throttle);
@@ -238,7 +211,18 @@ uint8_t getPID_I(int axis);
 uint8_t getPID_D(int axis);
 uint8_t getArmStatus(int block);
 
+quaternion_t getOrientationQuaternion();
+vector3D_t getOrientation(); // Returns Euler angle orientation
+float getYaw(); // Gives in Radians
+float getRoll(); // Gives in Radians
+float getPitch(); // Gives in Radians
+
+float getYawDegrees();
+float getRollDegrees();
+float getPitchDegrees();
+float getHeadingDegrees(); // Gives in Degrees
 float getHeading();
+
 int setHeading(float heading);
 int testHeading(int test);
 void setAlititude(float altitude);

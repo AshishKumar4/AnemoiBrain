@@ -8,27 +8,28 @@
 #include <sstream>
 #include <thread> // std::thread
 
-#include "../AbstractControls/Controls.hpp"
+#include "../Utils/common.hpp"
 
 #define CHANNEL_COUNT   9
 
-class DirectController : public Controller
+class DirectController
 {
   vector<int> server_fd;
   vector<int> socket_num;
   vector<struct sockaddr_in *> addresses;
   int channelBuffs[CHANNEL_COUNT] =     {0, 0, 0, 0, 0, 0, 0, 0, 0};
+  
+protected:
   DronePosition_t*          currentPosition;
   DroneState_t*             currentState;
   vector<DroneCamera_t>     cameras;
   DroneIMU_t*               imu;
 
-protected:
   void sendCommand(int val, int channel);
 public:
   void InitSequence();
-  int ConnectChannel(char *ip, int port, int channel);
-  DirectController(char *ip = "0.0.0.0", int portBase = 8400);
+  int ConnectChannel(std::string ip, int port, int channel);
+  DirectController(std::string ip = "0.0.0.0", int portBase = 8400);
   ~DirectController();
   void arm();
   void disarm();

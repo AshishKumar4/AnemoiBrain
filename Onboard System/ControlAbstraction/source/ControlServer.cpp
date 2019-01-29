@@ -135,15 +135,17 @@ int ControlListeners(int i, int fd)
 
             // We Now issue our command
             //printf("\n [%s] Command Issued ", CHANNEL_NAME_TABLES[i].c_str());
-
+            int numVal = atoi(val.c_str());
 #ifndef DRONELESS_LOCAL_TEST
-            CHANNEL_HANDLER_TABLES[i](atoi(val.c_str()));
+            ControllerInterface::RC_MASTER_DATA[i] = uint8_t(numVal);
+            CHANNEL_HANDLER_TABLES[i](numVal);
 #endif
         }
 #elif defined(STREAM_PROTOCOL_2)
         for (int j = 0; j < valread; j++)
         {
             CHANNEL_HANDLER_TABLES[i](int(ControlChannelBuffer[i][j]));
+            ControllerInterface::RC_MASTER_DATA[i] = uint8_t(ControlChannelBuffer[i][j]);
         }
 #endif
     }
@@ -305,7 +307,8 @@ int Handshake(int i, int j)
 
 int ControlServer_init(int argc, char **argv)
 {
-    Onboard::AbstractServer ControlServer(8400);
+    int portBase = (argc > 1) ? stoi(std::string(argv[3])) : 8400;
+    Onboard::AbstractServer ControlServer(portBase);
     for (int i = 0; i < 8; i++)
     {
         Onboard::Controls::ControlChannelBuffer[i] = new char[4096];
@@ -320,14 +323,14 @@ int ControlServer_init(int argc, char **argv)
 
 #if defined(MSP_REMOTE_TWEAKS)
 
-    Onboard::AbstractServer RemoteTweakerServer(8600);
+    Onboard::AbstractServer RemoteTweakerServer(portBase + 200);
     RemoteTweakerServer.CreateChannels(0, Onboard::RemoteTweaker::RemotePIDChange, Onboard::RemoteTweaker::Handshake);
     RemoteTweakerServer.JoinThreads();
 
 #endif
 
 #if defined(MSP_SERIAL_FORWARDING)
-    Onboard::AbstractServer SerialForwardServer(8500);
+    Onboard::AbstractServer SerialForwardServer(portBase + 100);
     Onboard::SerialForwarding::sock_locks.push_back(new std::mutex);
     SerialForwardServer.CreateChannels(0, Onboard::SerialForwarding::MSP_Forward, Onboard::SerialForwarding::Handshake);
     SerialForwardServer.JoinThreads();
