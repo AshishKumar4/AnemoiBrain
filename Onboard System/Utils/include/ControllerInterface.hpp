@@ -112,6 +112,9 @@ uint8_t checksum(uint8_t *buf, int len);
 #define AUX3       6
 #define AUX4       7
 
+#define RC_X_MOTION 8
+#define RC_Y_MOTION 9
+
 #define HEADING_YAW_P 0.8
 #define HEADING_YAW_I 1
 #define HEADING_YAW_D 200
@@ -190,7 +193,7 @@ typedef int (*func_vs_t)(std::vector<std::string>);              // function poi
 
 namespace ControllerInterface
 {
-uint8_t RC_MASTER_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+uint8_t RC_MASTER_DATA[11] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 int WriteToPort(int portnum, char *buff, int size);
 int ReadFromPort(int portnum, char *buff, int size);
@@ -222,6 +225,10 @@ float getRollDegrees();
 float getPitchDegrees();
 float getHeadingDegrees(); // Gives in Degrees
 float getHeading();
+
+float get_X_Coordinate();
+float get_Y_Coordinate();
+float getAltitude();
 
 int setAutoYaw(float heading);
 int setAutoRoll(float heading);

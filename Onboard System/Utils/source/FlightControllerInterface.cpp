@@ -376,20 +376,20 @@ void Channel_Updater(int threadId)
             mtx.unlock();
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
-        catch (std::exception &e)
-        {
-            std::cout << "Error in CLI Monitor " << e.what();
-            mtx.unlock();
-        }
         catch (const std::future_error &e)
         {
             std::cout << "Caught a future_error with code \"" << e.code()
                       << "\"\nMessage: \"" << e.what() << "\"\n";
             mtx.unlock();
         }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in CLI Monitor " << e.what();
+            mtx.unlock();
+        }
     }
 }
-}
+
 
 void Raw_Init(int argc, char *argv[])
 {

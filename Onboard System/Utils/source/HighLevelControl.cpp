@@ -11,6 +11,7 @@
 #include <mutex>
 #include <future>
 #include <functional>
+#include <math.h>
 
 #include "ControllerInterface.hpp"
 
@@ -125,15 +126,15 @@ void Channel_ViewRefresh(int threadId)
             mtx.unlock();
             std::this_thread::sleep_for(std::chrono::milliseconds(CLI_UPDATE_RATE));
         }
-        catch (std::exception &e)
-        {
-            std::cout << "Error in CLI Monitor " << e.what();
-            mtx.unlock();
-        }
         catch (const std::future_error &e)
         {
             std::cout << "Caught a future_error with code \"" << e.code()
                       << "\"\nMessage: \"" << e.what() << "\"\n";
+            mtx.unlock();
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in CLI Monitor " << e.what();
             mtx.unlock();
         }
     }
@@ -496,22 +497,6 @@ uint8_t getArmStatus(int block)
     All SI Units, Meters, Degrees
 */
 
-
-float get_X_Coordinate()
-{
-    return 0;
-}
-
-float get_Y_Coordinate()
-{
-    return 0;
-}
-
-float getPitchDegrees()
-{
-    return 0;
-}
-
 namespace // Anonymous Namespace
 {
 vector3D_t *controlledPosition;
@@ -650,15 +635,15 @@ class RotationActuator_t : public Actuator_t
             this->actuationControllerlock->unlock();
             std::this_thread::sleep_for(std::chrono::milliseconds(int(deltaTime)));
         }
-        catch (std::exception &e)
-        {
-            std::cout << "Error Occured! inside " << e.what();
-            this->actuationControllerlock->unlock();
-        }
         catch (const std::future_error &e)
         {
             std::cout << "Caught a future_error with code \"" << e.code()
                       << "\"\nMessage: \"" << e.what() << "\"\n";
+            this->actuationControllerlock->unlock();
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error Occured! inside " << e.what();
             this->actuationControllerlock->unlock();
         }
     }
@@ -802,15 +787,15 @@ class LateralActuator_t : public Actuator_t
             this->actuationControllerlock->unlock();
             std::this_thread::sleep_for(std::chrono::milliseconds(int(deltaTime)));
         }
-        catch (std::exception &e)
-        {
-            std::cout << "Error Occured! inside " << e.what();
-            this->actuationControllerlock->unlock();
-        }
         catch (const std::future_error &e)
         {
             std::cout << "Caught a future_error with code \"" << e.code()
                       << "\"\nMessage: \"" << e.what() << "\"\n";
+            this->actuationControllerlock->unlock();
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error Occured! inside " << e.what();
             this->actuationControllerlock->unlock();
         }
     }
@@ -818,7 +803,7 @@ class LateralActuator_t : public Actuator_t
 
 LateralActuator_t X_Actuator(set_X_Motion, get_X_Coordinate, RC_X_MOTION);
 LateralActuator_t Y_Actuator(set_Y_Motion, get_Y_Coordinate, RC_Y_MOTION);
-LateralActuator_t Z_Actuator(setThrottle, getAltitude, THROTLLE);
+LateralActuator_t Z_Actuator(setThrottle, getAltitude, THROTTLE);
 
 /*
     Back to the APIs
@@ -979,6 +964,21 @@ float getPitchDegrees()
     return getConventionalDegrees(getPitch());
 }
 
+float get_X_Coordinate()
+{
+    return 0;
+}
+
+float get_Y_Coordinate()
+{
+    return 0;
+}
+
+float getAltitude()
+{
+    return 0;
+}
+
 float getHeadingDegrees() // Gives in Degrees
 {
     return getYawDegrees();
@@ -1090,6 +1090,7 @@ int returnToHome()
 int unusedAPIhandler(std::vector<std::string> test)
 {
     std::cout << "\nOops! Seems someone sent me some wrong code!";
+    return 1;
 }
 
 void RemoteAPI_Invoker(int code, int count)
