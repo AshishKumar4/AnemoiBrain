@@ -58,7 +58,16 @@
         "future": "cpp",
         "bitset": "cpp",
         "*.ipp": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "csetjmp": "cpp",
+        "cfenv": "cpp",
+        "cuchar": "cpp",
+        "forward_list": "cpp",
+        "unordered_set": "cpp",
+        "scoped_allocator": "cpp",
+        "shared_mutex": "cpp",
+        "valarray": "cpp",
+        "charconv": "cpp"
     },
     "python.formatting.provider": "black",
     // Files excluded from counting.

@@ -1,0 +1,7 @@
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/SensorAbstraction/build/CMakeFiles/install/strip.dir
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/SensorAbstraction/build/CMakeFiles/edit_cache.dir
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/SensorAbstraction/build/CMakeFiles/SensorServer.dir
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/SensorAbstraction/build/CMakeFiles/install.dir
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/SensorAbstraction/build/CMakeFiles/rebuild_cache.dir
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/SensorAbstraction/build/CMakeFiles/list_install_components.dir
+/root/Desktop/Anemoi Drone Project/Drone Software/Onboard System/SensorAbstraction/build/CMakeFiles/install/local.dir

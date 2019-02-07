@@ -223,6 +223,10 @@ float getPitchDegrees();
 float getHeadingDegrees(); // Gives in Degrees
 float getHeading();
 
+int setAutoYaw(float heading);
+int setAutoRoll(float heading);
+int setAutoPitch(float heading);
+
 int setHeading(float heading);
 int testHeading(int test);
 void setAlititude(float altitude);

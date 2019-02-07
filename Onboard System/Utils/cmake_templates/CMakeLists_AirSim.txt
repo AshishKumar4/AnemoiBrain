@@ -36,7 +36,7 @@ find_package(Threads REQUIRED)
 
 # Build our Library
 # Build our Abstract Server and Flight Controller Interface
-set(SERVER_SOURCES "source/AbstractServer.cpp" "source/ControllerInterface.cpp")
+set(SERVER_SOURCES "source/AbstractServer.cpp" "source/HighLevelControl.cpp")
 add_library(${PROJECT_NAME} SHARED ${SERVER_SOURCES})
 target_link_libraries(${PROJECT_NAME} Threads::Threads)
 target_link_libraries(${PROJECT_NAME} AirLib)
