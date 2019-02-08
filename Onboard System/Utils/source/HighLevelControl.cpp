@@ -881,8 +881,10 @@ int destroy_LateralControllers()
 
 int init_ActuationControllers()
 {
+#if defined(AUTONOMOUS_ACTUATION_CONTROLLERS)   
     init_RotationalControllers();
     //init_LateralControllers();
+#endif
     return 0;
 }
 
