@@ -77,27 +77,27 @@ int ControlResumeHandler()
 
 int RemoteAPI_Listener(int i, int fd)
 {
-    try 
+    try
     {
         memset(ControlChannelBuffer[i], 0, 4096);
         printf("\nInsiteRAPI");
         int valread = read(fd, ControlChannelBuffer[i], 4096);
         if (valread == 0 || valread == -1)
             return 1;
-        // Implement a protocol over here to pass on codes 
+        // Implement a protocol over here to pass on codes
 
-        // for now, lets just test if it works 
+        // for now, lets just test if it works
         //std::vector<std::string> test;
         printf("\nRAPI CALLED!!!");
-        for(int j = 0; j < valread; j++)
+        for (int j = 0; j < valread; j++)
         {
             ControllerInterface::RemoteAPI_Invoker((int)ControlChannelBuffer[i][j], j);
         }
         printf("\n Exiting...");
     }
-    catch(std::exception &e)
+    catch (std::exception &e)
     {
-        std::cout<<"ERROR!!!";
+        std::cout << "ERROR!!!";
         return 1;
     }
     return 0;
@@ -307,37 +307,45 @@ int Handshake(int i, int j)
 
 int ControlServer_init(int argc, char **argv)
 {
-    int portBase = (argc > 1) ? stoi(std::string(argv[3])) : 8400;
-    Onboard::AbstractServer ControlServer(portBase);
-    for (int i = 0; i < 8; i++)
+    try
     {
-        Onboard::Controls::ControlChannelBuffer[i] = new char[4096];
-        ControlServer.AddChannels(i, Onboard::Controls::ControlListeners, Onboard::Controls::ControlHandshake);
-    }
-    Onboard::Controls::ControlChannelBuffer[8] = new char[4096];
-    ControlServer.AddChannels(8, Onboard::Controls::RemoteAPI_Listener, Onboard::Controls::ControlHandshake);
+        int portBase = (argc >= 3) ? stoi(std::string(argv[3])) : 8400;
+        Onboard::AbstractServer ControlServer(portBase);
+        for (int i = 0; i < 8; i++)
+        {
+            Onboard::Controls::ControlChannelBuffer[i] = new char[4096];
+            ControlServer.AddChannels(i, Onboard::Controls::ControlListeners, Onboard::Controls::ControlHandshake);
+        }
+        Onboard::Controls::ControlChannelBuffer[8] = new char[4096];
+        ControlServer.AddChannels(8, Onboard::Controls::RemoteAPI_Listener, Onboard::Controls::ControlHandshake);
 
-    ControlServer.ExceptionHandler = Onboard::Controls::ControlExceptionHandler;
-    ControlServer.ResumeHandler = Onboard::Controls::ControlResumeHandler;
-    ControlServer.LaunchThreads(); //*/
+        ControlServer.ExceptionHandler = Onboard::Controls::ControlExceptionHandler;
+        ControlServer.ResumeHandler = Onboard::Controls::ControlResumeHandler;
+        ControlServer.LaunchThreads(); //*/
 
 #if defined(MSP_REMOTE_TWEAKS)
 
-    Onboard::AbstractServer RemoteTweakerServer(portBase + 200);
-    RemoteTweakerServer.CreateChannels(0, Onboard::RemoteTweaker::RemotePIDChange, Onboard::RemoteTweaker::Handshake);
-    RemoteTweakerServer.JoinThreads();
+        Onboard::AbstractServer RemoteTweakerServer(portBase + 200);
+        RemoteTweakerServer.CreateChannels(0, Onboard::RemoteTweaker::RemotePIDChange, Onboard::RemoteTweaker::Handshake);
+        RemoteTweakerServer.JoinThreads();
 
 #endif
 
 #if defined(MSP_SERIAL_FORWARDING)
-    Onboard::AbstractServer SerialForwardServer(portBase + 100);
-    Onboard::SerialForwarding::sock_locks.push_back(new std::mutex);
-    SerialForwardServer.CreateChannels(0, Onboard::SerialForwarding::MSP_Forward, Onboard::SerialForwarding::Handshake);
-    SerialForwardServer.JoinThreads();
+        Onboard::AbstractServer SerialForwardServer(portBase + 100);
+        Onboard::SerialForwarding::sock_locks.push_back(new std::mutex);
+        SerialForwardServer.CreateChannels(0, Onboard::SerialForwarding::MSP_Forward, Onboard::SerialForwarding::Handshake);
+        SerialForwardServer.JoinThreads();
 #endif //*/
-    ControlServer.JoinThreads();
+        ControlServer.JoinThreads();
+    }
+    catch (std::exception &e)
+    {
+        printf("\nError in Control Server Initialisation!");
+        fflush(stdin);
+    }
+
     return 0;
 }
 
 } // namespace Onboard
-

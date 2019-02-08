@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     */
     ControllerInterface::ControllerInterface_init(argc, (char **)argv); // Maybe lower levels can make use of command line args
 
-    int portBase = (argc > 1) ? stoi(std::string(argv[3])) : 8400;
+    int portBase = (argc >= 3) ? stoi(std::string(argv[3])) : 8400;
     rpcStub = new rpc::server(portBase - 1);
     rpcStub->bind("setHeading", &(ControllerInterface::setHeading));
     rpcStub->async_run(1);

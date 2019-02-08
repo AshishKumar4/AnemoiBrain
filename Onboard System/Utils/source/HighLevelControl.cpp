@@ -552,15 +552,25 @@ class Actuator_t        // An Abstract class
     int setIntendedActuation(float intention)
     {
         //intentionLock->lock();
+        #if defined(ACTUATION_INTENTION_RELATIVE)
+        // The Intended actuation should be relative to the current heading
+        IntendedActuation = float(int((getHeadingDegrees() + intention)) % 360);
+        #else
         IntendedActuation = intention;
+        #endif
         //intentionLock->unlock();
         return 0;
     }
 
     float getIntendedActuation()
     {
+        float intention;
+        #if defined(ACTUATION_INTENTION_RELATIVE)
         //intentionLock->lock();
-        float intention = IntendedActuation;
+        intention = IntendedActuation;
+        #else
+        intention = IntendedActuation;
+        #endif
         //intentionLock->unlock();
         return intention;
     }
@@ -613,7 +623,7 @@ class RotationActuator_t : public Actuator_t
                 this->setActuation(127);                                   // Make it not move anymore
                 //std::this_thread::sleep_for(std::chrono::milliseconds(1)); // Wait for it to stabilize
                 //if (std::abs(this->getCurrentStateValues() - h) < 2)
-                    printf("\nDone...%f %f", newError, h);//*/
+                //printf("\nDone...%f %f", newError, h);//*/
                 this->actuationControllerlock->unlock();
                 //std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 return;
@@ -872,7 +882,7 @@ int destroy_LateralControllers()
 int init_ActuationControllers()
 {
     init_RotationalControllers();
-    init_LateralControllers();
+    //init_LateralControllers();
     return 0;
 }
 
