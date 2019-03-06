@@ -1,0 +1,1 @@
+/usr/bin/c++    -rdynamic CMakeFiles/fcu_motors.dir/examples/fcu_motor_test.cpp.o  -o fcu_motors -Wl,-rpath,/root/Gardien-System/Deps/MSP/build_opizero libmsp_fcu.so libmspclient.so -lpthread 

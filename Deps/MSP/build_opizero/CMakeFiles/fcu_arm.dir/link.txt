@@ -1,0 +1,1 @@
+/usr/bin/c++    -rdynamic CMakeFiles/fcu_arm.dir/examples/fcu_arm_test.cpp.o  -o fcu_arm -Wl,-rpath,/root/Gardien-System/Deps/MSP/build_opizero libmsp_fcu.so libmspclient.so -lpthread 
