@@ -165,7 +165,7 @@ int ControlListeners(int i, int fd)
                 continue;
             ++used;
             uint8_t* tmp = (uint8_t*)parsed.c_str();
-            printf("[%d => %d] ", tmp[1], tmp[2]);
+            //printf("[%d => %d] ", tmp[1], tmp[2]);
             if(parsed.length() == 2)
             {
                 CHANNEL_HANDLER_TABLES[int(tmp[0] - 1)](int(tmp[1]));
@@ -173,7 +173,7 @@ int ControlListeners(int i, int fd)
             }
             else 
             {
-                printf("\nIncorrect packet length -> %s, %d", parsed.c_str(), parsed.length());
+                //printf("\nIncorrect packet length -> %s, %d", parsed.c_str(), parsed.length());
             }
         }
         used *= 3;  // This would give number of bytes used up
