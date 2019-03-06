@@ -33,6 +33,7 @@ func_vi_t CHANNEL_HANDLER_TABLES[] = {&ControllerInterface::setThrottle, &Contro
 std::string CHANNEL_NAME_TABLES[] = {"throttle", "pitch", "roll", "yaw", "aux1", "aux2", "aux3", "aux4"};
 
 char **ControlChannelBuffer = (char **)malloc(sizeof(char *) * 12);
+std::string* OldControlData = new std::string[12];
 
 int ControlHandshake(int i, int fd)
 {
@@ -147,6 +148,39 @@ int ControlListeners(int i, int fd)
             CHANNEL_HANDLER_TABLES[i](int(ControlChannelBuffer[i][j]));
             ControllerInterface::RC_MASTER_DATA[i] = uint8_t(ControlChannelBuffer[i][j]);
         }
+#elif defined(STREAM_PROTOCOL_3)
+        // Format --> .xy.xy.xy.xy.xy.xy.xy.
+        // Convert to string ->
+        ControlChannelBuffer[i][valread] = '\0';    // Null terminate it
+        std::string parsed, cmdNew(ControlChannelBuffer[i]);
+        cmdNew = OldControlData[i] + cmdNew; // OldControlData stores previously unused data
+        //printf("\n%s -- [%s]", cmdNew.c_str(), OldControlData[i].c_str());
+
+        // Split it by '.'
+        std::stringstream input_stringstream(cmdNew);
+        int used = 0;
+        while (std::getline(input_stringstream, parsed, '.'))
+        {
+            if (!parsed.length())
+                continue;
+            ++used;
+            uint8_t* tmp = (uint8_t*)parsed.c_str();
+            printf("[%d => %d] ", tmp[1], tmp[2]);
+            if(parsed.length() == 2)
+            {
+                CHANNEL_HANDLER_TABLES[int(tmp[0] - 1)](int(tmp[1]));
+                ControllerInterface::RC_MASTER_DATA[int(tmp[0] - 1)] = uint8_t(int(tmp[1]));
+            }
+            else 
+            {
+                printf("\nIncorrect packet length -> %s, %d", parsed.c_str(), parsed.length());
+            }
+        }
+        used *= 3;  // This would give number of bytes used up
+        char* chptr = ControlChannelBuffer[i] + used;   // Get to that point until where it was used
+
+        OldControlData[i] = std::string(chptr); // For the next time
+
 #endif
     }
     catch (std::exception &e)
@@ -311,6 +345,11 @@ int ControlServer_init(int argc, char **argv)
     {
         int portBase = (argc >= 3) ? stoi(std::string(argv[3])) : 8400;
         Onboard::AbstractServer ControlServer(portBase);
+#if defined(STREAM_PROTOCOL_3)
+        Onboard::Controls::OldControlData[0] = "";
+        Onboard::Controls::ControlChannelBuffer[0] = new char[4096];
+        ControlServer.AddChannels(0, Onboard::Controls::ControlListeners, Onboard::Controls::ControlHandshake);
+#else
         for (int i = 0; i < 8; i++)
         {
             Onboard::Controls::ControlChannelBuffer[i] = new char[4096];
@@ -318,7 +357,7 @@ int ControlServer_init(int argc, char **argv)
         }
         Onboard::Controls::ControlChannelBuffer[8] = new char[4096];
         ControlServer.AddChannels(8, Onboard::Controls::RemoteAPI_Listener, Onboard::Controls::ControlHandshake);
-
+#endif
         ControlServer.ExceptionHandler = Onboard::Controls::ControlExceptionHandler;
         ControlServer.ResumeHandler = Onboard::Controls::ControlResumeHandler;
         ControlServer.LaunchThreads(); //*/

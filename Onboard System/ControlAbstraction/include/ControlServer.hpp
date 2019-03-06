@@ -12,7 +12,8 @@ namespace Onboard
                     may be entroduced.
 */
 //#define STREAM_PROTOCOL_1 // FailProof, Encapsulate
-#define STREAM_PROTOCOL_2 // Simple Byte Stream, Faster and lightweight
+//#define STREAM_PROTOCOL_2 // Simple Byte Stream, Faster and lightweight
+#define STREAM_PROTOCOL_3 // Better
 
 //#define DRONELESS_LOCAL_TEST
 

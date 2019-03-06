@@ -192,6 +192,15 @@ public:
     }
 };
 
+class GeoPoint_t
+{
+public: 
+    GeoPoint_t()
+    {
+        
+    }
+};
+
 typedef int (*func_i_t)(int);              // function pointer
 typedef int (*func_vs_t)(std::vector<std::string>);              // function pointer
 
@@ -218,11 +227,9 @@ uint8_t getPID_I(int axis);
 uint8_t getPID_D(int axis);
 uint8_t getArmStatus(int block);
 
-quaternion_t getOrientationQuaternion();
-vector3D_t getOrientation(); // Returns Euler angle orientation
-float getYaw(); // Gives in Radians
-float getRoll(); // Gives in Radians
-float getPitch(); // Gives in Radians
+float getYaw(); // Gives in Radians, Absolute for drone wrt world
+float getRoll(); // Gives in Radians, Absolute for drone wrt world
+float getPitch(); // Gives in Radians, Absolute for drone wrt world
 
 float getYawDegrees();
 float getRollDegrees();
@@ -234,6 +241,16 @@ float get_X_Coordinate();
 float get_Y_Coordinate();
 float getAltitude();
 
+float get_X_VelocityRel();
+float get_Y_VelocityRel();
+float get_Z_VelocityRel();
+float get_X_VelocityAbs();
+float get_Y_VelocityAbs();
+float get_Z_VelocityAbs();
+
+vector3D_t getVelocityAbs();
+vector3D_t getVelocityRel();
+
 int setAutoYaw(float heading);
 int setAutoRoll(float heading);
 int setAutoPitch(float heading);
@@ -242,8 +259,18 @@ int setHeading(float heading);
 int testHeading(int test);
 void setAlititude(float altitude);
 void takeOff(float altitude = 5);
+
+GeoPoint_t getGPSLocation();
+
+quaternion_t getOrientationQuaternion();
+vector3D_t getOrientation(); // Returns Euler angle orientation
 vector3D_t getVelocity();
 vector3D_t getPosition();
+
+int setVelocity(vector3D_t val);
+int setPosition(vector3D_t val);
+void set_X_Velocity(float val);
+void set_Y_Velocity(float val);
 /*
     High Level APIs 
 */

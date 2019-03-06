@@ -25,7 +25,8 @@
                     may be entroduced.
 */
 //#define STREAM_PROTOCOL_1 // FailProof, Encapsulate
-#define STREAM_PROTOCOL_2 // Simple Byte Stream, Faster and lightweight
+//#define STREAM_PROTOCOL_2 // Simple Byte Stream, Faster and lightweight
+#define STREAM_PROTOCOL_3 // Better
 
 //#define DRONELESS_LOCAL_TEST
 
@@ -51,6 +52,18 @@ int opt = 1;
 
 void DirectController::InitSequence()
 {
+#if defined(STREAM_PROTOCOL_3) // For Protocol 3, We have only one channel
+  send(server_fd[0], HANDSHAKE_IN_MSG, strlen(HANDSHAKE_IN_MSG), 0);
+  // TODO: Place mechanism to recieve back handshake and if not matching, Panic!
+  char *buff = (char *)malloc(1024);
+  int valread = read(server_fd[0], buff, 1024);
+  if (strncmp(buff, HANDSHAKE_OUT_MSG, strlen(HANDSHAKE_OUT_MSG)))
+  {
+    std::cout << "Gardien Could not establish Connection / Handshake Failure...\n";
+    throw "Handshake Failed!";
+  }
+  printf("Handshake Successfull, Connection Established!\n");
+#else
   for (int i = 0; i < CHANNEL_COUNT; i++)
   {
     send(server_fd[i], HANDSHAKE_IN_MSG, strlen(HANDSHAKE_IN_MSG), 0);
@@ -64,6 +77,7 @@ void DirectController::InitSequence()
     }
     printf("Handshake Successfull, Connection Established!\n");
   }
+#endif
   disarm();
   balance();
   disarm();
@@ -72,6 +86,9 @@ void DirectController::InitSequence()
 
 DirectController::DirectController(std::string ip, int portBase)
 {
+#if defined(STREAM_PROTOCOL_3) // For Protocol 3, We have only one channel
+  ConnectChannel(ip, portBase, 0);
+#else
   ConnectChannel(ip, portBase + 0, 0); //PORT_THROTTLE
   ConnectChannel(ip, portBase + 1, 1); //PORT_PITCH
   ConnectChannel(ip, portBase + 2, 2); //PORT_ROLL
@@ -81,7 +98,7 @@ DirectController::DirectController(std::string ip, int portBase)
   ConnectChannel(ip, portBase + 6, 6); //PORT_AUX3
   ConnectChannel(ip, portBase + 7, 7); //PORT_AUX4
   ConnectChannel(ip, portBase + 8, 8); //RAPI_INVOKER
-
+#endif
   InitSequence();
 }
 
@@ -207,20 +224,29 @@ void DirectController::sendCommand(int val, int channel)
     }
     char *bmsg;
     int blen = 0;
+#if defined(STREAM_PROTOCOL_3)
+    uint8_t buf[4];
+    buf[0] = '.';
+    buf[1] = uint8_t(channel + 1);
+    buf[2] = uint8_t(val);
+    bmsg = (char *)buf;
+    send(server_fd[0], bmsg, 3, 0);
+#else
 #if defined(STREAM_PROTOCOL_1)
-    stringstream ss; // = new stringstream;
+    stringstream ss;                   // = new stringstream;
     ss << ".[:" << val << ":]";
     string msg = ss.str(); // = new string(ss->str());
     bmsg = (char *)msg.c_str();
     blen = msg.size();
 #elif defined(STREAM_PROTOCOL_2)
     uint8_t gm[1] = {uint8_t(val)};
-    bmsg = (char*)gm;
+    bmsg = (char *)gm;
     blen = 1;
 #endif
     send(server_fd[channel], bmsg, blen, 0);
     /*delete msg;
     delete ss;*/
+#endif
   }
   catch (exception &e)
   {
@@ -231,7 +257,7 @@ void DirectController::sendCommand(int val, int channel)
 void DirectController::printChannels()
 {
   printf("\nData: ");
-  for(int i = 0; i < 9; i++)
+  for (int i = 0; i < 9; i++)
     printf("[%d]--", channelBuffs[i]);
   fflush(stdout);
 }
@@ -263,12 +289,12 @@ void DirectController::setAux(int channel, int val)
 
 void DirectController::callRAPI(int code, int val)
 {
-    char *bmsg;
-    int blen = 0;
-    uint8_t gm[1] = {uint8_t(code)};
-    bmsg = (char*)gm;
-    blen = 1;
-    send(server_fd[8], bmsg, blen, 0);
+  char *bmsg;
+  int blen = 0;
+  uint8_t gm[1] = {uint8_t(code)};
+  bmsg = (char *)gm;
+  blen = 1;
+  send(server_fd[8], bmsg, blen, 0);
 }
 /*
   Sensors APIs 

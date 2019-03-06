@@ -343,9 +343,9 @@ int ReadFromPort(int portnum, char *buff, int size)
 
 #endif
 
-/*
-    General Purpose tools
-*/
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* -----------------------------------------------General Purpose tools---------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
 
 float clamp(float val, float imin, float imax, float omin, float omax)
 {
@@ -356,9 +356,798 @@ float clamp(float val, float imin, float imax, float omin, float omax)
 namespace ControllerInterface
 {
 
+/*
+    GPS/Barometer/Compass assisted
+    All SI Units, Meters, Degrees
+    Forward pitch direction in Y Axis, Left Right is X axis, up is Z
+*/
+
+namespace // Anonymous Namespace
+{
+vector3D_t *controlledPosition;
+vector3D_t *controlledOrientation;
+
+std::thread *YawControllerThread;
+std::thread *RollControllerThread;
+std::thread *PitchControllerThread;
+std::thread *AltitudeControllerThread;
+
+std::mutex YawControllerlock;
+std::mutex PitchControllerlock;
+std::mutex RollControllerlock;
+std::mutex AltitudeControllerlock;
+
+float Controlled_IntendedYawHeading = 0;
+float Controlled_IntendedPitchHeading = 0;
+float Controlled_IntendedRollHeading = 0;
+float Controlled_IntendedAltitude = 0;
+
+vector3D_t eulerFromQuaternion(quaternion_t orien)
+{
+    vector3D_t oo;
+    /*
+        Quaternion to Euler
+    */
+    //std::cout << ">>>" << orien << "<<<" << std::endl;
+    double heading = 0, roll, pitch, yaw;
+    double ysqr = orien.y() * orien.y();
+
+    // roll (x-axis rotation)
+    double t0 = +2.0f * (orien.w() * orien.x() + orien.y() * orien.z());
+    double t1 = +1.0f - 2.0f * (orien.x() * orien.x() + ysqr);
+    roll = std::atan2(t0, t1);
+
+    // pitch (y-axis rotation)
+    double t2 = +2.0f * (orien.w() * orien.y() - orien.z() * orien.x());
+    t2 = ((t2 > 1.0f) ? 1.0f : t2);
+    t2 = ((t2 < -1.0f) ? -1.0f : t2);
+    pitch = std::asin(t2);
+
+    // yaw (z-axis rotation)
+    double t3 = +2.0f * (orien.w() * orien.z() + orien.x() * orien.y());
+    double t4 = +1.0f - 2.0f * (ysqr + orien.z() * orien.z());
+    yaw = std::atan2(t3, t4);
+    //heading = yaw;
+    //printf("->Roll %f, Pitch %f, Yaw %f", roll, pitch, yaw);
+    //printf("->Heading: { %f %f}", orien.z(), orien.w());
+    oo.x = pitch;
+    oo.y = roll;
+    oo.z = yaw; // // 0, 360);
+    return oo;
+}
+
+class Actuator_t // An Abstract class
+{
+    float IntendedActuation;
+
+protected:
+    float errorScale;
+    float actuateVal;
+    float currentactuation;
+    float oldError;
+    float oldAbsError;
+    float deltaTime;
+
+  public:
+    std::thread *actuatorThread;
+    float CONTROLLER_P;
+    float CONTROLLER_I;
+    float CONTROLLER_D;
+
+    float ACTUATION_HALT_VALUE;
+    float ACTUATION_MAX_VALUE;
+    float ACTUATION_MIN_VALUE;
+
+    int RC_Channel;
+
+    std::mutex *intentionLock;
+    std::mutex *actuationControllerlock;
+
+    std::function<void(int)> setActuation;
+    std::function<float(void)> getCurrentStateValues;
+    std::function<float(float)> ErrorProcessor;
+
+    Actuator_t(std::function<void(int)> actuatorSet, std::function<float(void)> actuatorGet, int rcChannel, float CONSTANT_P = 0.8, float CONSTANT_I = 1.0, float CONSTANT_D = 200)
+    {
+        setActuation = actuatorSet;
+        getCurrentStateValues = actuatorGet;
+        IntendedActuation = 0;
+        CONTROLLER_P = CONSTANT_P;
+        CONTROLLER_I = CONSTANT_I;
+        CONTROLLER_D = CONSTANT_D;
+        intentionLock = new std::mutex();
+        actuationControllerlock = new std::mutex();
+
+        RC_Channel = rcChannel;
+    }
+
+    int setIntendedActuation(float intention)
+    {
+//intentionLock->lock();
+#if defined(ACTUATION_INTENTION_RELATIVE)
+        // The Intended actuation should be relative to the current heading
+        IntendedActuation = float(int((getHeadingDegrees() + intention)) % 360);
+#else
+        IntendedActuation = intention;
+#endif
+        //intentionLock->unlock();
+        return 0;
+    }
+
+    float getIntendedActuation()
+    {
+        float intention;
+#if defined(ACTUATION_INTENTION_RELATIVE)
+        //intentionLock->lock();
+        intention = IntendedActuation;
+#else
+        intention = IntendedActuation;
+#endif
+        //intentionLock->unlock();
+        return intention;
+    }
+
+    virtual void deployAutoActuators() = 0;
+
+    void AutoActuator()
+    {
+        try
+        {
+            this->actuationControllerlock->lock();
+            float h = this->getCurrentStateValues();
+            float newError = h - this->getIntendedActuation();
+            // Any processing needed?
+            newError = ErrorProcessor(newError);
+
+            float absNewError = std::abs(newError);
+            if (absNewError <= 2)
+            {
+                if (this->ACTUATION_HALT_VALUE >= 0)
+                    this->setActuation(this->ACTUATION_HALT_VALUE); // Make it not move anymore
+                printf("\nDone...%f %f", newError, h);              //*/
+                this->actuationControllerlock->unlock();
+                return;
+            }
+            // Our Equation
+            float clampedVal = newError * errorScale;                                                                                  //clamp(newError * errorScale, -180, 180, -127, 127);
+            actuateVal = ((clampedVal) + ((newError - oldError) / deltaTime) * this->CONTROLLER_D) + RC_MASTER_DATA[this->RC_Channel]; //currentYaw; //(newError/error); // - (newError / oldError)*(absNewError/newError)*2.0 // 2*(oldAbsError - 1*absNewError)
+
+            if (actuateVal > this->ACTUATION_MAX_VALUE)
+                actuateVal = this->ACTUATION_MAX_VALUE;
+            else if (actuateVal < this->ACTUATION_MIN_VALUE)
+                actuateVal = this->ACTUATION_MIN_VALUE;
+
+            this->setActuation(int(actuateVal));
+            oldError = newError;
+            oldAbsError = absNewError;
+            this->actuationControllerlock->unlock();
+            std::this_thread::sleep_for(std::chrono::milliseconds(int(deltaTime)));
+        }
+        catch (const std::future_error &e)
+        {
+            std::cout << "Caught a future_error with code \"" << e.code()
+                      << "\"\nMessage: \"" << e.what() << "\"\n";
+            this->actuationControllerlock->unlock();
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error Occured! inside " << e.what();
+            this->actuationControllerlock->unlock();
+        }
+    }
+};
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/*-------------------------------------------------- RotationalControllers -------------------------------------------------*/
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+float DegreeRoundclamp(float val)
+{
+    if (val > 180 || val < -180)
+    {
+        val -= 360;
+    }
+    return val;
+}
+
+class RotationActuator_t : public Actuator_t
+{
+
+  public:
+    RotationActuator_t(std::function<void(int)> actuatorSet, std::function<float(void)> actuatorGet, int rcChannel, float CONSTANT_P = 0.8, float CONSTANT_I = 1.0, float CONSTANT_D = 200) : Actuator_t(actuatorSet, actuatorGet, rcChannel, CONSTANT_P, CONSTANT_I, CONSTANT_D)
+    {
+        errorScale = CONTROLLER_P;
+        actuateVal = 127;
+        currentactuation = 127;
+        oldError = 1;
+        oldAbsError = 1;
+        deltaTime = 5;
+
+        ACTUATION_HALT_VALUE = 127;
+        ACTUATION_MAX_VALUE = 255;
+        ACTUATION_MIN_VALUE = 0;
+
+        ErrorProcessor = DegreeRoundclamp;
+    }
+
+    void deployAutoActuators()
+    {
+        //actuatorThread = new std::thread(this->AutoRotationalActuator);
+    }
+
+    void AutoRotationalActuator()
+    {
+        AutoActuator();
+    }
+};
+
+RotationActuator_t YawActuator(setYaw, getHeadingDegrees, YAW);
+RotationActuator_t RollActuator(setRoll, getRollDegrees, ROLL);
+RotationActuator_t PitchActuator(setPitch, getPitchDegrees, PITCH);
+
+void YawController()
+{
+    while (true)
+    {
+        try
+        {
+            YawActuator.AutoRotationalActuator();
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in Outermost Yaw loop!" << e.what();
+        }
+    }
+}
+
+void RollController()
+{
+    while (true)
+    {
+        try
+        {
+            RollActuator.AutoRotationalActuator();
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in Outermost Roll loop!" << e.what();
+        }
+    }
+}
+
+void PitchController()
+{
+    while (true)
+    {
+        try
+        {
+            PitchActuator.AutoRotationalActuator();
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in Outermost Pitch loop!" << e.what();
+        }
+    }
+}
+
+/*
+    APIs that can be built over these functions
+*/
+
+void set_Y_Motion(int val)
+{
+    float h = getHeadingDegrees();
+    // Equation is, (cos()*setPitch) + (sin()*setRoll)
+    float vv = float(val);
+    setPitch((vv * cosf(h)));
+    setRoll((vv * sinf(h)));
+}
+
+void set_X_Motion(int val)
+{
+    float h = getHeadingDegrees();
+    // Equation is, (cos()*setRoll) + (sin()*setPitch)
+    float vv = float(val);
+    setPitch((vv * sinf(h)));
+    setRoll((vv * cosf(h)));
+}
+
+void set_X_MotionAbs(int val)
+{
+    set_X_Motion(val);
+}
+
+void set_Y_MotionAbs(int val)
+{
+    set_X_Motion(val);
+}
+
+void setAltitude(int val)
+{
+}
+
+int init_RotationalControllers()
+{
+    YawControllerThread = new std::thread(YawController);
+    return 0;
+}
+
+int destroy_RotationalControllers()
+{
+    YawControllerThread->join();
+    return 0;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/*--------------------------------------------------- VelocityControllers --------------------------------------------------*/
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+/*
+    Actuates the drone WRT the World!
+*/
+
+class AbsoluteVelocityActuator_t : public Actuator_t
+{
+  public:
+    AbsoluteVelocityActuator_t(std::function<void(int)> actuatorSet, std::function<float(void)> actuatorGet, int rcChannel, float CONSTANT_P = 0.8, float CONSTANT_I = 1.0, float CONSTANT_D = 200) : Actuator_t(actuatorSet, actuatorGet, rcChannel, CONSTANT_P, CONSTANT_I, CONSTANT_D)
+    {
+        errorScale = CONTROLLER_P;
+        actuateVal = 127;
+        currentactuation = 127;
+        oldError = 1;
+        oldAbsError = 1;
+        deltaTime = 5;
+
+        ACTUATION_HALT_VALUE = -1;
+        ACTUATION_MAX_VALUE = 255;
+        ACTUATION_MIN_VALUE = 0;
+    }
+
+    void deployAutoActuators()
+    {
+        //actuatorThread = new std::thread(this->AutoLateralalActuator);
+    }
+
+    void AutoVelocityActuator()
+    {
+        AutoActuator();
+    }
+};
+
+AbsoluteVelocityActuator_t X_Vabs_Actuator(set_X_MotionAbs, get_X_VelocityAbs, RC_X_MOTION);
+AbsoluteVelocityActuator_t Y_Vabs_Actuator(set_Y_MotionAbs, get_Y_VelocityAbs, RC_Y_MOTION);
+AbsoluteVelocityActuator_t Z_Vabs_Actuator(setThrottle, get_Z_VelocityAbs, THROTTLE);
+
+void X_Vabs_Controllers()
+{
+    while (true)
+    {
+        try
+        {
+            X_Vabs_Actuator.AutoActuator();
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in Outermost X_Vabs_Actuator loop!" << e.what();
+        }
+    }
+}
+
+void Y_Vabs_Controllers()
+{
+    while (true)
+    {
+        try
+        {
+            Y_Vabs_Actuator.AutoActuator();
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in Outermost Y_Vabs_Actuator loop!" << e.what();
+        }
+    }
+}
+
+void Z_Vabs_Controllers()
+{
+    while (true)
+    {
+        try
+        {
+            Z_Vabs_Actuator.AutoActuator();
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in Outermost Z_Vabs_Actuator loop!" << e.what();
+        }
+    }
+}
+
+int init_AbsoluteVelocityControllers()
+{
+    //YawControllerThread = new std::thread(YawController);
+    return 0;
+}
+
+int destroy_AbsoluteVelocityControllers()
+{
+    //YawControllerThread->join();
+    return 0;
+}
+
+/*
+    Actuates the drone WRT the Drone's view of the world!
+*/
+
+class DroneVelocityActuator_t : public Actuator_t
+{
+  public:
+    DroneVelocityActuator_t(std::function<void(int)> actuatorSet, std::function<float(void)> actuatorGet, int rcChannel, float CONSTANT_P = 0.8, float CONSTANT_I = 1.0, float CONSTANT_D = 200) : Actuator_t(actuatorSet, actuatorGet, rcChannel, CONSTANT_P, CONSTANT_I, CONSTANT_D)
+    {
+        errorScale = CONTROLLER_P;
+        actuateVal = 127;
+        currentactuation = 127;
+        oldError = 1;
+        oldAbsError = 1;
+        deltaTime = 5;
+
+        ACTUATION_HALT_VALUE = -1;
+        ACTUATION_MAX_VALUE = 255;
+        ACTUATION_MIN_VALUE = 0;
+    }
+
+    void deployAutoActuators()
+    {
+        //actuatorThread = new std::thread(this->AutoLateralalActuator);
+    }
+
+    void AutoVelocityActuator()
+    {
+        AutoActuator();
+    }
+};
+
+DroneVelocityActuator_t X_Vrel_Actuator(setRoll, get_X_VelocityRel, RC_X_MOTION);
+DroneVelocityActuator_t Y_Vrel_Actuator(setPitch, get_Y_VelocityRel, RC_Y_MOTION);
+DroneVelocityActuator_t Z_Vrel_Actuator(setThrottle, get_Z_VelocityRel, THROTTLE);
+
+void X_Vrel_Controllers()
+{
+    while (true)
+    {
+        try
+        {
+            X_Vrel_Actuator.AutoActuator();
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in Outermost X_Vrel_Actuator loop!" << e.what();
+        }
+    }
+}
+
+void Y_Vrel_Controllers()
+{
+    while (true)
+    {
+        try
+        {
+            Y_Vrel_Actuator.AutoActuator();
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in Outermost Y_Vrel_Actuator loop!" << e.what();
+        }
+    }
+}
+
+void Z_Vrel_Controllers()
+{
+    while (true)
+    {
+        try
+        {
+            Z_Vrel_Actuator.AutoActuator();
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in Outermost Z_Vrel_Actuator loop!" << e.what();
+        }
+    }
+}
+
+
+int init_DroneVelocityControllers()
+{
+    //YawControllerThread = new std::thread(YawController);
+    return 0;
+}
+
+int destroy_DroneVelocityControllers()
+{
+    //YawControllerThread->join();
+    return 0;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/*--------------------------------------------- LateralControllers (Positional) --------------------------------------------*/
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+class LateralActuator_t : public Actuator_t
+{
+  public:
+    LateralActuator_t(std::function<void(int)> actuatorSet, std::function<float(void)> actuatorGet, int rcChannel, float CONSTANT_P = 0.8, float CONSTANT_I = 1.0, float CONSTANT_D = 200) : Actuator_t(actuatorSet, actuatorGet, rcChannel, CONSTANT_P, CONSTANT_I, CONSTANT_D)
+    {
+        errorScale = CONTROLLER_P;
+        actuateVal = 127;
+        currentactuation = 127;
+        oldError = 1;
+        oldAbsError = 1;
+        deltaTime = 5;
+    }
+
+    void deployAutoActuators()
+    {
+        //actuatorThread = new std::thread(this->AutoLateralalActuator);
+    }
+
+    void AutoLateralalActuator()
+    {
+        AutoActuator();
+    }
+};
+
+LateralActuator_t X_Actuator(set_X_Velocity, get_X_Coordinate, RC_X_MOTION);
+LateralActuator_t Y_Actuator(set_Y_Velocity, get_Y_Coordinate, RC_Y_MOTION);
+LateralActuator_t Z_Actuator(setThrottle, getAltitude, THROTTLE);
+
+int init_LateralControllers()
+{
+    //YawControllerThread = new std::thread(YawController);
+    return 0;
+}
+
+int destroy_LateralControllers()
+{
+    //YawControllerThread->join();
+    return 0;
+}
+
+/* Our Anonymous Namespace ends here, Autonomous APIs Below */
+
+int init_ActuationControllers()
+{
+#if defined(AUTONOMOUS_ACTUATION_CONTROLLERS)
+    init_RotationalControllers();
+    //init_LateralControllers();
+#endif
+    return 0;
+}
+
+int destroy_ActuationControllers()
+{
+    destroy_RotationalControllers();
+    destroy_LateralControllers();
+    return 0;
+}
+
+int pauseControllers()
+{
+    YawActuator.actuationControllerlock->lock();
+    return 1;
+}
+
+int resumeControllers()
+{
+    YawActuator.actuationControllerlock->unlock();
+    return 0;
+}
+
+} // namespace
+
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ----------------------------------------------General APIs for Control-------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
+
+/******************************************************************************************/
+/******************************* A Low-High level Get APIs ********************************/
+/******************************************************************************************/
+
+uint8_t getGyro(int axis)
+{
+    return IMU_Raw[0][axis];
+}
+
+uint8_t getAcc(int axis)
+{
+    return IMU_Raw[1][axis];
+}
+
+uint8_t getMag(int axis)
+{
+    return IMU_Raw[2][axis];
+}
+
+uint8_t getPID_P(int axis)
+{
+    return PID_Raw[0][axis];
+}
+
+uint8_t getPID_I(int axis)
+{
+    return PID_Raw[1][axis];
+}
+
+uint8_t getPID_D(int axis)
+{
+    return PID_Raw[2][axis];
+}
+
+uint8_t getArmStatus(int block)
+{
+    return 0;
+}
+
+quaternion_t getOrientationQuaternion()
+{
+#if defined(MODE_AIRSIM)
+    auto orien = client.getMultirotorState().getOrientation();
+    return quaternion_t(orien.w(), orien.x(), orien.y(), orien.z());
+#else
+    return quaternion_t(1, 0, 0, 0); // Get Quaternion from compass data
+#endif
+}
+
+/*
+    Gives Absolute World Orientation Values
+*/
+
+float getYaw() // Gives in Radians
+{
+    float h = getOrientation().z;
+    return h;
+}
+
+float getRoll() // Gives in Radians
+{
+    float h = getOrientation().y;
+    return h;
+}
+
+float getPitch() // Gives in Radians
+{
+    float h = getOrientation().x;
+    return h;
+}
+
+/*
+    This is our convention, counter clockwise, 0 to 360 in every direction
+*/
+
+float getConventionalDegrees(float rads)
+{
+    // 0 -> North
+    // 90 -> east
+    // 180 -> south
+    // 270 ->west
+    float h = clamp(rads, -3.14159265358979323846, 3.14159265358979323846, 180, -180);
+    if (h < 0)
+    {
+        h = 360 + h;
+    }
+    return h;
+}
+
+float getYawDegrees()
+{
+    return getConventionalDegrees(getYaw());
+}
+
+float getRollDegrees()
+{
+    return getConventionalDegrees(getRoll());
+}
+
+float getPitchDegrees()
+{
+    return getConventionalDegrees(getPitch());
+}
+
+float get_X_Coordinate()
+{
+    return 0;
+}
+
+float get_Y_Coordinate()
+{
+    return 0;
+}
+
+float get_X_VelocityRel()
+{
+    return getVelocityRel().x;
+}
+
+float get_Y_VelocityRel()
+{
+    return getVelocityRel().y;
+}
+
+float get_Z_VelocityRel()
+{
+    return getVelocityRel().z;
+}
+
+float get_X_VelocityAbs()
+{
+    return getVelocityAbs().x;
+}
+
+float get_Y_VelocityAbs()
+{
+    return getVelocityAbs().y;
+}
+
+float get_Z_VelocityAbs()
+{
+    return getVelocityAbs().z;
+}
+
+float getAltitude()
+{
+    return 0;
+}
+
+float getHeadingDegrees() // Gives in Degrees
+{
+    return getYawDegrees();
+}
+
+float getHeading()
+{
+    return getHeadingDegrees();
+}
+
+/***********************************************************************************************/
+/******************************* A Little Higher Level Get APIs ********************************/
+/***********************************************************************************************/
+
+vector3D_t getOrientation() // Returns Euler angle orientation
+{
+    return eulerFromQuaternion(getOrientationQuaternion());
+}
+
+vector3D_t getVelocityAbs()
+{
+    return getVelocity();   // CHANGE THIS
+}
+
+vector3D_t getVelocityRel()
+{
+    return getVelocity();   // CHANGE THIS
+}
+
+vector3D_t getVelocity()   // CHANGE THIS
+{
+    vector3D_t vel;
+    return vel;
+}
+
+vector3D_t getPosition()   // CHANGE THIS
+{
+    vector3D_t pos;
+    return pos;
+}
+
+GeoPoint_t getGPSLocation()   // CHANGE THIS
+{
+    GeoPoint_t val;
+    return val;
+}
+
+/******************************************************************************************/
+/************************************ All the Set APIs ************************************/
+/******************************************************************************************/
 
 void setThrottle(int throttle)
 {
@@ -457,553 +1246,9 @@ void setAux4(int val)
     //IssueCommand();
 }
 
-uint8_t getGyro(int axis)
-{
-    return IMU_Raw[0][axis];
-}
-
-uint8_t getAcc(int axis)
-{
-    return IMU_Raw[1][axis];
-}
-
-uint8_t getMag(int axis)
-{
-    return IMU_Raw[2][axis];
-}
-
-uint8_t getPID_P(int axis)
-{
-    return PID_Raw[0][axis];
-}
-
-uint8_t getPID_I(int axis)
-{
-    return PID_Raw[1][axis];
-}
-
-uint8_t getPID_D(int axis)
-{
-    return PID_Raw[2][axis];
-}
-
-uint8_t getArmStatus(int block)
-{
-    return 0;
-}
-
-/*
-    GPS/Barometer/Compass assisted
-    All SI Units, Meters, Degrees
-*/
-
-namespace // Anonymous Namespace
-{
-vector3D_t *controlledPosition;
-vector3D_t *controlledOrientation;
-
-std::thread *YawControllerThread;
-std::thread *RollControllerThread;
-std::thread *PitchControllerThread;
-std::thread *AltitudeControllerThread;
-
-std::mutex YawControllerlock;
-std::mutex PitchControllerlock;
-std::mutex RollControllerlock;
-std::mutex AltitudeControllerlock;
-
-float Controlled_IntendedYawHeading = 0;
-float Controlled_IntendedPitchHeading = 0;
-float Controlled_IntendedRollHeading = 0;
-float Controlled_IntendedAltitude = 0;
-
-class Actuator_t        // An Abstract class
-{
-    float IntendedActuation;
-
-  public:
-    std::thread *actuatorThread;
-    float CONTROLLER_P;
-    float CONTROLLER_I;
-    float CONTROLLER_D;
-
-    int RC_Channel;
-
-    std::mutex *intentionLock;
-    std::mutex *actuationControllerlock;
-
-    std::function<void(int)> setActuation;
-    std::function<float(void)> getCurrentStateValues;
-
-    Actuator_t(std::function<void(int)> actuatorSet, std::function<float(void)> actuatorGet, int rcChannel, float CONSTANT_P = 0.8, float CONSTANT_I = 1.0, float CONSTANT_D = 200)
-    {
-        setActuation = actuatorSet;
-        getCurrentStateValues = actuatorGet;
-        IntendedActuation = 0;
-        CONTROLLER_P = CONSTANT_P;
-        CONTROLLER_I = CONSTANT_I;
-        CONTROLLER_D = CONSTANT_D;
-        intentionLock = new std::mutex();
-        actuationControllerlock = new std::mutex();
-
-        RC_Channel = rcChannel;
-    }
-
-    int setIntendedActuation(float intention)
-    {
-        //intentionLock->lock();
-        #if defined(ACTUATION_INTENTION_RELATIVE)
-        // The Intended actuation should be relative to the current heading
-        IntendedActuation = float(int((getHeadingDegrees() + intention)) % 360);
-        #else
-        IntendedActuation = intention;
-        #endif
-        //intentionLock->unlock();
-        return 0;
-    }
-
-    float getIntendedActuation()
-    {
-        float intention;
-        #if defined(ACTUATION_INTENTION_RELATIVE)
-        //intentionLock->lock();
-        intention = IntendedActuation;
-        #else
-        intention = IntendedActuation;
-        #endif
-        //intentionLock->unlock();
-        return intention;
-    }
-
-    virtual void deployAutoActuators() = 0;
-};
-
-/*------------------------------------- RotationalControllers -------------------------------------*/
-
-class RotationActuator_t : public Actuator_t
-{
-    float errorScale;
-    float actuateVal;
-    float currentactuation;
-    float oldError;
-    float oldAbsError;
-    float deltaTime;
-
-  public:
-    RotationActuator_t(std::function<void(int)> actuatorSet, std::function<float(void)> actuatorGet, int rcChannel, float CONSTANT_P = 0.8, float CONSTANT_I = 1.0, float CONSTANT_D = 200) : Actuator_t(actuatorSet, actuatorGet, rcChannel, CONSTANT_P, CONSTANT_I, CONSTANT_D)
-    {
-        errorScale = CONTROLLER_P;
-        actuateVal = 127;
-        currentactuation = 127;
-        oldError = 1;
-        oldAbsError = 1;
-        deltaTime = 5;
-    }
-
-    void deployAutoActuators()
-    {
-        //actuatorThread = new std::thread(this->AutoRotationalActuator);
-    }
-
-    void AutoRotationalActuator()
-    {
-        try
-        {
-            this->actuationControllerlock->lock();
-            float h = this->getCurrentStateValues();
-            float newError = h - this->getIntendedActuation();
-            if (newError > 180 || newError < -180)
-            {
-                newError -= 360;
-            }
-            float absNewError = std::abs(newError);
-            if (absNewError <= 2)
-            {
-                //direc *= 0.99;
-                this->setActuation(127);                                   // Make it not move anymore
-                //std::this_thread::sleep_for(std::chrono::milliseconds(1)); // Wait for it to stabilize
-                //if (std::abs(this->getCurrentStateValues() - h) < 2)
-                //printf("\nDone...%f %f", newError, h);//*/
-                this->actuationControllerlock->unlock();
-                //std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                return;
-                //return 1;
-            }
-            // Our Equation
-            float clampedVal = newError * errorScale;                                                                                  //clamp(newError * errorScale, -180, 180, -127, 127);
-            actuateVal = ((clampedVal) + ((newError - oldError) / deltaTime) * this->CONTROLLER_D) + RC_MASTER_DATA[this->RC_Channel]; //currentYaw; //(newError/error); // - (newError / oldError)*(absNewError/newError)*2.0 // 2*(oldAbsError - 1*absNewError)
-
-            if (actuateVal > 255)
-                actuateVal = 255;
-            else if (actuateVal < 0)
-                actuateVal = 0;
-
-            //printf("\n{Errors: <%f> %f %f %f [%f]}", h, newError, actuateVal, clampedVal, errorScale);
-            this->setActuation(int(actuateVal));
-            oldError = newError;
-            oldAbsError = absNewError;
-            this->actuationControllerlock->unlock();
-            std::this_thread::sleep_for(std::chrono::milliseconds(int(deltaTime)));
-        }
-        catch (const std::future_error &e)
-        {
-            std::cout << "Caught a future_error with code \"" << e.code()
-                      << "\"\nMessage: \"" << e.what() << "\"\n";
-            this->actuationControllerlock->unlock();
-        }
-        catch (std::exception &e)
-        {
-            std::cout << "Error Occured! inside " << e.what();
-            this->actuationControllerlock->unlock();
-        }
-    }
-};
-
-RotationActuator_t YawActuator(setYaw, getHeadingDegrees, YAW);
-RotationActuator_t RollActuator(setRoll, getRollDegrees, ROLL);
-RotationActuator_t PitchActuator(setPitch, getPitchDegrees, PITCH);
-
-void YawController()
-{
-    while (true)
-    {
-        try
-        {
-            YawActuator.AutoRotationalActuator();
-        }
-        catch (std::exception &e)
-        {
-            std::cout << "Error in Outermost Yaw loop!" << e.what();
-        }
-    }
-}
-
-void RollController()
-{
-    while (true)
-    {
-        try
-        {
-            RollActuator.AutoRotationalActuator();
-        }
-        catch (std::exception &e)
-        {
-            std::cout << "Error in Outermost Roll loop!" << e.what();
-        }
-    }
-}
-
-void PitchController()
-{
-    while (true)
-    {
-        try
-        {
-            PitchActuator.AutoRotationalActuator();
-        }
-        catch (std::exception &e)
-        {
-            std::cout << "Error in Outermost Pitch loop!" << e.what();
-        }
-    }
-}
-
-/*
-    APIs that can be built over these functions
-*/
-
-void set_X_Motion(int val)
-{
-    float h = getHeadingDegrees();
-    // Equation is, (cos()*setPitch) + (sin()*setRoll)
-    float vv = float(val);
-    setPitch((vv*cosf(h)));
-    setRoll((vv*sinf(h)));
-}
-
-void set_Y_Motion(int val)
-{
-    float h = getHeadingDegrees();
-    // Equation is, (cos()*setRoll) + (sin()*setPitch)
-    float vv = float(val);
-    setPitch((vv*sinf(h)));
-    setRoll((vv*cosf(h)));
-}
-
-void setAltitude(int val)
-{
-}
-
-/*------------------------------------- LateralControllers -------------------------------------*/
-
-class LateralActuator_t : public Actuator_t
-{
-    float errorScale;
-    float actuateVal;
-    float currentactuation;
-    float oldError;
-    float oldAbsError;
-    float deltaTime;
-
-  public:
-    LateralActuator_t(std::function<void(int)> actuatorSet, std::function<float(void)> actuatorGet, int rcChannel, float CONSTANT_P = 0.8, float CONSTANT_I = 1.0, float CONSTANT_D = 200) : Actuator_t(actuatorSet, actuatorGet, rcChannel, CONSTANT_P, CONSTANT_I, CONSTANT_D)
-    {
-        errorScale = CONTROLLER_P;
-        actuateVal = 127;
-        currentactuation = 127;
-        oldError = 1;
-        oldAbsError = 1;
-        deltaTime = 5;
-    }
-
-    void deployAutoActuators()
-    {
-        //actuatorThread = new std::thread(this->AutoLateralalActuator);
-    }
-
-    void AutoLateralalActuator()
-    {
-        try
-        {
-            this->actuationControllerlock->lock();
-            float h = this->getCurrentStateValues();
-            float newError = h - this->getIntendedActuation();
-            float absNewError = std::abs(newError);
-            if (absNewError <= 2)
-            {
-                //direc *= 0.99;
-                this->setActuation(127);                                   // Make it not move anymore
-                //std::this_thread::sleep_for(std::chrono::milliseconds(1)); // Wait for it to stabilize
-                //if (std::abs(this->getCurrentStateValues() - h) < 2)
-                    printf("\nDone...%f %f", newError, h);//*/
-                this->actuationControllerlock->unlock();
-                //std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                return;
-                //return 1;
-            }
-            // Our Equation
-            float clampedVal = newError * errorScale;                                                                                  //clamp(newError * errorScale, -180, 180, -127, 127);
-            actuateVal = ((clampedVal) + ((newError - oldError) / deltaTime) * this->CONTROLLER_D) + RC_MASTER_DATA[this->RC_Channel]; //currentYaw; //(newError/error); // - (newError / oldError)*(absNewError/newError)*2.0 // 2*(oldAbsError - 1*absNewError)
-
-            if (actuateVal > 255)
-                actuateVal = 255;
-            else if (actuateVal < 0)
-                actuateVal = 0;
-
-            //printf("\n{Errors: <%f> %f %f %f [%f]}", h, newError, actuateVal, clampedVal, errorScale);
-            this->setActuation(int(actuateVal));
-            oldError = newError;
-            oldAbsError = absNewError;
-            this->actuationControllerlock->unlock();
-            std::this_thread::sleep_for(std::chrono::milliseconds(int(deltaTime)));
-        }
-        catch (const std::future_error &e)
-        {
-            std::cout << "Caught a future_error with code \"" << e.code()
-                      << "\"\nMessage: \"" << e.what() << "\"\n";
-            this->actuationControllerlock->unlock();
-        }
-        catch (std::exception &e)
-        {
-            std::cout << "Error Occured! inside " << e.what();
-            this->actuationControllerlock->unlock();
-        }
-    }
-};
-
-LateralActuator_t X_Actuator(set_X_Motion, get_X_Coordinate, RC_X_MOTION);
-LateralActuator_t Y_Actuator(set_Y_Motion, get_Y_Coordinate, RC_Y_MOTION);
-LateralActuator_t Z_Actuator(setThrottle, getAltitude, THROTTLE);
-
-/*
-    Back to the APIs
-*/
-
-vector3D_t eulerFromQuaternion(quaternion_t orien)
-{
-    vector3D_t oo;
-    /*
-        Quaternion to Euler
-    */
-    //std::cout << ">>>" << orien << "<<<" << std::endl;
-    double heading = 0, roll, pitch, yaw;
-    double ysqr = orien.y() * orien.y();
-
-    // roll (x-axis rotation)
-    double t0 = +2.0f * (orien.w() * orien.x() + orien.y() * orien.z());
-    double t1 = +1.0f - 2.0f * (orien.x() * orien.x() + ysqr);
-    roll = std::atan2(t0, t1);
-
-    // pitch (y-axis rotation)
-    double t2 = +2.0f * (orien.w() * orien.y() - orien.z() * orien.x());
-    t2 = ((t2 > 1.0f) ? 1.0f : t2);
-    t2 = ((t2 < -1.0f) ? -1.0f : t2);
-    pitch = std::asin(t2);
-
-    // yaw (z-axis rotation)
-    double t3 = +2.0f * (orien.w() * orien.z() + orien.x() * orien.y());
-    double t4 = +1.0f - 2.0f * (ysqr + orien.z() * orien.z());
-    yaw = std::atan2(t3, t4);
-    //heading = yaw;
-    //printf("->Roll %f, Pitch %f, Yaw %f", roll, pitch, yaw);
-    //printf("->Heading: { %f %f}", orien.z(), orien.w());
-    oo.x = pitch;
-    oo.y = roll;
-    oo.z = yaw; // // 0, 360);
-    return oo;
-}
-
-int init_RotationalControllers()
-{
-    YawControllerThread = new std::thread(YawController);
-    return 0;
-}
-
-int destroy_RotationalControllers()
-{
-    YawControllerThread->join();
-    return 0;
-}
-
-int init_LateralControllers()
-{
-    //YawControllerThread = new std::thread(YawController);
-    return 0;
-}
-
-int destroy_LateralControllers()
-{
-    //YawControllerThread->join();
-    return 0;
-}
-
-/* Our Anonymous Namespace ends here, Autonomous APIs Below */
-
-int init_ActuationControllers()
-{
-#if defined(AUTONOMOUS_ACTUATION_CONTROLLERS)   
-    init_RotationalControllers();
-    //init_LateralControllers();
-#endif
-    return 0;
-}
-
-int destroy_ActuationControllers()
-{
-    destroy_RotationalControllers();
-    destroy_LateralControllers();
-    return 0;
-}
-
-int pauseControllers()
-{
-    YawActuator.actuationControllerlock->lock();
-    return 1;
-}
-
-int resumeControllers()
-{
-    YawActuator.actuationControllerlock->unlock();
-    return 0;
-}
-
-} // namespace
-
-
-quaternion_t getOrientationQuaternion()
-{
-#if defined(MODE_AIRSIM)
-    auto orien = client.getMultirotorState().getOrientation();
-    return quaternion_t(orien.w(), orien.x(), orien.y(), orien.z());
-#else
-    return quaternion_t(1, 0, 0, 0);
-#endif
-}
-
-vector3D_t getOrientation() // Returns Euler angle orientation
-{
-    return eulerFromQuaternion(getOrientationQuaternion());
-}
-
-float getYaw() // Gives in Radians
-{
-    float h = getOrientation().z;
-    return h;
-}
-
-float getRoll() // Gives in Radians
-{
-    float h = getOrientation().y;
-    return h;
-}
-
-float getPitch() // Gives in Radians
-{
-    float h = getOrientation().x;
-    return h;
-}
-
-/*
-    This is our convention, counter clockwise, 0 to 360 in every direction
-*/
-
-float getConventionalDegrees(float rads)
-{
-    // 0 -> North
-    // 90 -> east
-    // 180 -> south
-    // 270 ->west
-    float h = clamp(rads, -3.14159265358979323846, 3.14159265358979323846, 180, -180);
-    if (h < 0)
-    {
-        h = 360 + h;
-    }
-    return h;
-}
-
-float getYawDegrees()
-{
-    return getConventionalDegrees(getYaw());
-}
-
-float getRollDegrees()
-{
-    return getConventionalDegrees(getRoll());
-}
-
-float getPitchDegrees()
-{
-    return getConventionalDegrees(getPitch());
-}
-
-float get_X_Coordinate()
-{
-    return 0;
-}
-
-float get_Y_Coordinate()
-{
-    return 0;
-}
-
-float getAltitude()
-{
-    return 0;
-}
-
-float getHeadingDegrees() // Gives in Degrees
-{
-    return getYawDegrees();
-}
-
-float getHeading()
-{
-    return getHeadingDegrees();
-}
-
-/*
-    A Little Higher Level APIs
-*/
+/***********************************************************************************************/
+/******************************* A Little Higher Level Set APIs ********************************/
+/***********************************************************************************************/
 
 int setHeading(float heading)
 {
@@ -1014,6 +1259,29 @@ int testHeading(std::vector<std::string> test)
 {
     std::cout << "Testing Auto Heading feature...";
     return setHeading(90);
+}
+
+int setVelocity(vector3D_t val)
+{
+    set_X_Velocity(val.x);
+    set_Y_Velocity(val.y);
+    setAltitude(val.z);
+    return 0;
+}
+
+int setPosition(vector3D_t val)
+{
+    return 0;
+}
+
+void set_X_Velocity(float val)
+{
+
+}
+
+void set_Y_Velocity(float val)
+{
+    
 }
 
 int setAutoYaw(float heading)
@@ -1040,21 +1308,13 @@ int setAutoPitch(float heading)
     return 0;
 }
 
-vector3D_t getVelocity()
-{
-    vector3D_t vel;
-    return vel;
-}
-
-vector3D_t getPosition()
-{
-    vector3D_t pos;
-    return pos;
-}
-
 void setAltitude(float altitude)
 {
 }
+
+/***********************************************************************************************/
+/*********************************** Other Higher Level APIs ***********************************/
+/***********************************************************************************************/
 
 void takeOff(float altitude)
 {
@@ -1187,6 +1447,10 @@ void FaultHandler()
 #endif
 }
 
+/*
+    The Main Initializer Function
+*/
+
 int ControllerInterface_init(int argc, char **argv)
 {
     printf("\n Initializing Flight Controller Interface...");
@@ -1220,7 +1484,7 @@ int ControllerInterface_init(int argc, char **argv)
     }
     API_ProcedureInvokeTable[111] = testHeading;
 
-    init_ActuationControllers();
+    //init_ActuationControllers();
 
 #if defined(CLI_MONITOR)
     std::thread *chnl_refresh = new std::thread(Channel_ViewRefresh, 0);

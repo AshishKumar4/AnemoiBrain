@@ -3,7 +3,7 @@
 pkill -f socat
 
 if [[ ! $1 ]]; then
-    ip=192.168.43.106
+    ip=192.168.43.102
 else 
     ip=$1
 fi

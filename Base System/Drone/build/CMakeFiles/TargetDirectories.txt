@@ -1,0 +1,3 @@
+/root/Desktop/Anemoi Drone Project/Drone Software/Base System/Drone/build/CMakeFiles/rebuild_cache.dir
+/root/Desktop/Anemoi Drone Project/Drone Software/Base System/Drone/build/CMakeFiles/Drone.dir
+/root/Desktop/Anemoi Drone Project/Drone Software/Base System/Drone/build/CMakeFiles/edit_cache.dir

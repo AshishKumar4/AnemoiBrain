@@ -1,0 +1,60 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+.././include/Controls/DirectControls.hpp
+string
+-
+iostream
+-
+vector
+-
+iterator
+-
+sstream
+-
+thread
+-
+../Utils/common.hpp
+.././include/Utils/common.hpp
+
+.././include/Utils/common.hpp
+iostream
+.././include/Utils/iostream
+vector
+.././include/Utils/vector
+
+/root/Desktop/Anemoi Drone Project/Drone Software/Base System/Drone/source/Controls/DirectControls.cpp
+unistd.h
+-
+stdio.h
+-
+sys/socket.h
+-
+stdlib.h
+-
+netinet/in.h
+-
+arpa/inet.h
+-
+string.h
+-
+string
+-
+iostream
+-
+vector
+-
+iterator
+-
+sstream
+-
+thread
+-
+DirectControls.hpp
+/root/Desktop/Anemoi Drone Project/Drone Software/Base System/Drone/source/Controls/DirectControls.hpp
+

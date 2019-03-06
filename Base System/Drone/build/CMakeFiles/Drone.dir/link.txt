@@ -1,0 +1,2 @@
+/usr/bin/ar qc libDrone.a  CMakeFiles/Drone.dir/source/Drone.cpp.o CMakeFiles/Drone.dir/source/Sensors/Sensors.cpp.o CMakeFiles/Drone.dir/source/Controls/DirectControls.cpp.o
+/usr/bin/ranlib libDrone.a
