@@ -36,8 +36,13 @@
 
 #if defined(STREAM_PROTOCOL_1)
 #undef STREAM_PROTOCOL_2
+#undef STREAM_PROTOCOL_3
 #elif defined(STREAM_PROTOCOL_2)
 #undef STREAM_PROTOCOL_1
+#undef STREAM_PROTOCOL_3
+#elif defined(STREAM_PROTOCOL_3)
+#undef STREAM_PROTOCOL_1
+#undef STREAM_PROTOCOL_2
 #endif
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
@@ -52,19 +57,11 @@ int opt = 1;
 
 void DirectController::InitSequence()
 {
+  int Total_Channels = CHANNEL_COUNT;
 #if defined(STREAM_PROTOCOL_3) // For Protocol 3, We have only one channel
-  send(server_fd[0], HANDSHAKE_IN_MSG, strlen(HANDSHAKE_IN_MSG), 0);
-  // TODO: Place mechanism to recieve back handshake and if not matching, Panic!
-  char *buff = (char *)malloc(1024);
-  int valread = read(server_fd[0], buff, 1024);
-  if (strncmp(buff, HANDSHAKE_OUT_MSG, strlen(HANDSHAKE_OUT_MSG)))
-  {
-    std::cout << "Gardien Could not establish Connection / Handshake Failure...\n";
-    throw "Handshake Failed!";
-  }
-  printf("Handshake Successfull, Connection Established!\n");
-#else
-  for (int i = 0; i < CHANNEL_COUNT; i++)
+  Total_Channels = 3;
+#endif
+  for (int i = 0; i < Total_Channels; i++)
   {
     send(server_fd[i], HANDSHAKE_IN_MSG, strlen(HANDSHAKE_IN_MSG), 0);
     // TODO: Place mechanism to recieve back handshake and if not matching, Panic!
@@ -77,7 +74,7 @@ void DirectController::InitSequence()
     }
     printf("Handshake Successfull, Connection Established!\n");
   }
-#endif
+  beaconThread = new thread(this->beaconRefresh, this);
   disarm();
   balance();
   disarm();
@@ -86,8 +83,10 @@ void DirectController::InitSequence()
 
 DirectController::DirectController(std::string ip, int portBase)
 {
-#if defined(STREAM_PROTOCOL_3) // For Protocol 3, We have only one channel
-  ConnectChannel(ip, portBase, 0);
+#if defined(STREAM_PROTOCOL_3) // For Protocol 3, We have only one channel for tx, 1 for rapi, 1 for beacon
+  ConnectChannel(ip, portBase, 0);  // for Rx
+  ConnectChannel(ip, portBase + 1, 1); // RAPI_INVOKER
+  ConnectChannel(ip, portBase + 2, 2); // Beacon
 #else
   ConnectChannel(ip, portBase + 0, 0); //PORT_THROTTLE
   ConnectChannel(ip, portBase + 1, 1); //PORT_PITCH
@@ -296,6 +295,23 @@ void DirectController::callRAPI(int code, int val)
   blen = 1;
   send(server_fd[8], bmsg, blen, 0);
 }
+
+/*
+  Beacon, send data at every 50ms
+*/
+
+void DirectController::beaconRefresh(DirectController* obj)
+{
+  const char* bmsg = "still alive\0";
+  while(1)
+  { 
+    obj->beaconLock.lock();
+    send(obj->server_fd[2], bmsg, strlen(bmsg), 0);
+    obj->beaconLock.unlock();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  }
+}
+
 /*
   Sensors APIs 
 */

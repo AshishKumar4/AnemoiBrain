@@ -19,9 +19,9 @@
 */
 //#define MODE_AIRSIM
 //#define MODE_MAVLINK_SIM
-//#define MODE_DEBUG_NO_FC
+#define MODE_DEBUG_NO_FC
 
-#define MODE_REALDRONE
+//#define MODE_REALDRONE
 
 #define SYNCD_TRANSFER
 #define UPDATER_THREAD
@@ -44,7 +44,7 @@
 //#define ACTUATION_INTENTION_RELATIVE
 
 #define CLI_UPDATE_RATE 100 // Miliseconds
-#define FAILSAFE_LANDING_RATE 10
+#define FAILSAFE_LANDING_RATE 5
 
 /*
         There are two possible configurations, 
