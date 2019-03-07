@@ -44,7 +44,7 @@
 //#define ACTUATION_INTENTION_RELATIVE
 
 #define CLI_UPDATE_RATE 100 // Miliseconds
-#define FAILSAFE_LANDING_RATE 10
+#define FAILSAFE_LANDING_RATE 15
 
 /*
         There are two possible configurations, 

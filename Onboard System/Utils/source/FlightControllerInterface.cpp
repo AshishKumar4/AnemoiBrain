@@ -384,7 +384,7 @@ void Channel_Updater(int threadId)
         }
         catch (std::exception &e)
         {
-            std::cout << "Error in CLI Monitor " << e.what();
+            std::cout << "Error in Channel Updater " << e.what();
             mtx.unlock();
         }
     }

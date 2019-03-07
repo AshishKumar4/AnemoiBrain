@@ -7,6 +7,7 @@
 #include <iterator>
 #include <sstream>
 #include <thread> // std::thread
+#include <mutex>
 
 #include "../Utils/common.hpp"
 
@@ -25,8 +26,13 @@ protected:
   vector<DroneCamera_t>     cameras;
   DroneIMU_t*               imu;
 
+  std::thread               *beaconThread;
+
   void sendCommand(int val, int channel);
 public:
+
+  std::mutex                beaconLock;
+
   void InitSequence();
   int ConnectChannel(std::string ip, int port, int channel);
   DirectController(std::string ip = "0.0.0.0", int portBase = 8400);
@@ -44,6 +50,7 @@ public:
   void setRoll(int val);
   void setAux(int channel, int val);
   void callRAPI(int code, int val);
+  static void beaconRefresh(DirectController* obj);
 
   void printChannels();
   /* APIs to get Data */

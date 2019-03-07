@@ -1410,7 +1410,7 @@ void FailSafeMechanism()
 
 void ResumeHandler()
 {
-#if defined(MSP_Serial_PROTOCOL)
+//#if defined(MSP_Serial_PROTOCOL)
     try
     {
         failsafe.lock();
@@ -1419,7 +1419,7 @@ void ResumeHandler()
         FailSafeThread->join();
         if (FailSafeTrigger)
         {
-            mtx.unlock(); // Grab the lock and don't release until the fault is fixed
+            mtx.unlock(); 
             FailSafeTrigger = false;
         }
         std::cout << "Fault Resumed and Managed!\n";
@@ -1428,12 +1428,12 @@ void ResumeHandler()
     {
         std::cout << "Some More Error 3!" << e.what();
     }
-#endif
+//#endif
 }
 
 void FaultHandler()
 {
-#if defined(MSP_Serial_PROTOCOL)
+//#if defined(MSP_Serial_PROTOCOL)
     try
     {
         std::cout << "Fault Occured!\nTriggering FailSafe!!!";
@@ -1444,7 +1444,7 @@ void FaultHandler()
     {
         std::cout << "Some More Error 1!" << e.what();
     }
-#endif
+//#endif
 }
 
 /*

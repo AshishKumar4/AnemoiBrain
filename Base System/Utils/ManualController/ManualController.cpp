@@ -524,6 +524,24 @@ int event_key_s(ManualController *obj)
     return 1;
 }
 
+int beaconStatus = 0;
+int event_key_b(ManualController *obj)      // Start/Stop Beacon
+{
+    if(!beaconStatus)
+    {
+        beaconStatus = 1;
+        obj->uavObject->beaconLock.lock();
+        printf("\nBeacon Locked!");
+    }
+    else 
+    {
+        beaconStatus = 0;
+        obj->uavObject->beaconLock.unlock();
+        printf("\nBeacon unlocked!");
+    }
+    return 1;
+}
+
 int event_key_h(ManualController *obj)
 {
     printf("\nRAPI CALLED!!!");
@@ -610,6 +628,7 @@ int main(int argc, char **argv)
     KeyMap['a'] = event_key_a;
     KeyMap['s'] = event_key_s;
     KeyMap['h'] = event_key_h;
+    KeyMap['b'] = event_key_b;
     KeyMap['\n'] = event_key_enter;
     KeyMap['\r'] = event_key_enter;
     ManualController remote(droneControl, serialport);
