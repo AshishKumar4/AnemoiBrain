@@ -1383,7 +1383,7 @@ void FailSafeMechanism()
         setPitch(127);
         setYaw(127);
         int a = RC_DATA[THROTTLE];
-        for (int i = a; i > 0; i--)
+        for (int i = a; i > 100; i--)
         {
             failsafe.lock();
             if (FaultManaged)
@@ -1392,6 +1392,19 @@ void FailSafeMechanism()
                 return;
             }
             std::cout << "\nLowering the throttle to " << i;
+            setThrottle(i);
+            failsafe.unlock();
+            std::this_thread::sleep_for(std::chrono::milliseconds(FAILSAFE_LANDING_RATE));
+        }
+        for(int i = 0; i < 50; i++) // 2 Seconds
+        {
+            failsafe.lock();
+            if (FaultManaged)
+            {
+                failsafe.unlock();
+                return;
+            }
+            std::cout << "\nWaiting for connection while Landing... " << i;
             setThrottle(i);
             failsafe.unlock();
             std::this_thread::sleep_for(std::chrono::milliseconds(FAILSAFE_LANDING_RATE));
