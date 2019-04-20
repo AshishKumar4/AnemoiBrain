@@ -1,1 +1,0 @@
-/usr/bin/c++    -rdynamic CMakeFiles/client_async_test.dir/examples/client_async_test.cpp.o  -o client_async_test -Wl,-rpath,/root/Gardien-System/Deps/MSP/build_opizero libmspclient.so libmsp_msg_print.so -lpthread 

@@ -1,3 +1,6 @@
 [submodule "Dependencies/rpclib"]
 	path = Dependencies/rpclib
 	url = https://github.com/rpclib/rpclib
+[submodule "Dependencies/Dependencies/rpclib"]
+	path = Dependencies/Dependencies/rpclib
+	url = https://github.com/rpclib/rpclib

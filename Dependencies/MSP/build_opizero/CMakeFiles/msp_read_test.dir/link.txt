@@ -1,1 +1,0 @@
-/usr/bin/c++    -rdynamic CMakeFiles/msp_read_test.dir/examples/msp_read_test.cpp.o  -o msp_read_test -Wl,-rpath,/root/Gardien-System/Deps/MSP/build_opizero libmsp.so libmsp_msg_print.so -lpthread 
