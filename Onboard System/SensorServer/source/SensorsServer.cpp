@@ -15,7 +15,6 @@
 
 #include "AbstractServer.hpp"
 #include "ControllerInterface.hpp"
-#include "Sensors.h"
 
 #include "SensorsServer.hpp"
 

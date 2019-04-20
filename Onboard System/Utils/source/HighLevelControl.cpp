@@ -13,8 +13,11 @@
 #include <functional>
 #include <math.h>
 
-#include "ControllerInterface.hpp"
+#include "Sensors/Sensors.hpp"
+#include "Sensors/InertialMeasurement.hpp"
+#include "Sensors/Location.hpp"
 
+#include "ControllerInterface.hpp"
 #include "FlightControllerInterface.cpp"
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
@@ -347,12 +350,6 @@ int ReadFromPort(int portnum, char *buff, int size)
 /* -----------------------------------------------General Purpose tools---------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
 
-float clamp(float val, float imin, float imax, float omin, float omax)
-{
-    float aa = omin + (((omax - omin) / (imax - imin)) * (val - imin));
-    return aa;
-}
-
 namespace ControllerInterface
 {
 
@@ -381,40 +378,6 @@ float Controlled_IntendedYawHeading = 0;
 float Controlled_IntendedPitchHeading = 0;
 float Controlled_IntendedRollHeading = 0;
 float Controlled_IntendedAltitude = 0;
-
-vector3D_t eulerFromQuaternion(quaternion_t orien)
-{
-    vector3D_t oo;
-    /*
-        Quaternion to Euler
-    */
-    //std::cout << ">>>" << orien << "<<<" << std::endl;
-    double heading = 0, roll, pitch, yaw;
-    double ysqr = orien.y() * orien.y();
-
-    // roll (x-axis rotation)
-    double t0 = +2.0f * (orien.w() * orien.x() + orien.y() * orien.z());
-    double t1 = +1.0f - 2.0f * (orien.x() * orien.x() + ysqr);
-    roll = std::atan2(t0, t1);
-
-    // pitch (y-axis rotation)
-    double t2 = +2.0f * (orien.w() * orien.y() - orien.z() * orien.x());
-    t2 = ((t2 > 1.0f) ? 1.0f : t2);
-    t2 = ((t2 < -1.0f) ? -1.0f : t2);
-    pitch = std::asin(t2);
-
-    // yaw (z-axis rotation)
-    double t3 = +2.0f * (orien.w() * orien.z() + orien.x() * orien.y());
-    double t4 = +1.0f - 2.0f * (ysqr + orien.z() * orien.z());
-    yaw = std::atan2(t3, t4);
-    //heading = yaw;
-    //printf("->Roll %f, Pitch %f, Yaw %f", roll, pitch, yaw);
-    //printf("->Heading: { %f %f}", orien.z(), orien.w());
-    oo.x = pitch;
-    oo.y = roll;
-    oo.z = yaw; // // 0, 360);
-    return oo;
-}
 
 class Actuator_t // An Abstract class
 {
@@ -465,8 +428,8 @@ protected:
     {
 //intentionLock->lock();
 #if defined(ACTUATION_INTENTION_RELATIVE)
-        // The Intended actuation should be relative to the current heading
-        IntendedActuation = float(int((getHeadingDegrees() + intention)) % 360);
+        // The Intended actuation should be relative to the current state
+        IntendedActuation = float(this->getCurrentStateValues() + intention);
 #else
         IntendedActuation = intention;
 #endif
@@ -543,6 +506,8 @@ protected:
 
 float DegreeRoundclamp(float val)
 {
+    float decimal = val - float(int(val));
+    val = float(int(val)%360) + decimal;
     if (val > 180 || val < -180)
     {
         val -= 360;
@@ -988,161 +953,118 @@ uint8_t getArmStatus(int block)
     return 0;
 }
 
-quaternion_t getOrientationQuaternion()
-{
-#if defined(MODE_AIRSIM)
-    auto orien = client.getMultirotorState().getOrientation();
-    return quaternion_t(orien.w(), orien.x(), orien.y(), orien.z());
-#else
-    return quaternion_t(1, 0, 0, 0); // Get Quaternion from compass data
-#endif
-}
-
-/*
-    Gives Absolute World Orientation Values
-*/
-
 float getYaw() // Gives in Radians
 {
-    float h = getOrientation().z;
-    return h;
+    return MainState->getYaw();
 }
 
 float getRoll() // Gives in Radians
 {
-    float h = getOrientation().y;
-    return h;
+    return MainState->getRoll();
 }
 
 float getPitch() // Gives in Radians
 {
-    float h = getOrientation().x;
-    return h;
-}
-
-/*
-    This is our convention, counter clockwise, 0 to 360 in every direction
-*/
-
-float getConventionalDegrees(float rads)
-{
-    // 0 -> North
-    // 90 -> east
-    // 180 -> south
-    // 270 ->west
-    float h = clamp(rads, -3.14159265358979323846, 3.14159265358979323846, 180, -180);
-    if (h < 0)
-    {
-        h = 360 + h;
-    }
-    return h;
+    return MainState->getPitch();
 }
 
 float getYawDegrees()
 {
-    return getConventionalDegrees(getYaw());
+    return MainState->getYawDegrees();
 }
 
 float getRollDegrees()
 {
-    return getConventionalDegrees(getRoll());
+    return MainState->getRollDegrees();
 }
 
 float getPitchDegrees()
 {
-    return getConventionalDegrees(getPitch());
+    return MainState->getPitchDegrees();
 }
 
 float get_X_Coordinate()
 {
-    return 0;
+    return MainState->get_X_Coordinate();
 }
 
 float get_Y_Coordinate()
 {
-    return 0;
+    return MainState->get_Y_Coordinate();
 }
 
 float get_X_VelocityRel()
 {
-    return getVelocityRel().x;
+    return MainState->get_X_VelocityRel();
 }
 
 float get_Y_VelocityRel()
 {
-    return getVelocityRel().y;
+    return MainState->get_Y_VelocityRel();
 }
 
 float get_Z_VelocityRel()
 {
-    return getVelocityRel().z;
+    return MainState->get_Z_VelocityRel();
 }
 
 float get_X_VelocityAbs()
 {
-    return getVelocityAbs().x;
+    return MainState->get_X_VelocityAbs();
 }
 
 float get_Y_VelocityAbs()
 {
-    return getVelocityAbs().y;
+    return MainState->get_Y_VelocityAbs();
 }
 
 float get_Z_VelocityAbs()
 {
-    return getVelocityAbs().z;
+    return MainState->get_Z_VelocityAbs();
 }
 
 float getAltitude()
 {
-    return 0;
+    return MainState->getAltitude();
 }
 
 float getHeadingDegrees() // Gives in Degrees
 {
-    return getYawDegrees();
+    return MainState->getHeadingDegrees();
 }
 
 float getHeading()
 {
-    return getHeadingDegrees();
+    return MainState->getHeading();
 }
 
 /***********************************************************************************************/
 /******************************* A Little Higher Level Get APIs ********************************/
 /***********************************************************************************************/
 
-vector3D_t getOrientation() // Returns Euler angle orientation
-{
-    return eulerFromQuaternion(getOrientationQuaternion());
-}
-
 vector3D_t getVelocityAbs()
 {
-    return getVelocity();   // CHANGE THIS
+    return MainState->getVelocityAbs();
 }
 
 vector3D_t getVelocityRel()
 {
-    return getVelocity();   // CHANGE THIS
+    return MainState->getVelocityRel();
 }
 
 vector3D_t getVelocity()   // CHANGE THIS
 {
-    vector3D_t vel;
-    return vel;
+    return MainState->getVelocity();
 }
 
 vector3D_t getPosition()   // CHANGE THIS
 {
-    vector3D_t pos;
-    return pos;
+    return MainState->getPosition();
 }
 
 GeoPoint_t getGPSLocation()   // CHANGE THIS
 {
-    GeoPoint_t val;
-    return val;
+    return MainState->getLocation();
 }
 
 /******************************************************************************************/
@@ -1469,6 +1391,9 @@ int ControllerInterface_init(int argc, char **argv)
     printf("\n Initializing Flight Controller Interface...");
     //int fd = wiringPiSPISetup(0, SPI_IOC_WR_MAX_SPEED_HZ);//SPI_init("/dev/spidev0.0");
     Raw_Init(argc, argv);
+
+    MainState = new GlobalState_t(MainLocator, MainIMU);
+    
 #if defined(MSP_SERIAL_FORWARDING)
     Port_Forwarding_Init(argc, argv);
 #endif
@@ -1505,7 +1430,7 @@ int ControllerInterface_init(int argc, char **argv)
         KeyMap[i] = event_key_other;
     KeyMap['q'] = event_key_q; // Show RC Values
     KeyMap['w'] = event_key_w; // show PID Values
-    KeyMap['e'] = event_key_e; // show IMU Data
+    KeyMap['e'] = event_key_e; // show MainState Data
     KeyMap['r'] = event_key_r; // show Wifi Strength
     KeyMap['A'] = event_key_A; // show Armed
     std::thread *keyboard_handler = new std::thread(Keyboard_handler, 2);

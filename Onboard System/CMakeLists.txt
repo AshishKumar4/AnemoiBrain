@@ -13,16 +13,16 @@ endif()
 
 # Include the Necessary Headers
 include_directories(${ONBOARD_ROOT}/Utils/include
-    ${ONBOARD_ROOT}/ControlAbstraction/include
-    ${ONBOARD_ROOT}/SensorAbstraction/include
+    ${ONBOARD_ROOT}/ControlServer/include
+    ${ONBOARD_ROOT}/SensorServer/include
     )
 
 
 # Add the Linker Directories
 link_directories(${ONBOARD_ROOT}/Utils/build/
-    ${ONBOARD_ROOT}/ControlAbstraction/build/
-    ${ONBOARD_ROOT}/SensorAbstraction/build/
-    ${AIRSIM_ROOT}/cmake/output/lib/
+    ${ONBOARD_ROOT}/ControlServer/build/
+    ${ONBOARD_ROOT}/SensorServer/build/
+    ${AIRSIM_ROOT}/AirLib/lib/x64/Debug
     )
 
 # Some global configurations

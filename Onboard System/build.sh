@@ -2,9 +2,9 @@
 
 cd Utils
 ./build.sh $1 $2
-cd ../ControlAbstraction
+cd ../ControlServer
 ./build.sh $1
-cd ../SensorAbstraction
+cd ../SensorServer
 ./build.sh $1
 cd ..
 

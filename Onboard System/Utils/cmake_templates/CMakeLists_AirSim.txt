@@ -27,7 +27,7 @@ include_directories(include
 # Set the path to AirLib directly correctly !!!
 link_directories(lib/
     build/
-    ${AIRSIM_ROOT}/cmake/output/lib/
+    ${AIRSIM_ROOT}/AirLib/lib/x64/Debug
     )
 
 # Some global configurations
@@ -36,7 +36,9 @@ find_package(Threads REQUIRED)
 
 # Build our Library
 # Build our Abstract Server and Flight Controller Interface
-set(SERVER_SOURCES "source/AbstractServer.cpp" "source/HighLevelControl.cpp")
+set(SERVER_SOURCES "source/AbstractServer.cpp" "source/HighLevelControl.cpp"
+    "source/Sensors/InertialMeasurement.cpp" "source/Sensors/Location.cpp"
+    "source/Sensors/Sensors.cpp")
 add_library(${PROJECT_NAME} SHARED ${SERVER_SOURCES})
 target_link_libraries(${PROJECT_NAME} Threads::Threads)
 target_link_libraries(${PROJECT_NAME} AirLib)

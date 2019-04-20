@@ -14,6 +14,10 @@
 
 #include "ControllerInterface.hpp"
 
+#include "Sensors/Sensors.hpp"
+#include "Sensors/InertialMeasurement.hpp"
+#include "Sensors/Location.hpp"
+
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* -----------------------------------------Some Pretty Definitions we may need-------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
@@ -513,6 +517,9 @@ void Raw_Init(int argc, char *argv[])
 
     //cout << "Press Enter to takeoff" << endl; cin.get();
     client.takeoffAsync(5); //*/
+
+    ControllerInterface::MainIMU = new AirSim_IMU_t(&client);
+    ControllerInterface::MainLocator = new AirSim_Locator_t(&client);
 }
 
 static volatile void sendCommand(uint8_t val, uint8_t channel)
