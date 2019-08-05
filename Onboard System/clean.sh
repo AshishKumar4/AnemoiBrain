@@ -1,6 +1,6 @@
 #! /bin/bash
 
-cd Utils/; ./clean.sh
+cd CoreSystem/; ./clean.sh
 cd ../ControlServer; ./clean.sh 
 cd ../SensorServer; ./clean.sh
 cd ..

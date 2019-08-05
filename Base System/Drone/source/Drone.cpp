@@ -17,5 +17,34 @@ Drone::Drone(std::string ip, int portBase): DirectController(ip, portBase), Sens
 
 int Drone::setHeading(float heading)
 {
+    printf("%f", heading);
     return rpcStub->call("setHeading", heading).as<int>();
+}
+
+int Drone::setRollAngle(float angle)
+{
+    printf("%f", angle);
+    return rpcStub->call("setRollAngle", angle).as<int>();
+}
+
+int Drone::setPitchAngle(float angle)
+{
+    printf("%f", angle);
+    return rpcStub->call("setPitchAngle", angle).as<int>();
+}
+
+int Drone::setAltitude(float altitude)
+{
+    printf("%f", altitude);
+    return rpcStub->call("setAltitude", altitude).as<int>();
+}
+
+int Drone::toggleAutoActuator(char type)
+{
+    return rpcStub->call("toggleAutoActuator", type).as<int>();
+}
+
+int Drone::gotoLocation(float x, float y, float z)
+{
+    return rpcStub->call("gotoLocation", x, y, z).as<int>();
 }

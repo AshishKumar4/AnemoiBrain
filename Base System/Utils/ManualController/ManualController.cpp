@@ -546,9 +546,40 @@ int event_key_h(ManualController *obj)
 {
     printf("\nRAPI CALLED!!!");
     //obj->uavObject->callRAPI(111, 0);
-    int angle;
-    std::cin>>angle;
-    obj->uavObject->setHeading(angle);
+    float x,y,z;
+    char axis;
+    axis = getc(stdin);
+    std::cin>>x>>y>>z;
+    switch(axis)
+    {
+        case 'R': // Rotational, get 3 values for roll,pitch,yaw
+
+                obj->uavObject->setHeading(z);
+                obj->uavObject->setRollAngle(y);
+                obj->uavObject->setPitchAngle(x);
+            break;
+        case 'P': // Positional, get 3 values 
+                obj->uavObject->gotoLocation(x, y, z);
+            break;
+        case 'A': // Altitude 
+                obj->uavObject->setAltitude(z);
+                printf("[%f]", z);
+                break;
+        default: 
+            printf("\nNot understood %c,%d", axis,axis);
+            return 0;
+    }
+    return 1;
+}
+
+int event_key_S(ManualController *obj)
+{
+    printf("\nRAPI, TOGGLE Auto Actuators!");
+    char type;
+    std::cin >> type;
+    // Three types of Auto Actuators -> Rotational (R), Velocity (V), Positional (P)
+    obj->uavObject->toggleAutoActuator(type);
+    printf("\nDone...");
     return 1;
 }
 
@@ -629,6 +660,7 @@ int main(int argc, char **argv)
     KeyMap['s'] = event_key_s;
     KeyMap['h'] = event_key_h;
     KeyMap['b'] = event_key_b;
+    KeyMap['S'] = event_key_S;
     KeyMap['\n'] = event_key_enter;
     KeyMap['\r'] = event_key_enter;
     ManualController remote(droneControl, serialport);

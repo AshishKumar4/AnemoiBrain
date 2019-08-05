@@ -1,5 +1,7 @@
 #pragma once
 
+#include "AbstractServer.hpp"
+
 namespace Onboard
 {
 /* ------------------------------------------------------------------------------------------------------------------------ */
@@ -63,5 +65,8 @@ int Handshake(int i, int j);
 
 #endif
 
+
 int ControlServer_init(int argc, char **argv);
 } // namespace Onboard
+
+Onboard::AbstractServer* ControlServer;

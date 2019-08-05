@@ -59,13 +59,13 @@ void DirectController::InitSequence()
 {
   int Total_Channels = CHANNEL_COUNT;
 #if defined(STREAM_PROTOCOL_3) // For Protocol 3, We have only one channel
-  Total_Channels = 3;
+  Total_Channels = 2;
 #endif
   for (int i = 0; i < Total_Channels; i++)
   {
     send(server_fd[i], HANDSHAKE_IN_MSG, strlen(HANDSHAKE_IN_MSG), 0);
     // TODO: Place mechanism to recieve back handshake and if not matching, Panic!
-    char *buff = (char *)malloc(1024);
+    char *buff = new char[1024];
     int valread = read(server_fd[i], buff, 1024);
     if (strncmp(buff, HANDSHAKE_OUT_MSG, strlen(HANDSHAKE_OUT_MSG)))
     {
@@ -85,8 +85,8 @@ DirectController::DirectController(std::string ip, int portBase)
 {
 #if defined(STREAM_PROTOCOL_3) // For Protocol 3, We have only one channel for tx, 1 for rapi, 1 for beacon
   ConnectChannel(ip, portBase, 0);  // for Rx
-  ConnectChannel(ip, portBase + 1, 1); // RAPI_INVOKER
-  ConnectChannel(ip, portBase + 2, 2); // Beacon
+  //ConnectChannel(ip, portBase + 1, 1); // RAPI_INVOKER
+  ConnectChannel(ip, portBase + 1, 2); // Beacon
 #else
   ConnectChannel(ip, portBase + 0, 0); //PORT_THROTTLE
   ConnectChannel(ip, portBase + 1, 1); //PORT_PITCH
@@ -286,16 +286,6 @@ void DirectController::setAux(int channel, int val)
   sendCommand(val, channel + 3);
 }
 
-void DirectController::callRAPI(int code, int val)
-{
-  char *bmsg;
-  int blen = 0;
-  uint8_t gm[1] = {uint8_t(code)};
-  bmsg = (char *)gm;
-  blen = 1;
-  send(server_fd[8], bmsg, blen, 0);
-}
-
 /*
   Beacon, send data at every 50ms
 */
@@ -306,7 +296,7 @@ void DirectController::beaconRefresh(DirectController* obj)
   while(1)
   { 
     obj->beaconLock.lock();
-    send(obj->server_fd[2], bmsg, strlen(bmsg), 0);
+    send(obj->server_fd[1], bmsg, strlen(bmsg), 0);
     obj->beaconLock.unlock();
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }

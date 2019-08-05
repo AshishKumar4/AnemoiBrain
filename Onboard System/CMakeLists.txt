@@ -7,19 +7,19 @@ if(COMPILE_MODE STREQUAL "airsim")
     set (AIRSIM_ROOT /opt/AirSim)
     set (CMAKE_CXX_STANDARD 11)
     LIST(APPEND CMAKE_MODULE_PATH "cmake_templates") 
-    INCLUDE("Utils/cmake_templates/CommonSetup.cmake")
+    INCLUDE("CoreSystem/cmake_templates/CommonSetup.cmake")
     CommonSetup()
 endif()
 
 # Include the Necessary Headers
-include_directories(${ONBOARD_ROOT}/Utils/include
+include_directories(${ONBOARD_ROOT}/CoreSystem/include
     ${ONBOARD_ROOT}/ControlServer/include
     ${ONBOARD_ROOT}/SensorServer/include
     )
 
 
 # Add the Linker Directories
-link_directories(${ONBOARD_ROOT}/Utils/build/
+link_directories(${ONBOARD_ROOT}/CoreSystem/build/
     ${ONBOARD_ROOT}/ControlServer/build/
     ${ONBOARD_ROOT}/SensorServer/build/
     ${AIRSIM_ROOT}/AirLib/lib/x64/Debug
@@ -35,5 +35,5 @@ add_executable(${PROJECT_NAME} ${SERVER_SOURCES})
 target_link_libraries(${PROJECT_NAME} Threads::Threads)
 target_link_libraries(${PROJECT_NAME} ControlServer)
 target_link_libraries(${PROJECT_NAME} SensorServer)
-target_link_libraries(${PROJECT_NAME} OnboardUtils)
+target_link_libraries(${PROJECT_NAME} OnboardCore)
 target_link_libraries(${PROJECT_NAME} rpc)

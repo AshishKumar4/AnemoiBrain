@@ -13,6 +13,8 @@
 #include <thread> // std::thread
 #include <mutex>
 #include <poll.h>
+#include <future>
+#include <atomic>
 
 #include "AbstractServer.hpp"
 #include "ControllerInterface.hpp"
@@ -57,6 +59,11 @@ int ControlHandshake(int i, int fd)
         }
         //thisObj->smtx.unlock();
     }
+    catch (const std::future_error &e)
+    {
+        std::cout << "HandShake-->Caught a future_error with code \"" << e.code()
+                  << "\"\nMessage: \"" << e.what() << "\"\n";
+    }
     catch (std::exception &e)
     {
         std::cout << "Some ERROR in Handshake!!!" << e.what() << "\n";
@@ -77,35 +84,7 @@ int ControlResumeHandler()
     return 1;
 }
 
-int RemoteAPI_Listener(int i, int fd)
-{
-    try
-    {
-        memset(ControlChannelBuffer[i], 0, 4096);
-        printf("\nInsiteRAPI");
-        int valread = read(fd, ControlChannelBuffer[i], 4096);
-        if (valread == 0 || valread == -1)
-            return 1;
-        // Implement a protocol over here to pass on codes
-
-        // for now, lets just test if it works
-        //std::vector<std::string> test;
-        printf("\nRAPI CALLED!!!");
-        for (int j = 0; j < valread; j++)
-        {
-            ControllerInterface::RemoteAPI_Invoker((int)ControlChannelBuffer[i][j], j);
-        }
-        printf("\n Exiting...");
-    }
-    catch (std::exception &e)
-    {
-        std::cout << "ERROR!!!";
-        return 1;
-    }
-    return 0;
-}
-
-bool exceptionOccured = false;
+std::atomic<bool> exceptionOccured;//
 
 int ControlBeaconMonitor(int i, int fd)
 {
@@ -142,14 +121,23 @@ int ControlBeaconMonitor(int i, int fd)
             recv(fd, ControlChannelBuffer[i], 4096, 0); // get your data
             if (strcmp(ControlChannelBuffer[i], "still alive"))
                 return 1;
-            printf("\n%s", ControlChannelBuffer[i]);
+            //printf("\n%s", ControlChannelBuffer[i]);
             break;
         }
     }
+    catch (const std::future_error &e)
+    {
+        std::cout << "Inner2<->Caught a future_error with code \"" << e.code()
+                  << "\"\nMessage: \"" << e.what() << "\"\n";
+    }
     catch (std::exception &e)
     {
-        std::cout << "ERROR!!!";
+        std::cout << "ERROR in ControlBeaconMonitor!!!!";
         return 1;
+    }
+    catch(...)
+    {
+        std::cout<<"Some Other error in ControlBeaconMonitor!";
     }
     return 0;
 }
@@ -233,10 +221,19 @@ int ControlListeners(int i, int fd)
 
 #endif
     }
+    catch (const std::future_error &e)
+    {
+        std::cout << "Inner3<->Caught a future_error with code \"" << e.code()
+                  << "\"\nMessage: \"" << e.what() << "\"\n";
+    }
     catch (std::exception &e)
     {
-        std::cout << "Some ERROR!!!" << e.what() << "\n";
+        std::cout << "Some ERROR in ControlListeners!!!!" << e.what() << "\n";
         return 1;
+    }
+    catch(...)
+    {
+        std::cout<<"Some Other error in ControlListeners!";
     }
     return 0;
 }
@@ -389,33 +386,34 @@ int Handshake(int i, int j)
 
 #endif
 
+
 int ControlServer_init(int argc, char **argv)
 {
     try
     {
+        Controls::exceptionOccured = false;
         int portBase = (argc >= 3) ? stoi(std::string(argv[3])) : 8400;
-        Onboard::AbstractServer ControlServer(portBase);
+        ControlServer = new Onboard::AbstractServer(portBase);
 #if defined(STREAM_PROTOCOL_3)
         Onboard::Controls::OldControlData[0] = "";
         Onboard::Controls::ControlChannelBuffer[0] = new char[4096];
         Onboard::Controls::ControlChannelBuffer[1] = new char[4096];
         Onboard::Controls::ControlChannelBuffer[2] = new char[4096];
-        ControlServer.AddChannels(0, Onboard::Controls::ControlListeners, Onboard::Controls::ControlHandshake);
-        ControlServer.AddChannels(1, Onboard::Controls::RemoteAPI_Listener, Onboard::Controls::ControlHandshake);
-        ControlServer.AddChannels(2, Onboard::Controls::ControlBeaconMonitor, Onboard::Controls::ControlHandshake);
+        ControlServer->AddChannels(0, Onboard::Controls::ControlListeners, Onboard::Controls::ControlHandshake);
+        ControlServer->AddChannels(1, Onboard::Controls::ControlBeaconMonitor, Onboard::Controls::ControlHandshake);
 #else
-        for (int i = 0; i < 8; i++)
+        /*for (int i = 0; i < 8; i++)
         {
             Onboard::Controls::ControlChannelBuffer[i] = new char[4096];
             ControlServer.AddChannels(i, Onboard::Controls::ControlListeners, Onboard::Controls::ControlHandshake);
         }
         Onboard::Controls::ControlChannelBuffer[8] = new char[4096];
-        ControlServer.AddChannels(8, Onboard::Controls::RemoteAPI_Listener, Onboard::Controls::ControlHandshake);
-#endif
-        ControlServer.ExceptionHandler = Onboard::Controls::ControlExceptionHandler;
-        ControlServer.ResumeHandler = Onboard::Controls::ControlResumeHandler;
-        ControlServer.LaunchThreads(); //*/
-
+        ControlServer.AddChannels(8, Onboard::Controls::RemoteAPI_Listener, Onboard::Controls::ControlHandshake);   //*/
+#endif  
+        ControlServer->ExceptionHandler = Onboard::Controls::ControlExceptionHandler;
+        ControlServer->ResumeHandler = Onboard::Controls::ControlResumeHandler;
+        ControlServer->LaunchThreads(); //*/
+/*
 #if defined(MSP_REMOTE_TWEAKS)
 
         Onboard::AbstractServer RemoteTweakerServer(portBase + 200);
@@ -430,7 +428,6 @@ int ControlServer_init(int argc, char **argv)
         SerialForwardServer.CreateChannels(0, Onboard::SerialForwarding::MSP_Forward, Onboard::SerialForwarding::Handshake);
         SerialForwardServer.JoinThreads();
 #endif //*/
-        ControlServer.JoinThreads();
     }
     catch (std::exception &e)
     {

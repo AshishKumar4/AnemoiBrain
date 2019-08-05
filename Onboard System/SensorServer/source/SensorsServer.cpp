@@ -99,7 +99,7 @@ int SensorsServer_init(int argc, char **argv)
     }
     SensorsServer.ExceptionHandler = Onboard::Sensors::SensorExceptionHandler;
     SensorsServer.ResumeHandler = Onboard::Sensors::SensorResumeHandler;
-    SensorsServer.LaunchThreads();
+    //SensorsServer.LaunchThreads();
     while (1)
         std::cout << "Some Error!";
     ;

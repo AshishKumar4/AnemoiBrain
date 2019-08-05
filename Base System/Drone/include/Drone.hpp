@@ -18,6 +18,11 @@ class Drone : public DirectController, public Sensors
         Provide High level Control APIs
     */
     int setHeading(float heading);
+    int setRollAngle(float angle);
+    int setPitchAngle(float angle);
+    int setAltitude(float altitude);
+    int toggleAutoActuator(char type);
+    int gotoLocation(float x, float y, float z);
     /*
         Provide High level Sensor Telemetry
    */

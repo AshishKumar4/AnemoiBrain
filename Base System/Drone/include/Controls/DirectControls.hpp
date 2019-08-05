@@ -49,7 +49,6 @@ public:
   void setYaw(int val);
   void setRoll(int val);
   void setAux(int channel, int val);
-  void callRAPI(int code, int val);
   static void beaconRefresh(DirectController* obj);
 
   void printChannels();
