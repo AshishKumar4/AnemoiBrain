@@ -156,6 +156,8 @@ void setAux2(int val);
 void setAux3(int val);
 void setAux4(int val);
 
+void setDistance(float val);
+
 uint8_t getGyro(int axis);
 uint8_t getAcc(int axis);
 uint8_t getMag(int axis);
@@ -187,6 +189,10 @@ float get_Z_VelocityAbs();
 
 vector3D_t getVelocityAbs();
 vector3D_t getVelocityRel();
+
+float getDesiredVelocity();
+float getCurrentTargetDistance();
+void HeadlessMoveTowardsTarget(float val);
 
 int setAutoYaw(float heading);
 int setAutoRoll(float heading);
@@ -220,7 +226,6 @@ int set_Y_Velocity(float val);
     High Level APIs 
 */
 
-int autoNavPID(GeoPoint_t start, GeoPoint_t destination, float maxAltitude = 0);
 int setDestination(GeoPoint_t position, bool start_now = true);
 int gotoLocation(float x, float y, float z);
 int returnToHome();
@@ -231,7 +236,7 @@ int launch_ActuationControllers();
 void ResumeHandler();
 void FaultHandler();
 
-int ControllerInterface_init(int argc, char **argv);
+int ControllerInterface_init(int argc, const char *argv[]);
 } // namespace ControllerInterface
 
 volatile std::thread *chnl_refresh;

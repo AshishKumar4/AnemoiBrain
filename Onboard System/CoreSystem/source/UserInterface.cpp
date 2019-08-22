@@ -213,6 +213,36 @@ int event_key_V()
     return 0;
 }
 
+int event_key_h()
+{
+    float p, i, d;
+    char type;
+    std::cin>>type;
+    std::cin>>p>>i>>d;
+    printf("\t {%f, %f, %f}", p, i, d);
+    if(type == 'Y')
+    {
+        ControllerInterface::FeedbackControl::YawActuator.CONTROLLER_P = p;
+        ControllerInterface::FeedbackControl::YawActuator.CONTROLLER_I = i;
+        ControllerInterface::FeedbackControl::YawActuator.CONTROLLER_D = d;
+    }
+
+    if(type == 'A')
+    {
+        ControllerInterface::FeedbackControl::Z_Actuator.CONTROLLER_P = p;
+        ControllerInterface::FeedbackControl::Z_Actuator.CONTROLLER_I = i;
+        ControllerInterface::FeedbackControl::Z_Actuator.CONTROLLER_D = d;
+    }
+
+    if(type == 'H')
+    {
+        ControllerInterface::FeedbackControl::Distance_Actuator.CONTROLLER_P = p;
+        ControllerInterface::FeedbackControl::Distance_Actuator.CONTROLLER_I = i;
+        ControllerInterface::FeedbackControl::Distance_Actuator.CONTROLLER_D = d;
+    }
+    return 0;
+}
+
 int event_key_other()
 {
     return 0;

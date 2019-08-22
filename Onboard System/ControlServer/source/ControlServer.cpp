@@ -387,12 +387,12 @@ int Handshake(int i, int j)
 #endif
 
 
-int ControlServer_init(int argc, char **argv)
+int ControlServer_init(int argc, const char *argv[])
 {
     try
     {
         Controls::exceptionOccured = false;
-        int portBase = (argc >= 3) ? stoi(std::string(argv[3])) : 8400;
+        int portBase = (argc > 3) ? stoi(std::string(argv[3])) : 8400;
         ControlServer = new Onboard::AbstractServer(portBase);
 #if defined(STREAM_PROTOCOL_3)
         Onboard::Controls::OldControlData[0] = "";

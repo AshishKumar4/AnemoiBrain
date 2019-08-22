@@ -79,7 +79,7 @@ protected:
     float currentactuation;
     float oldError;
     float oldAbsError;
-    float deltaTime;
+    double deltaTime;
     float errorAccumulator;
 
 public:
@@ -87,6 +87,7 @@ public:
     float CONTROLLER_P;
     float CONTROLLER_I;
     float CONTROLLER_D;
+    float CONTROLLER_E;
     float MAX_I_BOUNDARY;
 
     float ACTUATION_HALT_VALUE;
@@ -98,7 +99,7 @@ public:
     std::mutex *intentionLock;
     std::mutex *actuationControllerlock;
 
-    std::function<void(int)> setActuation;
+    std::function<void(float)> setActuation;
     std::function<float(void)> getCurrentStateValues;
     std::function<float(float)> ErrorProcessor;
     std::function<int(float, float)> EscapeFunction;
@@ -111,6 +112,7 @@ public:
         CONTROLLER_P = CONSTANT_P;
         CONTROLLER_I = CONSTANT_I;
         CONTROLLER_D = CONSTANT_D;
+        CONTROLLER_E = 0;
 
         MAX_I_BOUNDARY = 150;
         intentionLock = new std::mutex();
@@ -176,32 +178,32 @@ public:
 
     virtual void deployFeedbackControllers() = 0;
 
-    void FeedbackController()
+    float FeedbackController()
     {
         try
         {
-            if (IntentionOverride)
+            /* if (IntentionOverride)
             {
                 return; // If the Feedback Controllers are overriden by the user manually, Do not attempt anything
             }
-            this->actuationControllerlock->lock();
+            this->actuationControllerlock->lock();*/
             float h = this->getCurrentStateValues();
             float newError = h - this->getIntendedActuation();
-            if (h == newError && !h)
+            /*if (h == newError)
             {
                 this->actuationControllerlock->unlock();
                 std::this_thread::sleep_for(std::chrono::microseconds(int(deltaTime * 1000)));
 
                 return;
-            }
+            }*/
             // Any processing needed?
             //printf("\n{>>%f, \t%f<<},", h, newError);
             newError = ErrorProcessor(newError);
 
-            if(this->EscapeFunction(newError, oldError))
-            {      
+            if (this->EscapeFunction(newError, oldError))
+            {
                 this->actuationControllerlock->unlock();
-                return;
+                return -1;
             }
 
             /*float absNewError = std::abs(newError);
@@ -215,16 +217,25 @@ public:
             }*/
             // Our Equation
             float P_term = newError * this->CONTROLLER_P; //clamp(newError * errorScale, -180, 180, -127, 127);
-            float I_term = (this->errorAccumulator + (newError * (this->CONTROLLER_I)));
-            this->errorAccumulator = I_term;
+            this->errorAccumulator += double(newError) * deltaTime * 0.001;
             if (this->errorAccumulator)
             {
                 this->errorAccumulator = tanh(this->errorAccumulator / this->MAX_I_BOUNDARY) * this->MAX_I_BOUNDARY;
             }
+            float I_term = float(this->errorAccumulator * this->CONTROLLER_I);
+            double derivative = (double(newError - oldError) / (deltaTime));
+            float D_term = derivative * this->CONTROLLER_D;
+            float E_term = (derivative / double(newError)) * this->CONTROLLER_E;
 
-            float D_term = ((newError - oldError) / (deltaTime)) * this->CONTROLLER_D;
+            if (this->CONTROLLER_E)
+            {
+                printf(" <%f> ", E_term);
+            }
+            //printf("\n{%f}", D_term);
+            //if(newError != 0)
+            //    D_term = (D_term) ;
 
-            actuateVal = P_term + I_term + D_term + RC_MASTER_DATA[this->RC_Channel]; //currentYaw; //(newError/error); // - (newError / oldError)*(absNewError/newError)*2.0 // 2*(oldAbsError - 1*absNewError)
+            actuateVal = P_term + I_term + D_term + E_term + RC_MASTER_DATA[this->RC_Channel]; //currentYaw; //(newError/error); // - (newError / oldError)*(absNewError/newError)*2.0 // 2*(oldAbsError - 1*absNewError)
 
             //printf("=> P:%f, I:%f, D:%f, => %f", P_term, I_term, D_term, actuateVal);
             if (actuateVal > this->ACTUATION_MAX_VALUE)
@@ -232,11 +243,13 @@ public:
             else if (actuateVal < this->ACTUATION_MIN_VALUE)
                 actuateVal = this->ACTUATION_MIN_VALUE;
             //printf(", %f", actuateVal);
-            this->setActuation(int(actuateVal));
+            this->setActuation(actuateVal);
             oldError = newError;
             //oldAbsError = absNewError;
-            this->actuationControllerlock->unlock();
+            //this->actuationControllerlock->unlock();
             std::this_thread::sleep_for(std::chrono::microseconds(int(deltaTime * 1000)));
+
+            return D_term; // Useful to determine if the drone is stationary
         }
         catch (const std::future_error &e)
         {
@@ -249,12 +262,12 @@ public:
             std::cout << "Error Occured! inside " << e.what();
             this->actuationControllerlock->unlock();
         }
+        return -1;
     }
 };
 
 volatile FeedbackController_t *FeedbackControllers[3][3];
 volatile bool FeedbackControllerStatus[3];
-
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /*-------------------------------------------------- RotationalControllers -------------------------------------------------*/
@@ -287,7 +300,11 @@ public:
         ACTUATION_MAX_VALUE = 255;
         ACTUATION_MIN_VALUE = 0;
 
+        this->MAX_I_BOUNDARY = 1000;
+
+        this->CONTROLLER_P = 0.8;
         this->CONTROLLER_I = 0;
+        this->CONTROLLER_D = 10;
 
         ErrorProcessor = DegreeRoundclamp;
     }
@@ -375,7 +392,10 @@ void PitchController()
 
 int init_RotationalControllers()
 {
-    //YawActuator.CONTROLLER_I = 0.001;
+    YawActuator.CONTROLLER_P = 0.7;   //ku/5;//2.3;//6.7;//11;
+    YawActuator.CONTROLLER_I = 0.004; //(float(2/5)*ku)/tu;//0.0001;
+    YawActuator.CONTROLLER_D = 210;   //(ku*tu)/15.0;//1000;//190;
+    RollActuator.CONTROLLER_P = 1;
     YawControllerThread = new std::thread(YawController);
     RollControllerThread = new std::thread(RollController);
     PitchControllerThread = new std::thread(PitchController);
@@ -391,129 +411,6 @@ int join_RotationalControllers()
 }
 
 int destroy_RotationalControllers()
-{
-    return 0;
-}
-
-/* ------------------------------------------------------------------------------------------------------------------------ */
-/*--------------------------------------------------- VelocityControllers --------------------------------------------------*/
-/* ------------------------------------------------------------------------------------------------------------------------ */
-
-/*
-    Actuates the drone WRT the Drone's view of the world!
-*/
-
-float VelocityControllerErrorScaler(float val) // Use a function
-{
-    //printf("Yerr: %f\t", val);
-
-    if(val <= 4)
-    {
-        val /= 1.5;
-    }
-    return val;
-}
-
-class DroneVelocityController_t : public FeedbackController_t
-{
-public:
-    DroneVelocityController_t(std::function<void(int)> actuatorSet, std::function<float(void)> actuatorGet, int rcChannel, float CONSTANT_P = 0.8, float CONSTANT_I = 1.0, float CONSTANT_D = 200) : FeedbackController_t(actuatorSet, actuatorGet, rcChannel, CONSTANT_P, CONSTANT_I, CONSTANT_D)
-    {
-        actuateVal = 0;
-        currentactuation = 0;
-        oldError = 1;
-        oldAbsError = 1;
-        deltaTime = 1;
-
-        ACTUATION_HALT_VALUE = 0;
-        ACTUATION_MAX_VALUE = 60;
-        ACTUATION_MIN_VALUE = -60;
-
-        this->MAX_I_BOUNDARY = 100;
-        this->CONTROLLER_I = 0.1;
-        this->CONTROLLER_D = 10000;
-        this->CONTROLLER_P = 0.8;
-
-        ErrorProcessor = VelocityControllerErrorScaler;
-    }
-
-    void deployFeedbackControllers()
-    {
-        //actuatorThread = new std::thread(this->AutoLateralalActuator);
-    }
-    /*
-    void AutoVelocityActuator()
-    {
-        FeedbackController();
-    }*/
-};
-
-DroneVelocityController_t X_Vrel_Actuator(setAutoRoll, get_X_VelocityRel, RC_X_MOTION);
-DroneVelocityController_t Y_Vrel_Actuator(setAutoPitch, get_Y_VelocityRel, RC_Y_MOTION);
-DroneVelocityController_t Z_Vrel_Actuator(setThrottle, get_Z_VelocityRel, THROTTLE);
-
-void X_Vrel_Controllers()
-{
-    while (true)
-    {
-        try
-        {
-            X_Vrel_Actuator.FeedbackController();
-        }
-        catch (std::exception &e)
-        {
-            std::cout << "Error in Outermost X_Vrel_Actuator loop!" << e.what();
-        }
-    }
-}
-
-void Y_Vrel_Controllers()
-{
-    while (true)
-    {
-        try
-        {
-            Y_Vrel_Actuator.FeedbackController();
-        }
-        catch (std::exception &e)
-        {
-            std::cout << "Error in Outermost Y_Vrel_Actuator loop!" << e.what();
-        }
-    }
-}
-
-void Z_Vrel_Controllers()
-{
-    while (true)
-    {
-        try
-        {
-            Z_Vrel_Actuator.FeedbackController();
-        }
-        catch (std::exception &e)
-        {
-            std::cout << "Error in Outermost Z_Vrel_Actuator loop!" << e.what();
-        }
-    }
-}
-
-int init_DroneVelocityControllers()
-{
-    X_Vrel_ControllerThread = new std::thread(X_Vrel_Controllers);
-    Y_Vrel_ControllerThread = new std::thread(Y_Vrel_Controllers);
-    //Z_Vrel_ControllerThread = new std::thread(Z_Vrel_Controllers);
-    return 0;
-}
-
-int join_DroneVelocityControllers()
-{
-    X_Vrel_ControllerThread->join();
-    Y_Vrel_ControllerThread->join();
-    //Z_Vrel_ControllerThread->join();
-    return 0;
-}
-
-int destroy_DroneVelocityControllers()
 {
     return 0;
 }
@@ -535,10 +432,6 @@ float Planner_X_ControllerErrorScaler(float val) // Use a function
 
 float Planner_Y_ControllerErrorScaler(float val) // Use a function
 {
-    if(val <= 15)
-    {
-        val /= 5;
-    }
     //printf("Yerr: %f\t", val);
     return val; //- tanh(val/max_scale) * max_scale;
 }
@@ -547,7 +440,7 @@ float LateralControllerErrorScaler(float val) // Use a function
 {
     //printf("Yerr: %f\t", val);
 
-    if(val <= 4)
+    if (val <= 4)
     {
         val /= 1.5;
     }
@@ -569,17 +462,24 @@ public:
         actuateVal = 0;            //127;
         currentactuation = 0;      // 127;
         ACTUATION_HALT_VALUE = 0;  //127;
-        ACTUATION_MAX_VALUE = 60;  //255;
-        ACTUATION_MIN_VALUE = -60; //0;
+        ACTUATION_MAX_VALUE = 60;  //0;
+        ACTUATION_MIN_VALUE = -60; //255;
+
+        /*actuateVal = 127;
+        currentactuation = 127;
+        ACTUATION_HALT_VALUE = 127;
+        ACTUATION_MAX_VALUE = 105;
+        ACTUATION_MIN_VALUE = 155;
+ */
 
         oldError = 1;
         oldAbsError = 1;
         deltaTime = 1;
 
         this->MAX_I_BOUNDARY = 100;
-        this->CONTROLLER_I = 0.0;
+        this->CONTROLLER_P = 0.6;
+        this->CONTROLLER_I = 0.01;
         this->CONTROLLER_D = 1000;
-        this->CONTROLLER_P = 0.7;
 
         ErrorProcessor = Planner_X_ControllerErrorScaler;
     }
@@ -603,17 +503,24 @@ public:
         actuateVal = 0;            //127;
         currentactuation = 0;      // 127;
         ACTUATION_HALT_VALUE = 0;  //127;
-        ACTUATION_MAX_VALUE = 60;  //255;
-        ACTUATION_MIN_VALUE = -60; //0;
+        ACTUATION_MAX_VALUE = 90;  //0;
+        ACTUATION_MIN_VALUE = -90; //255;
+        /*
+        actuateVal = 127;
+        currentactuation = 127;
+        ACTUATION_HALT_VALUE = 127;
+        ACTUATION_MAX_VALUE = 155;
+        ACTUATION_MIN_VALUE = 105; */
 
         oldError = 1;
         oldAbsError = 1;
         deltaTime = 1;
 
         this->MAX_I_BOUNDARY = 100;
-        this->CONTROLLER_I = 0.0;
-        this->CONTROLLER_D = 10000;
-        this->CONTROLLER_P = 0.2;
+        this->CONTROLLER_P = 4.5;
+        this->CONTROLLER_I = 0.001;
+        this->CONTROLLER_D = 15;
+        this->CONTROLLER_E = 0;
 
         ErrorProcessor = Planner_Y_ControllerErrorScaler;
     }
@@ -637,20 +544,21 @@ public:
         actuateVal = 0;            //127;
         currentactuation = 0;      // 127;
         ACTUATION_HALT_VALUE = 0;  //127;
-        ACTUATION_MAX_VALUE = 40;  //255;
-        ACTUATION_MIN_VALUE = -40; //0;
+        ACTUATION_MAX_VALUE = 90;  //255;
+        ACTUATION_MIN_VALUE = -90; //0;
 
         oldError = 1;
         oldAbsError = 1;
-        deltaTime = 1;
+        deltaTime = 10;
 
-        this->MAX_I_BOUNDARY = 100;
+        this->MAX_I_BOUNDARY = 500;
+        this->CONTROLLER_P = 3;
         this->CONTROLLER_I = 0.1;
-        this->CONTROLLER_D = 100000;
-        this->CONTROLLER_P = 0.6;
+        this->CONTROLLER_D = 1000;
+        this->CONTROLLER_E = 100000;
 
         ErrorProcessor = LateralControllerErrorScaler;
-        EscapeFunction = PositionHoldEscapeFunction;
+        //EscapeFunction = PositionHoldEscapeFunction;
     }
 
     void deployFeedbackControllers()
@@ -670,19 +578,19 @@ public:
     AltitudeController_t(std::function<void(int)> actuatorSet, std::function<float(void)> actuatorGet, int rcChannel, float CONSTANT_P = 0.8, float CONSTANT_I = 1.0, float CONSTANT_D = 200) : FeedbackController_t(actuatorSet, actuatorGet, rcChannel, CONSTANT_P, CONSTANT_I, CONSTANT_D)
     {
         actuateVal = 127;
-        currentactuation = 127;
+        currentactuation = 0;
         ACTUATION_HALT_VALUE = 127;
         ACTUATION_MAX_VALUE = 255;
         ACTUATION_MIN_VALUE = 0;
 
-        oldError = 1;
-        oldAbsError = 1;
+        oldError = 0;
+        oldAbsError = 0;
         deltaTime = 1;
 
-        this->MAX_I_BOUNDARY = 100;
-        this->CONTROLLER_I = 0.3;
-        this->CONTROLLER_D = 1000000;
-        this->CONTROLLER_P = 1.5;
+        this->MAX_I_BOUNDARY = 1000;
+        this->CONTROLLER_P = 40;
+        this->CONTROLLER_I = 0.01;
+        this->CONTROLLER_D = 10000;
 
         ErrorProcessor = AltitudeControllerErrorScaler;
     }
@@ -698,95 +606,11 @@ public:
     }
 };
 
-Planner_X_Controller_t Xrel_Actuator(setAutoPitch, getPathLength, RC_X_MOTION);
+Planner_X_Controller_t Xrel_Actuator(setAutoPitch, getDesiredVelocity, RC_X_MOTION); // instead of getPathLength, use clamped value of it
 Planner_Y_Controller_t Yrel_Actuator(setAutoRoll, getPathDeviation, RC_Y_MOTION);
-
-LateralController_t X_Actuator(setAutoRoll, get_X_Coordinate, RC_X_MOTION);
-LateralController_t Y_Actuator(setAutoPitch, get_Y_Coordinate, RC_Y_MOTION);
 AltitudeController_t Z_Actuator(setThrottle, getAltitude, THROTTLE);
-/*
-LateralController_t X_Actuator(set_X_Velocity, get_X_Coordinate, RC_X_MOTION);
-LateralController_t Y_Actuator(set_Y_Velocity, get_Y_Coordinate, RC_Y_MOTION);
-LateralController_t Z_Actuator(setThrottle, getAltitude, THROTTLE);
-*/
-void Xrel_Lateral_Controllers()
-{
-    while (true)
-    {
-        try
-        {
-        }
-        catch (const std::future_error &e)
-        {
-            std::cout << "<Xrel_Lateral_Controllers>Caught a future_error with code \"" << e.code()
-                      << "\"\nMessage: \"" << e.what() << "\"\n";
-        }
-        catch (std::exception &e)
-        {
-            std::cout << "Error in Outermost X_Actuator loop!" << e.what();
-        }
-    }
-}
 
-void Yrel_Lateral_Controllers()
-{
-    while (true)
-    {
-        try
-        {
-            Yrel_Actuator.FeedbackController();
-        }
-        catch (const std::future_error &e)
-        {
-            std::cout << "<Yrel_Lateral_Controllers>Caught a future_error with code \"" << e.code()
-                      << "\"\nMessage: \"" << e.what() << "\"\n";
-        }
-        catch (std::exception &e)
-        {
-            std::cout << "Error in Outermost Y_Actuator loop!" << e.what();
-        }
-    }
-}
-
-void X_Lateral_Controllers()
-{
-    while (true)
-    {
-        try
-        {
-            X_Actuator.FeedbackController();
-        }
-        catch (const std::future_error &e)
-        {
-            std::cout << "<X_Lateral_Controllers>Caught a future_error with code \"" << e.code()
-                      << "\"\nMessage: \"" << e.what() << "\"\n";
-        }
-        catch (std::exception &e)
-        {
-            std::cout << "Error in Outermost X_Actuator loop!" << e.what();
-        }
-    }
-}
-
-void Y_Lateral_Controllers()
-{
-    while (true)
-    {
-        try
-        {
-            Y_Actuator.FeedbackController();
-        }
-        catch (const std::future_error &e)
-        {
-            std::cout << "<Y_Lateral_Controllers>Caught a future_error with code \"" << e.code()
-                      << "\"\nMessage: \"" << e.what() << "\"\n";
-        }
-        catch (std::exception &e)
-        {
-            std::cout << "Error in Outermost Y_Actuator loop!" << e.what();
-        }
-    }
-}
+LateralController_t Distance_Actuator(HeadlessMoveTowardsTarget, getCurrentTargetDistance, RC_X_MOTION);
 
 void Z_Lateral_Controllers()
 {
@@ -811,9 +635,7 @@ void Z_Lateral_Controllers()
 
 int init_LateralControllers()
 {
-    Y_Actuator.ErrorProcessor = Planner_Y_ControllerErrorScaler;
-    //X_Lateral_ControllerThread = new std::thread(X_Lateral_Controllers);
-    //Y_Lateral_ControllerThread = new std::thread(Y_Lateral_Controllers);
+    //Y_Actuator.ErrorProcessor = Planner_Y_ControllerErrorScaler;
     Z_Lateral_ControllerThread = new std::thread(Z_Lateral_Controllers);
 
     return 0;
@@ -821,8 +643,6 @@ int init_LateralControllers()
 
 int join_LateralControllers()
 {
-    //X_Lateral_ControllerThread->join();
-    //Y_Lateral_ControllerThread->join();
     Z_Lateral_ControllerThread->join();
 
     return 0;
@@ -844,7 +664,7 @@ void X_Position_Hold()
     {
         try
         {
-            FeedbackControl::X_Actuator.FeedbackController();
+            //FeedbackControl::X_Actuator.FeedbackController();
         }
         catch (const std::future_error &e)
         {
@@ -864,7 +684,7 @@ void Y_Position_Hold()
     {
         try
         {
-            FeedbackControl::Y_Actuator.FeedbackController();
+            //FeedbackControl::Y_Actuator.FeedbackController();
         }
         catch (const std::future_error &e)
         {
@@ -878,22 +698,35 @@ void Y_Position_Hold()
     }
 }
 
-volatile float gazeX;
-volatile float gazeY;
-volatile float gazeZ;
+namespace
+{
 
-volatile float pathDestinationX;
-volatile float pathDestinationY;
-volatile float pathDestinationZ;
+float pathDestinationX;
+float pathDestinationY;
+float pathDestinationZ;
 
-volatile float pathStartX;
-volatile float pathStartY;
-volatile float pathStartZ;
+float pathStartX;
+float pathStartY;
+float pathStartZ;
 
-volatile float currentHeading;
+float totalDistance;
+float deltaX;
+float deltaY;
+
+float desiredHeading;
 std::atomic<float> currentDistance;
-volatile float olderDistance;
-volatile float initialHeading;
+std::atomic<float> currentDeviation;
+float olderDistance;
+float initialHeading;
+
+float pathConstant;
+
+bool shouldHoldPosition;
+} // namespace
+
+std::thread *moveThread, *gazeThread, *holdPositionThread;
+
+void gazeLoop();
 
 /*
     Convention ==>
@@ -914,31 +747,22 @@ volatile float initialHeading;
      +90 ---|--- -90
 */
 
+#define MAX_DESIRED_VELOCITY 30
+#define CLAMP_FACTOR 40
+#define TRANSITION_DISTANCE 15
+
+float getDesiredVelocity()
+{
+    float val = getPathLength();
+    return tanh(val / CLAMP_FACTOR) * MAX_DESIRED_VELOCITY;
+}
+
 float getPathLength()
 {
     try
     {
         float sign = 1;
-
-        /*
-        float currentActualHeading = getHeadingDegrees();
-        if (currentActualHeading > 180)
-        {
-            currentActualHeading -= 360;
-        }
-        if (abs(currentActualHeading - currentHeading) >= 90)
-        {
-            sign = -2;
-            //printf("{%f\t%f\t%f}", getHeadingDegrees(), currentHeading, abs(getHeadingDegrees() - currentHeading) );
-        } */
-        //float dErr = currentDistance - olderDistance;
-        float val = currentDistance;
-        if(currentDistance <= 10)
-        {
-            val *= -3;
-        }
-        
-        return val; //sqrt(pow(pathStartX - pathDestinationX, 2) + pow(pathStartY - pathDestinationY, 2));
+        return currentDistance; //sqrt(pow(pathStartX - pathDestinationX, 2) + pow(pathStartY - pathDestinationY, 2));
     }
 
     catch (const std::future_error &e)
@@ -956,12 +780,10 @@ float getPathLength()
 float getPathDeviation()
 {
     try
-    {
-        float dTheta = currentHeading - initialHeading;
-
-        float dev = sinf(dTheta) * currentDistance; // This should give me the deviation
+    { // This should give me the deviation
         //printf("{%f\t%f\t%f}\n",dev, dTheta, pathDestinationX);
-        return dev;
+
+        return currentDeviation;
     }
     catch (const std::future_error &e)
     {
@@ -973,6 +795,38 @@ float getPathDeviation()
         std::cout << "Error in Outermost Y_Actuator loop!" << e.what();
     }
     return 0;
+}
+
+void HeadlessMoveTowardsTarget(float val)
+{
+    float currentHeading = circularToSignAngle(getHeadingDegrees());
+    float dTheta = desiredHeading - currentHeading;
+    float pitch = -cosf(degreesToRads(dTheta)) * val;
+    float roll = sinf(degreesToRads(dTheta)) * val;
+    printf(" -> {%f}  [%f %f]; %f,", val, pitch, roll, dTheta);
+    setAutoPitch(pitch);
+    setAutoRoll(roll);
+}
+
+inline float euclideanDistance2d(float x2, float y2, float x1, float y1)
+{
+    return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+}
+
+inline float calcPathDeviation(GeoPoint_t currentLocation)
+{
+    return ((deltaY * currentLocation.x) - (deltaX * currentLocation.y) + (pathConstant)) / totalDistance;
+}
+
+float getCurrentTargetDistance()
+{
+    /*GeoPoint_t currentLocation = getLocation();
+    // Firstly move to the direction to face the destination
+    float dY = pathDestinationY - currentLocation.y;
+    float dX = pathDestinationX - currentLocation.x;
+    float lenXY = sqrt(pow(dX, 2) + pow(dY, 2));
+    currentDistance = lenXY;*/
+    return currentDistance;
 }
 
 int setLinearPath(GeoPoint_t start, GeoPoint_t destination)
@@ -992,6 +846,11 @@ int setLinearPath(GeoPoint_t start, GeoPoint_t destination)
         float dY = pathDestinationY - pathStartY;
         float dX = pathDestinationX - pathStartX;
         float lenXY = sqrt(pow(dX, 2) + pow(dY, 2));
+        totalDistance = lenXY;
+        deltaX = dX;
+        deltaY = dY;
+        currentDistance = lenXY;
+        pathConstant = pathDestinationX * pathStartY - pathDestinationY * pathStartX;
         float cosHeading = dY / lenXY;
         //printf("{%f}", cosHeading);
         float heading = acos(cosHeading);
@@ -1010,56 +869,151 @@ int setLinearPath(GeoPoint_t start, GeoPoint_t destination)
     return 0;
 }
 
+std::atomic<int> exitCourseController;
+
+void distanceController()
+{
+    while (true)
+    {
+        try
+        {
+            if (exitCourseController)
+                return;
+            FeedbackControl::Xrel_Actuator.FeedbackController();
+        }
+        catch (const std::future_error &e)
+        {
+            std::cout << "<distanceController>Caught a future_error with code \"" << e.code()
+                      << "\"\nMessage: \"" << e.what() << "\"\n";
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in Outermost X_Actuator loop!" << e.what();
+        }
+    }
+}
+
+void deviationController()
+{
+    while (true)
+    {
+        try
+        {
+            if (exitCourseController)
+                return;
+            FeedbackControl::Yrel_Actuator.FeedbackController();
+        }
+        catch (const std::future_error &e)
+        {
+            std::cout << "<deviationController>Caught a future_error with code \"" << e.code()
+                      << "\"\nMessage: \"" << e.what() << "\"\n";
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in Outermost X_Actuator loop!" << e.what();
+        }
+    }
+}
+
+inline void updateTargetDistanceDirection(GeoPoint_t currentLocation = getLocation())
+{
+    // Firstly move to the direction to face the destination
+    float dY = pathDestinationY - currentLocation.y;
+    float dX = pathDestinationX - currentLocation.x;
+    float lenXY = sqrt(pow(dX, 2) + pow(dY, 2));
+
+    olderDistance = currentDistance;
+    float heading = copysign(acos(dY / lenXY), -dX);
+    float headingDegrees = (heading * 180) / PI;
+
+    if (isnan(headingDegrees))
+        return;
+    //printf("[%f\t%f\t%f]", dX, dY, heading);
+    //setHeading(headingDegrees);
+
+    desiredHeading = headingDegrees;
+    currentDistance = lenXY;
+}
+
+inline void updateTargetStatus(GeoPoint_t currentLocation = getLocation())
+{
+    updateTargetDistanceDirection(currentLocation);
+    // Using Distance of point from line for deviation -->
+    float dev = calcPathDeviation(currentLocation);
+
+    //float dTheta = desiredHeading - initialHeading;
+    //float dev = sinf(dTheta) * currentDistance;
+
+    float lenXY = currentDistance;
+
+    printf("\n{{%f=>%f} {%f},\t{%f}}", desiredHeading, circularToSignAngle(getHeadingDegrees()), lenXY, dev);
+    currentDeviation = dev;
+    FeedbackControl::YawActuator.setIntendedActuation(desiredHeading);
+}
+
+void holdPositionLoop()
+{
+    while (1)
+    {
+        if (shouldHoldPosition)
+        {
+            updateTargetDistanceDirection();
+            float motion = FeedbackControl::Distance_Actuator.FeedbackController();
+            float len = currentDistance;
+            printf("\n{%f}", len);
+        }
+        std::this_thread::sleep_for(std::chrono::microseconds(1000));
+    }
+}
+
+void positionalLoop()
+{
+    exitCourseController = 0;
+    //currentDistance = INT_MAX;
+    // Launch a thread to make the drone point in the desired direction
+    //gazeThread = new std::thread(gazeLoop);
+    shouldHoldPosition = false;
+    updateTargetStatus();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    std::thread *distanceControllerThread = new std::thread(distanceController);
+    std::thread *deviationControllerThread = new std::thread(deviationController);
+    while (1)
+    {
+        updateTargetStatus();
+
+        if (currentDistance <= TRANSITION_DISTANCE)
+        {
+            exitCourseController = 1;
+            std::cout << "\nWe are here";
+            fflush(stdout);
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::microseconds(500));
+    }
+    printf("\nEngaging Position Hold System");
+    //motionAccumulator = 0;
+    //motionCounter = 0;
+    shouldHoldPosition = true;
+    //setAutoPitch(0);
+    //setAutoRoll(0);
+
+    /*delete gazeThread;
+    delete distanceControllerThread;
+    delete deviationControllerThread;*/
+}
+
 void gazeLoop()
 {
     try
     {
-        int check = 0;
         while (1)
         {
             try
             {
-                GeoPoint_t gazeStart = getLocation();
-                // Firstly move to the direction to face the destination
-                float dY = gazeY - gazeStart.y;
-                float dX = gazeX - gazeStart.x;
-                float lenXY = sqrt(pow(dX, 2) + pow(dY, 2));
-                if (lenXY >= 4) //  it is too close to give any meaningful results
-                {
-                    check = 0;
-                    olderDistance = currentDistance;
-                    float cosHeading = dY / lenXY;
-                    //printf("{%f}", cosHeading);
-                    float heading = acos(cosHeading);
-                    heading = copysign(heading, -gazeX + gazeStart.x);
-                    float headingDegrees = (heading * 180) / PI;
-
-                    if (isnan(headingDegrees))
-                        continue;
-                    //printf("[%f\t%f\t%f]", gazeStart.x, gazeStart.y, gazeStart.z);
-                    printf("{%f}\n",headingDegrees);
-                    //setHeading(headingDegrees);
-
-                    currentHeading = headingDegrees;
-                    currentDistance = lenXY;
-
-                    FeedbackControl::YawActuator.actuationControllerlock->lock();
-                    FeedbackControl::YawActuator.setIntendedActuation(headingDegrees);
-                    FeedbackControl::YawActuator.actuationControllerlock->unlock();
-                }
-                else 
-                {
-                    check += 1;
-                    if(check >= 10)
-                    {
-                        printf("Breaking...");
-                        return;
-                    }
-                }
-
-                FeedbackControl::Yrel_Actuator.FeedbackController();
-                FeedbackControl::Xrel_Actuator.FeedbackController();
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                updateTargetStatus();
+                if (exitCourseController)
+                    return;
+                std::this_thread::sleep_for(std::chrono::microseconds(1000));
             }
             catch (const std::future_error &e)
             {
@@ -1083,15 +1037,13 @@ void gazeLoop()
     }
 }
 
-std::thread *moveThread;
-
 int setGazeOn(GeoPoint_t destination)
 {
     try
     {
-        gazeX = destination.x;
-        gazeY = destination.y;
-        gazeZ = destination.z;
+        pathDestinationX = destination.x;
+        pathDestinationY = destination.y;
+        pathDestinationZ = destination.z;
     }
     catch (const std::future_error &e)
     {
@@ -1113,9 +1065,12 @@ int launch_ActuationControllers()
         FeedbackControl::init_RotationalControllers();
         //FeedbackControl::init_DroneVelocityControllers();
         FeedbackControl::init_LateralControllers();
+
+        holdPositionThread = new std::thread(holdPositionLoop);
         // Wait for them to join
         FeedbackControl::join_RotationalControllers();
         FeedbackControl::join_LateralControllers();
+        holdPositionThread->join();
         //FeedbackControl::join_DroneVelocityControllers();
 #endif
     }

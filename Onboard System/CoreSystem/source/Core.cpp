@@ -19,6 +19,7 @@
 
 #include "FlightControllerInterface.cpp"
 #include "FeedbackControl.cpp"
+#include "AutoNavigation.cpp"
 #include "UserInterface.cpp"
 
 namespace ControllerInterface
@@ -561,6 +562,21 @@ void setRoll(int roll)
     }
 }
 
+void setRoll(float roll)
+{
+    setRoll(int(roll));
+}
+
+void setPitch(float roll)
+{
+    setPitch(int(roll));
+}
+
+void setYaw(float roll)
+{
+    setYaw(int(roll));
+}
+
 void setYaw(int yaw)
 {
     try
@@ -689,12 +705,6 @@ int setHeading(float heading)
     return 0;
 }
 
-int testHeading(std::vector<std::string> test)
-{
-    std::cout << "Testing Auto Heading feature...";
-    return setHeading(90);
-}
-
 int setVelocity(vector3D_t val)
 {
     try
@@ -714,75 +724,6 @@ int setVelocity(vector3D_t val)
         std::cout << "Error in Outermost setVelocity loop!" << e.what();
     }
     return 0;
-}
-
-namespace // Anonymous Namespace
-{
-std::atomic<int> xpitchVal;
-std::atomic<int> xrollVal;
-
-std::atomic<int> ypitchVal;
-std::atomic<int> yrollVal;
-
-std::atomic<uint8_t> prFlags;
-std::mutex prLock;
-} // namespace
-
-void set_X_MotionAbs(int val)
-{
-    // printf("XAct: %d\n", val);
-    setAutoPitch(val);
-    return;
-    float h = (getHeading());
-    //printf("<%f, %f>\t", h, radsToDegrees(h));
-    // Equation is, (cos()*setRoll) + (sin()*setPitch)
-    float vv = float(val);
-    xpitchVal = ((vv * cosf(h)));
-    xrollVal = ((vv * sinf(h)));
-    prFlags |= 0b10;
-    prLock.lock();
-    if (prFlags & 0b01)
-    {
-        float pitchVal = xpitchVal + ypitchVal;
-        float rollVal = xrollVal + yrollVal;
-        float sum = pitchVal + rollVal;
-        //setPitch((pitchVal / sum)*255);
-        //printf("{%f}", (pitchVal / sum)*255);
-        //setRoll((rollVal / sum)*255);
-        //printf("{%f}", (rollVal / sum)*255);
-        std::cout << "{" << xpitchVal << "," << xrollVal << "}\n";
-        setAutoPitch(xpitchVal);
-        setAutoRoll(xrollVal);
-        prFlags ^= 0b01;
-    }
-    prLock.unlock();
-}
-
-void set_Y_MotionAbs(int val)
-{
-    // printf("YAct: %d\t", val);
-    setAutoRoll(val);
-    return;
-    float h = (getHeading());
-    // Equation is, (cos()*setPitch) + (sin()*setRoll)
-    float vv = float(val);
-    ypitchVal = ((vv * sinf(h)));
-    yrollVal = ((vv * cosf(h)));
-    prFlags |= 0b01;
-    prLock.lock();
-    if (prFlags & 0b10)
-    {
-        /*float pitchVal = xpitchVal + ypitchVal;
-        float rollVal = xrollVal + yrollVal;
-        float sum = pitchVal + rollVal;
-        setPitch((pitchVal / sum)*255);
-        setRoll((rollVal / sum)*255);*/
-        setAutoPitch(ypitchVal);
-        setAutoRoll(yrollVal);
-        prFlags = 0;
-        prFlags ^= 0b10;
-    }
-    prLock.unlock();
 }
 
 int setAltitude(float altitude)
@@ -815,18 +756,7 @@ int setDestination(float x, float y, float z)
     {
         if (IntentionOverride)
             return 1; // If the Feedback Controllers are overriden by the user manually, Do not attempt anything
-        FeedbackControl::X_Actuator.actuationControllerlock->lock();
-        FeedbackControl::Y_Actuator.actuationControllerlock->lock();
-        FeedbackControl::Z_Actuator.actuationControllerlock->lock();
-
-        FeedbackControl::X_Actuator.setIntendedActuation(x);
-        FeedbackControl::Y_Actuator.setIntendedActuation(y);
-        FeedbackControl::Z_Actuator.setIntendedActuation(z);
-        printf("<<%f>>", z);
-
-        FeedbackControl::Z_Actuator.actuationControllerlock->unlock();
-        FeedbackControl::Y_Actuator.actuationControllerlock->unlock();
-        FeedbackControl::X_Actuator.actuationControllerlock->unlock();
+        setDestination(GeoPoint_t(x, y, z), true);
     }
     catch (const std::future_error &e)
     {
@@ -847,9 +777,9 @@ int set_X_Velocity(float val)
     {
         if (IntentionOverride)
             return 1; // If the Feedback Controllers are overriden by the user manually, Do not attempt anything
-        FeedbackControl::X_Vrel_Actuator.actuationControllerlock->lock();
-        FeedbackControl::X_Vrel_Actuator.setIntendedActuation(val);
-        FeedbackControl::X_Vrel_Actuator.actuationControllerlock->unlock();
+        //FeedbackControl::X_Vrel_Actuator.actuationControllerlock->lock();
+        //FeedbackControl::X_Vrel_Actuator.setIntendedActuation(val);
+        //FeedbackControl::X_Vrel_Actuator.actuationControllerlock->unlock();
     }
     catch (const std::future_error &e)
     {
@@ -869,9 +799,9 @@ int set_Y_Velocity(float val)
     {
         if (IntentionOverride)
             return 1; // If the Feedback Controllers are overriden by the user manually, Do not attempt anything
-        FeedbackControl::Y_Vrel_Actuator.actuationControllerlock->lock();
-        FeedbackControl::Y_Vrel_Actuator.setIntendedActuation(val);
-        FeedbackControl::Y_Vrel_Actuator.actuationControllerlock->unlock();
+        //FeedbackControl::Y_Vrel_Actuator.actuationControllerlock->lock();
+        //FeedbackControl::Y_Vrel_Actuator.setIntendedActuation(val);
+        //FeedbackControl::Y_Vrel_Actuator.actuationControllerlock->unlock();
     }
     catch (const std::future_error &e)
     {
@@ -891,9 +821,10 @@ int setAutoYaw(float heading)
     {
         if (IntentionOverride)
             return 1; // If the Feedback Controllers are overriden by the user manually, Do not attempt anything
-        FeedbackControl::YawActuator.actuationControllerlock->lock();
+        //printf("<<<%f>>>", heading);
+        //FeedbackControl::YawActuator.actuationControllerlock->lock();
         FeedbackControl::YawActuator.setIntendedActuation(heading);
-        FeedbackControl::YawActuator.actuationControllerlock->unlock();
+        //FeedbackControl::YawActuator.actuationControllerlock->unlock();
     }
     catch (const std::future_error &e)
     {
@@ -913,9 +844,9 @@ int setAutoRoll(float heading)
     {
         if (IntentionOverride)
             return 1; // If the Feedback Controllers are overriden by the user manually, Do not attempt anything
-        FeedbackControl::RollActuator.actuationControllerlock->lock();
+        //FeedbackControl::RollActuator.actuationControllerlock->lock();
         FeedbackControl::RollActuator.setIntendedActuation(heading);
-        FeedbackControl::RollActuator.actuationControllerlock->unlock();
+        //FeedbackControl::RollActuator.actuationControllerlock->unlock();
     }
     catch (const std::future_error &e)
     {
@@ -935,9 +866,9 @@ int setAutoPitch(float heading)
     {
         if (IntentionOverride)
             return 1; // If the Feedback Controllers are overriden by the user manually, Do not attempt anything
-        FeedbackControl::PitchActuator.actuationControllerlock->lock();
+        //FeedbackControl::PitchActuator.actuationControllerlock->lock();
         FeedbackControl::PitchActuator.setIntendedActuation(heading);
-        FeedbackControl::PitchActuator.actuationControllerlock->unlock();
+        //FeedbackControl::PitchActuator.actuationControllerlock->unlock();
     }
     catch (const std::future_error &e)
     {
@@ -957,16 +888,8 @@ int setAutoPitch(float heading)
 
 void takeOff(float altitude)
 {
-    //setAltitude(10);
-    setDestination(0, 0, 20);
-}
-
-void holdPosition()
-{
-}
-
-void moveToRelativePosition(float x, float y, float z)
-{
+    setAltitude(altitude);
+    //setDestination(0, 0, 20);
 }
 
 /*
@@ -978,11 +901,6 @@ int setHeadingToPoint(GeoPoint_t destination)
     return setGazeOn(destination);
 }
 
-int setPath(GeoPoint_t start, GeoPoint_t destination)
-{
-    return setLinearPath(start, destination);
-}
-
 void holdPosition(float x, float y, float z)
 {
     setDestination(x, y, z);
@@ -992,24 +910,17 @@ void holdPosition(float x, float y, float z)
     yposition.join();
 }
 
-int autoNavPID(GeoPoint_t start, GeoPoint_t destination, float maxAltitude)
+namespace {
+
+GeoPoint_t lastDestination(0, 0, 0);
+
+int autoNavPID(GeoPoint_t destination, GeoPoint_t start = lastDestination)
 {
     try
     {
         printf("\n Got here!");
-        // Make the Drone to look into the target direction
-        //setHeadingToPoint(destination);
-
-        setAltitude(destination.z);
-        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-
-        // Then Throttle Up to maintain an altitude.
-        /*setLinearPath(start, destination);
-        moveThread = new std::thread(gazeLoop);
-        moveThread->join();*/
-        setHeading(0);
-
-        //holdPosition(destination.x, destination.y, destination.z);
+        AutoNavigation::addToPathQueue((AutoNavigation::makePath(start, destination)));
+        lastDestination.set(destination);
     }
     catch (const std::future_error &e)
     {
@@ -1023,7 +934,7 @@ int autoNavPID(GeoPoint_t start, GeoPoint_t destination, float maxAltitude)
     return 0;
 }
 
-std::vector<GeoPoint_t> destinationBuffer;
+}
 
 int setDestination(GeoPoint_t position, bool start_now)
 {
@@ -1031,7 +942,17 @@ int setDestination(GeoPoint_t position, bool start_now)
     {
         printf("\n Got here!");
         if (start_now)
-            autoNavPID(getLocation(), position);
+        {
+            if(AutoNavigation::isNavigationInProgress())
+            {
+                autoNavPID(position);
+            }
+            else 
+            {
+                autoNavPID(position, getLocation());
+            }
+        }
+            
     }
     catch (const std::future_error &e)
     {
@@ -1048,7 +969,7 @@ int setDestination(GeoPoint_t position, bool start_now)
 int gotoLocation(float x, float y, float z)
 {
     printf("\nTrying to move to position x=%f y=%f z=%f", x, y, z);
-    return setDestination(GeoPoint_t(x, y, z), true);
+    return autoNavPID(GeoPoint_t(x, y, z), getLocation());
 }
 
 int returnToHome()
@@ -1236,7 +1157,7 @@ void FaultHandler()
     The Main Initializer Function
 */
 
-int ControllerInterface_init(int argc, char **argv)
+int ControllerInterface_init(int argc, const char *argv[])
 {
     try
     {
@@ -1275,16 +1196,18 @@ int ControllerInterface_init(int argc, char **argv)
         FeedbackControl::FeedbackControllers[0][2] = &FeedbackControl::PitchActuator;
         FeedbackControl::FeedbackControllerStatus[0] = false;
 
-        FeedbackControl::FeedbackControllers[1][0] = &FeedbackControl::X_Vrel_Actuator;
+        /*FeedbackControl::FeedbackControllers[1][0] = &FeedbackControl::X_Vrel_Actuator;
         FeedbackControl::FeedbackControllers[1][1] = &FeedbackControl::Y_Vrel_Actuator;
         FeedbackControl::FeedbackControllers[1][2] = &FeedbackControl::Z_Vrel_Actuator;
         FeedbackControl::FeedbackControllerStatus[1] = false;
 
         FeedbackControl::FeedbackControllers[2][0] = &FeedbackControl::X_Actuator;
-        FeedbackControl::FeedbackControllers[2][1] = &FeedbackControl::Y_Actuator;
+        FeedbackControl::FeedbackControllers[2][1] = &FeedbackControl::Y_Actuator;*/
         FeedbackControl::FeedbackControllers[2][2] = &FeedbackControl::Z_Actuator;
         FeedbackControl::FeedbackControllerStatus[2] = false;
 
+        setAltitude(0);
+        
 #if defined(CLI_MONITOR)
         chnl_refresh = new std::thread(Channel_ViewRefresh, 0);
         for (int i = 0; i < 256; i++)
@@ -1296,11 +1219,14 @@ int ControllerInterface_init(int argc, char **argv)
         KeyMap['A'] = event_key_A; // show Armed
         KeyMap['P'] = event_key_P; // show Position
         KeyMap['V'] = event_key_V; // show Velocity
+        KeyMap['h'] = event_key_h; // set PIDs
         keyboard_handler = new std::thread(Keyboard_handler, 2);
 #endif
 #if defined(UPDATER_THREAD)
         chnl_update = new std::thread(Channel_Updater, 1);
 #endif
+
+        AutoNavigation::initialize_AutoNavigation();
         return 0;
     }
     catch (const std::future_error &e)

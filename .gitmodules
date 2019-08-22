@@ -4,3 +4,6 @@
 [submodule "Dependencies/Dependencies/rpclib"]
 	path = Dependencies/Dependencies/rpclib
 	url = https://github.com/rpclib/rpclib
+[submodule "Base System"]
+	path = Base System
+	url = https://github.com/ashishkumar4/AnemoiLink.git

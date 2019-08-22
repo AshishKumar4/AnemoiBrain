@@ -52,7 +52,7 @@ float GlobalLocator_t::get_X_Coordinate()
     //this->XLock.lock();
     try
     {
-        h = Xcoord;
+        h = getLocation().x;//Xcoord;
     }
     catch (const std::future_error &e)
     {
@@ -73,7 +73,7 @@ float GlobalLocator_t::get_Y_Coordinate()
     //this->XLock.lock();
     try
     {
-        h = Ycoord;
+        h = getLocation().y;//Ycoord;
     }
     catch (const std::future_error &e)
     {
@@ -94,7 +94,8 @@ float GlobalLocator_t::get_Z_Coordinate()
     //this->XLock.lock();
     try
     {
-        h = Zcoord;
+        h = getLocation().z;//Zcoord;
+        if( h < 0 ) h = 0;
     }
     catch (const std::future_error &e)
     {
@@ -222,21 +223,22 @@ vector3D_t tmpVelocity;
 GeoPoint_t tmpLocation;
 }
 
+extern GeoPoint_t AIRSIM_location;
+extern vector3D_t AIRSIM_velocity;
+
 vector3D_t AirSim_Locator_t::getVelocity() // CHANGE THIS
 {
-    auto velocity = client->getMultirotorState().kinematics_estimated.twist.linear;
-    tmpVelocity = vector3D_t(velocity.x(), velocity.y(), velocity.z());
-    return tmpVelocity;
+    //tmpVelocity = AIRSIM_velocity;
+    return AIRSIM_velocity;
 }
 
 GeoPoint_t AirSim_Locator_t::getLocation() // CHANGE THIS
 {
     try
     {
-        auto location = client->getMultirotorState().getPosition();
-        tmpLocation = GeoPoint_t(location.y(), location.x(), -location.z());
+        //tmpLocation = AIRSIM_location;
         // Airsim gives us relative position, with start position as 0,0,0, and altitude is negative above us
-        return tmpLocation;
+        return AIRSIM_location;
     }
     catch (const std::future_error &e)
     {

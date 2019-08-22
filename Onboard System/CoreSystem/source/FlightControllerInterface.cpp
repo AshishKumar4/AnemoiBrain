@@ -14,6 +14,8 @@
 
 #include "ControllerInterface.hpp"
 
+#include "common.hpp"
+
 #include "Sensors/Sensors.hpp"
 #include "Sensors/InertialMeasurement.hpp"
 #include "Sensors/Location.hpp"
@@ -392,7 +394,6 @@ void Channel_Updater(int threadId)
     }
 }
 
-
 void Raw_Init(int argc, char *argv[])
 {
     const std::string device = (argc > 1) ? std::string(argv[1]) : "/dev/ttyUSB0";
@@ -457,7 +458,7 @@ void sendCommand(uint8_t val, uint8_t channel)
 
 #define TIMESLICE 0.001
 
-msr::airlib::MultirotorRpcLibClient* client;
+msr::airlib::MultirotorRpcLibClient *client;
 
 /*
 
@@ -478,15 +479,54 @@ int IssueCommand(int threadId)
     return 0;
 }
 
+quaternion_t AIRSIM_oritentation;
+GeoPoint_t AIRSIM_location;
+vector3D_t AIRSIM_velocity;
+vector3D_t AIRSIM_euleroritentation;
+
+void Sensors_Updater()
+{
+    while (1)
+    {
+        try 
+        {
+            //mtx.lock();
+            auto orien = client->getMultirotorState().getOrientation();
+            AIRSIM_oritentation.set(orien.w(), orien.x(), orien.y(), orien.z());
+            //auto velocity = client->getMultirotorState().kinematics_estimated.twist.linear;
+            //AIRSIM_velocity.set(velocity.x(), velocity.y(), velocity.z());
+            auto location = client->getMultirotorState().getPosition();
+            AIRSIM_location.set(location.y(), location.x(), -location.z());
+            auto euler = eulerFromQuaternion(AIRSIM_oritentation);
+            AIRSIM_euleroritentation.set(euler.x, euler.y, euler.z);
+            //mtx.unlock();
+            //std::this_thread::sleep_for(std::chrono::microseconds(1));
+        }
+        catch (const std::future_error &e)
+        {
+            std::cout << "<Sensor_Updater>Caught a future_error with code \"" << e.code()
+                      << "\"\nMessage: \"" << e.what() << "\"\n";
+            //mtx.unlock();
+        }
+        catch (std::exception &e)
+        {
+            std::cout << "Error in CLI Monitor " << e.what();
+            //mtx.unlock();
+        }
+    }
+}
+
 void Channel_Updater(int threadid)
 {
+    std::thread sensors(Sensors_Updater);
     while (1)
     {
         try
         {
             //mtx.lock();
-            client->moveByAngleThrottleAsync(rcShrink(255 - RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 5), rcShrink(RC_DATA[YAW], -6.0, 6.0), TIMESLICE);
+            client->moveByAngleThrottleAsync(rcShrink(255 - RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 5), rcShrink(RC_DATA[YAW], -10.0, 10.0), TIMESLICE);
             //mtx.unlock();
+
             std::this_thread::sleep_for(std::chrono::microseconds(int(TIMESLICE * 1000.0 * 1000.0)));
         }
         catch (const std::future_error &e)
@@ -501,22 +541,27 @@ void Channel_Updater(int threadid)
             //mtx.unlock();
         }
     }
+    sensors.join();
 }
 
-void Raw_Init(int argc, char *argv[])
+void Raw_Init(int argc, const char *argv[])
 {
+    const std::string ip = (argc > 1) ? std::string(argv[1]) : "localhost";
+    const uint16_t port = (argc > 2) ? std::stoi(argv[2]) : 41451;
     //rpc::server srv(8080);
 
     //cout << "Press Enter to enable API control" << endl; cin.get();
-    client = new msr::airlib::MultirotorRpcLibClient();
+    client = new msr::airlib::MultirotorRpcLibClient(ip, port);
+    printf("\nEnabling AirSim API Control");
     client->enableApiControl(true);
 
     //cout << "Press Enter to arm the drone" << endl; cin.get();
+    printf("\nArming the multirotor");
     client->armDisarm(true);
 
     //cout << "Press Enter to takeoff" << endl; cin.get();
-    client->takeoffAsync(5); //*/
-
+    //client->takeoffAsync(5); //*/
+    printf("\nInitialization complete");
     ControllerInterface::MainIMU = new AirSim_IMU_t(client);
     ControllerInterface::MainLocator = new AirSim_Locator_t(client);
 }
@@ -570,7 +615,6 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
 
 #if defined(MODE_AIRSIM)
 #endif
-
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ---------------------------------------------MSP Data stream forwarding------------------------------------------------- */

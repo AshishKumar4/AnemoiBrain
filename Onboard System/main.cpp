@@ -17,7 +17,7 @@
 
 rpc::server *rpcStub;
 
-int main(int argc, char *argv[])
+int main(int argc, const char *argv[])
 {
     try
     {
@@ -25,9 +25,8 @@ int main(int argc, char *argv[])
         /*
         New Feature, RPC Communication!!! 
     */
-        ControllerInterface::ControllerInterface_init(argc, (char **)argv); // Maybe lower levels can make use of command line args
-
-        int portBase = (argc >= 3) ? stoi(std::string(argv[3])) : 8400;
+        ControllerInterface::ControllerInterface_init(argc, argv); // Maybe lower levels can make use of command line args
+        int portBase = (argc > 3) ? stoi(std::string(argv[3])) : 8400;
         rpcStub = new rpc::server(portBase - 1);
         rpcStub->bind("setHeading", &(ControllerInterface::setHeading));
         rpcStub->bind("setRollAngle", &(ControllerInterface::setAutoRoll));
@@ -42,7 +41,7 @@ int main(int argc, char *argv[])
         rpcStub->async_run(1);  
 #endif
         //std::thread *launch_ActuationControllersThread = new std::thread(ControllerInterface::launch_ActuationControllers);
-        Onboard::ControlServer_init(argc, (char **)argv);
+        Onboard::ControlServer_init(argc, argv);
         ControllerInterface::launch_ActuationControllers();
         ControlServer->JoinThreads();
         while(1);

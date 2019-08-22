@@ -23,15 +23,16 @@ class InertialMeasurement_t
     std::mutex      yawLock;
 
     static void bufferWriter(InertialMeasurement_t* imu);
+
 public:
     InertialMeasurement_t()
     {
-        bufferWriterThread = new std::thread(bufferWriter, this);
+        //bufferWriterThread = new std::thread(bufferWriter, this);
     }
 
     ~InertialMeasurement_t()
     {
-        bufferWriterThread->join();
+        //bufferWriterThread->join();
     }
 
     virtual quaternion_t getOrientation() = 0;
@@ -65,6 +66,7 @@ public:
     }
 
     quaternion_t getOrientation();
+    vector3D_t getEulerOrientation();
 };
 
 #endif

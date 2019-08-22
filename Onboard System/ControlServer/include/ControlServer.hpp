@@ -66,7 +66,7 @@ int Handshake(int i, int j);
 #endif
 
 
-int ControlServer_init(int argc, char **argv);
+int ControlServer_init(int argc, const char *argv[]);
 } // namespace Onboard
 
 Onboard::AbstractServer* ControlServer;

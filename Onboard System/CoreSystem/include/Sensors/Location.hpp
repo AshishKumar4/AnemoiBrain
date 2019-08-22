@@ -27,12 +27,12 @@ class GlobalLocator_t
 public:
     GlobalLocator_t()
     {
-        bufferWriterThread = new std::thread(bufferWriter, this);
+        //bufferWriterThread = new std::thread(bufferWriter, this);
     }
 
     ~GlobalLocator_t()
     {
-        bufferWriterThread->join();
+        //bufferWriterThread->join();
     }
 
     float get_X_Coordinate();
