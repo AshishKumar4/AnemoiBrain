@@ -1,12 +1,11 @@
-#pragma once 
-#ifndef COMMON_H
-#define COMMON_H
+#pragma once
 
-#include "thread"
 #include "iostream"
-#include <math.h>
-#include <future>
+#include "vector"
 #include <cmath>
+#include <rpc/msgpack.hpp>
+
+using namespace std;
 
 class vector3D_t
 {
@@ -14,6 +13,7 @@ public:
     float x;
     float y;
     float z;
+	MSGPACK_DEFINE_MAP(this->x, this->y, this->z);
 
     vector3D_t()
     {
@@ -21,12 +21,19 @@ public:
         y = 0;
         z = 0;
     }
-    
+
     vector3D_t(float xval, float yval, float zval)
     {
         x = xval;
         y = yval; 
         z = zval;
+    }
+	
+    vector3D_t(uint8_t arr[])
+    {
+        x = (float)arr[0];
+        y = (float)arr[1]; 
+        z = (float)arr[2];
     }
 
     void set(float xval, float yval, float zval)
@@ -45,6 +52,7 @@ public:
     float _x;
     float _y;
     float _z;
+	MSGPACK_DEFINE_MAP(this->_w, this->_x, this->_y, this->_z);
 
     quaternion_t()
     {
@@ -97,6 +105,7 @@ public:
     float x;
     float y;
     float z;
+	MSGPACK_DEFINE_MAP(this->x, this->y, this->z);
 
     GeoPoint_t()
     {
@@ -127,6 +136,42 @@ public:
     }
 };
 
+class data_imu_t
+{
+public: 
+	vector3D_t 	acc;
+	vector3D_t 	gyro;
+	vector3D_t 	mag;
+	MSGPACK_DEFINE_MAP(this->acc, this->gyro, this->mag);
+
+	data_imu_t(vector3D_t acc, vector3D_t gyro, vector3D_t mag)
+	{
+		this->acc = acc;
+		this->gyro = gyro;
+		this->mag = mag;
+	}
+};
+
+class image_t 
+{
+public:
+	vector<uint8_t> buff;
+	MSGPACK_DEFINE_MAP(buff);
+};
+
+class DroneState_t
+{
+public:
+	data_imu_t  imu;
+	vector3D_t 	vel;
+	float 		altitude;
+	float 		heading;	// in Radians
+	MSGPACK_DEFINE_MAP(this->imu, this->vel, this->altitude, this->heading);
+
+	DroneState_t(data_imu_t imu, vector3D_t vel, float altitude, float heading) : imu(imu), vel(vel), altitude(altitude), heading(heading)
+	{
+	}
+};
 
 /*
     This is our convention, counter clockwise, 0 to 360 in every direction
@@ -208,16 +253,9 @@ inline vector3D_t eulerFromQuaternion(quaternion_t orien)
         oo.z = yaw; // // 0, 360);
         return oo;
     }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::eulerFromQuaternion>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
     catch (const std::exception &e)
     {
         std::cerr << e.what() << '\n';
     }
     return vector3D_t(0,0,0);
 }
-
-#endif

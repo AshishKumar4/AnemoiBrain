@@ -37,6 +37,8 @@ std::atomic<bool> IntentionOverride;
 float getPathLength();
 float getPathDeviation();
 
+float E_VALUE = 0;
+
 namespace FeedbackControl
 {
 vector3D_t *controlledPosition;
@@ -225,8 +227,10 @@ public:
             float I_term = float(this->errorAccumulator * this->CONTROLLER_I);
             double derivative = (double(newError - oldError) / (deltaTime));
             float D_term = derivative * this->CONTROLLER_D;
-            float E_term = (derivative / double(newError)) * this->CONTROLLER_E;
-
+            //float E_term = (derivative / double(newError)) * this->CONTROLLER_E;
+			float E_term = derivative * (1 - tanh(abs(double(newError) * 0.15))) * this->CONTROLLER_E;
+			//float E_term = (derivative / (double(newError)*double(newError))) * this->CONTROLLER_E;
+ 
             if (this->CONTROLLER_E)
             {
                 printf(" <%f> ", E_term);
@@ -480,6 +484,7 @@ public:
         this->CONTROLLER_P = 0.6;
         this->CONTROLLER_I = 0.01;
         this->CONTROLLER_D = 1000;
+        this->CONTROLLER_E = 0;
 
         ErrorProcessor = Planner_X_ControllerErrorScaler;
     }
@@ -551,11 +556,12 @@ public:
         oldAbsError = 1;
         deltaTime = 10;
 
-        this->MAX_I_BOUNDARY = 500;
+        this->MAX_I_BOUNDARY = 1000;
         this->CONTROLLER_P = 3;
         this->CONTROLLER_I = 0.1;
         this->CONTROLLER_D = 1000;
-        this->CONTROLLER_E = 100000;
+		E_VALUE = 100000;
+        //this->CONTROLLER_E = 40000;
 
         ErrorProcessor = LateralControllerErrorScaler;
         //EscapeFunction = PositionHoldEscapeFunction;
@@ -961,6 +967,12 @@ void holdPositionLoop()
             float motion = FeedbackControl::Distance_Actuator.FeedbackController();
             float len = currentDistance;
             printf("\n{%f}", len);
+			if(FeedbackControl::Distance_Actuator.CONTROLLER_E >= 10000)
+				FeedbackControl::Distance_Actuator.CONTROLLER_E -= 100;
+			else 
+			{
+				printf("$$$$$");
+			}
         }
         std::this_thread::sleep_for(std::chrono::microseconds(1000));
     }
@@ -993,6 +1005,7 @@ void positionalLoop()
     printf("\nEngaging Position Hold System");
     //motionAccumulator = 0;
     //motionCounter = 0;
+	FeedbackControl::Distance_Actuator.CONTROLLER_E = E_VALUE;
     shouldHoldPosition = true;
     //setAutoPitch(0);
     //setAutoRoll(0);

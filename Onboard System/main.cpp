@@ -38,6 +38,14 @@ int main(int argc, const char *argv[])
         //rpcStub->bind("setDestination", &(ControllerInterface::setDestination));
         rpcStub->bind("toggleAutoActuator", &(ControllerInterface::toggleFeedbackControllers));
         rpcStub->bind("gotoLocation", &(ControllerInterface::gotoLocation));
+
+		/* get APIs--> */
+        rpcStub->bind("getCameraView", &(ControllerInterface::getCameraView));
+        rpcStub->bind("getIMU", &(ControllerInterface::getIMU));
+        rpcStub->bind("getLocation", &(ControllerInterface::getLocation));
+        rpcStub->bind("getAltitude", &(ControllerInterface::getAltitude));
+        rpcStub->bind("getVelocity", &(ControllerInterface::getVelocity));
+        rpcStub->bind("getCompleteState", &(ControllerInterface::getCompleteState));
         rpcStub->async_run(1);  
 #endif
         //std::thread *launch_ActuationControllersThread = new std::thread(ControllerInterface::launch_ActuationControllers);

@@ -89,6 +89,21 @@ uint8_t getMag(int axis)
     return 0;
 }
 
+vector3D_t getGyro()
+{
+	return vector3D_t(IMU_Raw[0]);
+}
+
+vector3D_t getAcc()
+{
+	return vector3D_t(IMU_Raw[1]);
+}
+
+vector3D_t getMag()
+{
+	return vector3D_t(IMU_Raw[2]);
+}
+
 uint8_t getPID_P(int axis)
 {
     //return PID_Raw[0][axis];
@@ -493,6 +508,21 @@ GeoPoint_t getLocation() // CHANGE THIS
         std::cout << "Error in Outermost Y_Actuator loop!" << e.what();
     }
     return GeoPoint_t(0, 0, 0);
+}
+
+image_t getCameraView()
+{
+	return image_t();
+}
+
+data_imu_t getIMU()
+{
+	return data_imu_t(getAcc(), getGyro(), getMag());
+}
+
+DroneState_t getCompleteState()
+{
+	return DroneState_t(getIMU(), getVelocity(), getAltitude(), getHeading());
 }
 
 /******************************************************************************************/

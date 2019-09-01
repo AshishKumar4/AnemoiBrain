@@ -61,7 +61,6 @@
         2) RPI unit is off board the drone and communicates with the flight controller through Radio (wifi/ Xbee)
     */
 
-
 /*
     Telemetry Protocol
 */
@@ -71,7 +70,6 @@
 //#define I2C_PROTOCOL
 #define MSP_Serial_PROTOCOL
 #endif
-
 
 /*
     Telemetry Type
@@ -90,13 +88,12 @@
 //#define MSP_SERIAL_FORWARDING
 //#define MSP_REMOTE_TWEAKS
 
-
 #endif
 
 #if defined(MODE_AIRSIM)
-    #define AIRSIM_MODE_API
+#define AIRSIM_MODE_API
 #define AUTONOMOUS_ACTUATION_CONTROLLERS
-    //#define AIRSIM_MODE_SOCKETS
+//#define AIRSIM_MODE_SOCKETS
 #endif
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
@@ -115,14 +112,14 @@ uint8_t checksum(uint8_t *buf, int len);
 #define FALSE_PACKET 145
 #define ACK_GOT_PACKET 250
 
-#define THROTTLE    0
-#define PITCH       1
-#define ROLL        2
-#define YAW         3
-#define AUX1       4
-#define AUX2       5
-#define AUX3       6
-#define AUX4       7
+#define THROTTLE 0
+#define PITCH 1
+#define ROLL 2
+#define YAW 3
+#define AUX1 4
+#define AUX2 5
+#define AUX3 6
+#define AUX4 7
 
 #define RC_X_MOTION 8
 #define RC_Y_MOTION 9
@@ -133,15 +130,14 @@ uint8_t checksum(uint8_t *buf, int len);
 #define HEADING_YAW_DAMPING 1
 #define HEADING_YAW_DAMPING_2 0.8
 
-
-typedef int (*func_i_t)(int);              // function pointer
-typedef int (*func_vs_t)(std::vector<std::string>);              // function pointer
+typedef int (*func_i_t)(int);						// function pointer
+typedef int (*func_vs_t)(std::vector<std::string>); // function pointer
 
 namespace ControllerInterface
 {
-InertialMeasurement_t* MainIMU;
-GlobalLocator_t* MainLocator;
-GlobalState_t* MainState;
+InertialMeasurement_t *MainIMU;
+GlobalLocator_t *MainLocator;
+GlobalState_t *MainState;
 
 uint8_t RC_MASTER_DATA[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -166,8 +162,8 @@ uint8_t getPID_I(int axis);
 uint8_t getPID_D(int axis);
 uint8_t getArmStatus(int block);
 
-float getYaw(); // Gives in Radians, Absolute for drone wrt world
-float getRoll(); // Gives in Radians, Absolute for drone wrt world
+float getYaw();   // Gives in Radians, Absolute for drone wrt world
+float getRoll();  // Gives in Radians, Absolute for drone wrt world
 float getPitch(); // Gives in Radians, Absolute for drone wrt world
 
 float getYawDegrees();
@@ -189,6 +185,15 @@ float get_Z_VelocityAbs();
 
 vector3D_t getVelocityAbs();
 vector3D_t getVelocityRel();
+
+GeoPoint_t getLocation(); // CHANGE THIS
+vector3D_t getVelocity();
+image_t getCameraView();
+data_imu_t getIMU();
+DroneState_t getCompleteState();
+
+quaternion_t getOrientationQuaternion();
+vector3D_t getOrientation(); // Returns Euler angle orientation
 
 float getDesiredVelocity();
 float getCurrentTargetDistance();
@@ -212,11 +217,6 @@ int setDestinationY(float val);
 int setAltitude(float altitude);
 
 void takeOff(float altitude = 5);
-
-quaternion_t getOrientationQuaternion();
-vector3D_t getOrientation(); // Returns Euler angle orientation
-vector3D_t getVelocity();
-GeoPoint_t getLocation();
 
 int setVelocity(vector3D_t val);
 int setPosition(GeoPoint_t val);
