@@ -90,6 +90,7 @@ public:
     float CONTROLLER_I;
     float CONTROLLER_D;
     float CONTROLLER_E;
+	float CONTROLLER_E_RANGE;
     float MAX_I_BOUNDARY;
 
     float ACTUATION_HALT_VALUE;
@@ -228,12 +229,12 @@ public:
             double derivative = (double(newError - oldError) / (deltaTime));
             float D_term = derivative * this->CONTROLLER_D;
             //float E_term = (derivative / double(newError)) * this->CONTROLLER_E;
-			float E_term = derivative * (1 - tanh(abs(double(newError) * 0.15))) * this->CONTROLLER_E;
+			float E_term = derivative * (1 - tanh(abs(double(newError) * this->CONTROLLER_E_RANGE))) * this->CONTROLLER_E;
 			//float E_term = (derivative / (double(newError)*double(newError))) * this->CONTROLLER_E;
  
             if (this->CONTROLLER_E)
             {
-                printf(" <%f> ", E_term);
+                //printf(" <%f> ", E_term);
             }
             //printf("\n{%f}", D_term);
             //if(newError != 0)
@@ -401,16 +402,16 @@ int init_RotationalControllers()
     YawActuator.CONTROLLER_D = 210;   //(ku*tu)/15.0;//1000;//190;
     RollActuator.CONTROLLER_P = 1;
     YawControllerThread = new std::thread(YawController);
-    RollControllerThread = new std::thread(RollController);
-    PitchControllerThread = new std::thread(PitchController);
+    //RollControllerThread = new std::thread(RollController);
+    //PitchControllerThread = new std::thread(PitchController);
     return 0;
 }
 
 int join_RotationalControllers()
 {
     YawControllerThread->join();
-    RollControllerThread->join();
-    PitchControllerThread->join();
+   // RollControllerThread->join();
+   // PitchControllerThread->join();
     return 0;
 }
 
@@ -484,7 +485,8 @@ public:
         this->CONTROLLER_P = 0.6;
         this->CONTROLLER_I = 0.01;
         this->CONTROLLER_D = 1000;
-        this->CONTROLLER_E = 0;
+        this->CONTROLLER_E = 10000;
+		this->CONTROLLER_E_RANGE = 0.085;
 
         ErrorProcessor = Planner_X_ControllerErrorScaler;
     }
@@ -521,11 +523,18 @@ public:
         oldAbsError = 1;
         deltaTime = 1;
 
-        this->MAX_I_BOUNDARY = 100;
-        this->CONTROLLER_P = 4.5;
-        this->CONTROLLER_I = 0.001;
-        this->CONTROLLER_D = 15;
-        this->CONTROLLER_E = 0;
+        // this->MAX_I_BOUNDARY = 100;
+        // this->CONTROLLER_P = 4.5;
+        // this->CONTROLLER_I = 0.001;
+        // this->CONTROLLER_D = 15;
+        // this->CONTROLLER_E = 0;
+
+        this->MAX_I_BOUNDARY = 1000;
+        this->CONTROLLER_P = 3;
+        this->CONTROLLER_I = 0.1;
+        this->CONTROLLER_D = 1000;
+		this->CONTROLLER_E_RANGE = 0.20;
+		this->CONTROLLER_E = 100000;
 
         ErrorProcessor = Planner_Y_ControllerErrorScaler;
     }
@@ -560,6 +569,7 @@ public:
         this->CONTROLLER_P = 3;
         this->CONTROLLER_I = 0.1;
         this->CONTROLLER_D = 1000;
+		this->CONTROLLER_E_RANGE = 0.16;
 		E_VALUE = 100000;
         //this->CONTROLLER_E = 40000;
 
@@ -728,6 +738,7 @@ float initialHeading;
 float pathConstant;
 
 bool shouldHoldPosition;
+bool hoverStableFlag;
 } // namespace
 
 std::thread *moveThread, *gazeThread, *holdPositionThread;
@@ -754,8 +765,8 @@ void gazeLoop();
 */
 
 #define MAX_DESIRED_VELOCITY 30
-#define CLAMP_FACTOR 40
-#define TRANSITION_DISTANCE 15
+#define CLAMP_FACTOR 50
+#define TRANSITION_DISTANCE 10
 
 float getDesiredVelocity()
 {
@@ -971,7 +982,12 @@ void holdPositionLoop()
 				FeedbackControl::Distance_Actuator.CONTROLLER_E -= 100;
 			else 
 			{
-				printf("$$$$$");
+				//printf("$$$$$");
+				printf("<<{%f}>>", motion);
+			}
+			if(!hoverStableFlag && len < 3 && motion == 0)
+			{
+				hoverStableFlag = true;
 			}
         }
         std::this_thread::sleep_for(std::chrono::microseconds(1000));
@@ -1007,6 +1023,11 @@ void positionalLoop()
     //motionCounter = 0;
 	FeedbackControl::Distance_Actuator.CONTROLLER_E = E_VALUE;
     shouldHoldPosition = true;
+	hoverStableFlag = false;
+	while(!hoverStableFlag)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
     //setAutoPitch(0);
     //setAutoRoll(0);
 

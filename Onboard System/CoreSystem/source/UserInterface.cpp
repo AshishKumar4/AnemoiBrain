@@ -22,6 +22,17 @@
 
 int show_RC = 0, show_PID = 0, show_IMU = 0, show_Wifi = 0, show_armed = 1, show_VELOCITY = 0, show_POSITION = 0;
 
+#if defined(MSP_Serial_PROTOCOL)
+
+#include <msp/msp_msg.hpp>
+#include <msp/FlightController.hpp>
+#include <msp/FirmwareVariants.hpp>
+
+extern fcu::FlightController *FlController;
+extern msp::FirmwareVariant FCvariant; 
+
+#endif
+
 void Channel_ViewRefresh(int threadId)
 {
     while (1)
@@ -44,8 +55,8 @@ void Channel_ViewRefresh(int threadId)
 #if defined(UPDATE_STATUS_RC)
             if (show_RC)
             {
-                msp::msg::Rc rc;
-                FlController->client.request(rc);
+                msp::msg::Rc rc(FCvariant);
+                FlController->sendMessage(rc);
 #if defined(SHOW_STATUS_RC)
                 std::cout << rc;
 #endif
@@ -54,14 +65,14 @@ void Channel_ViewRefresh(int threadId)
 #if defined(UPDATE_STATUS_IMU)
             if (show_IMU)
             {
-                msp::msg::ImuRaw imu;
-                FlController->client.request(imu);
+                msp::msg::RawImu imu(FCvariant);
+                FlController->sendMessage(imu);
                 for (int i = 0; i < 3; i++)
                     IMU_Raw[0][i] = (uint8_t)imu.gyro[i];
                 for (int i = 0; i < 3; i++)
                     IMU_Raw[1][i] = (uint8_t)imu.acc[i];
                 for (int i = 0; i < 3; i++)
-                    IMU_Raw[2][i] = (uint8_t)imu.magn[i];
+                    IMU_Raw[2][i] = (uint8_t)imu.mag[i];
 #if defined(SHOW_STATUS_IMU)
                 std::cout << imu;
 #endif
@@ -70,20 +81,20 @@ void Channel_ViewRefresh(int threadId)
 #if defined(UPDATE_STATUS_PID)
             if (show_PID)
             {
-                msp::msg::Pid pid;
-                FlController->client.request(pid);
+                msp::msg::Pid pid(FCvariant);
+                FlController->sendMessage(pid);
 #if defined(SHOW_STATUS_PID)
                 std::cout << pid;
 #endif
-                PID_Raw[0][0] = (uint8_t)pid.roll.P;
-                PID_Raw[1][0] = (uint8_t)pid.roll.I;
-                PID_Raw[2][0] = (uint8_t)pid.roll.D;
-                PID_Raw[0][1] = (uint8_t)pid.pitch.P;
-                PID_Raw[1][1] = (uint8_t)pid.pitch.I;
-                PID_Raw[2][1] = (uint8_t)pid.pitch.D;
-                PID_Raw[0][2] = (uint8_t)pid.yaw.P;
-                PID_Raw[1][2] = (uint8_t)pid.yaw.I;
-                PID_Raw[2][2] = (uint8_t)pid.yaw.D;
+                // PID_Raw[0][0] = (uint8_t)pid.roll.P;
+                // PID_Raw[1][0] = (uint8_t)pid.roll.I;
+                // PID_Raw[2][0] = (uint8_t)pid.roll.D;
+                // PID_Raw[0][1] = (uint8_t)pid.pitch.P;
+                // PID_Raw[1][1] = (uint8_t)pid.pitch.I;
+                // PID_Raw[2][1] = (uint8_t)pid.pitch.D;
+                // PID_Raw[0][2] = (uint8_t)pid.yaw.P;
+                // PID_Raw[1][2] = (uint8_t)pid.yaw.I;
+                // PID_Raw[2][2] = (uint8_t)pid.yaw.D;
             }
 #endif
 #endif // MSP

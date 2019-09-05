@@ -7,3 +7,6 @@
 [submodule "Base System"]
 	path = Base System
 	url = https://github.com/ashishkumar4/AnemoiLink.git
+[submodule "Dependencies/msp"]
+	path = Dependencies/msp
+	url = https://github.com/christianrauch/msp.git

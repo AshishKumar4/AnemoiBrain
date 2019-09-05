@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(OnboardCore)
 set (ONBOARD_ROOT ./)
-set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 14)
 
 # Include the Necessary Headers
 include_directories(include
@@ -30,7 +30,7 @@ set(SERVER_SOURCES "source/AbstractServer.cpp" "source/Core.cpp"
 add_library(${PROJECT_NAME} SHARED ${SERVER_SOURCES})
 target_link_libraries(${PROJECT_NAME} Threads::Threads)
 target_link_libraries(${PROJECT_NAME} libmspclient.so)
-target_link_libraries(${PROJECT_NAME} libmsp.so)
+#target_link_libraries(${PROJECT_NAME} libmsp.so)
 target_link_libraries(${PROJECT_NAME} libmsp_fcu.so)
-target_link_libraries(${PROJECT_NAME} libmsp_msg_print.so)
+#target_link_libraries(${PROJECT_NAME} libmsp_msg_print.so)
 install(TARGETS ${PROJECT_NAME} DESTINATION lib/)

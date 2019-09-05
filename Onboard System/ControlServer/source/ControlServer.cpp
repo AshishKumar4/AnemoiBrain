@@ -206,7 +206,7 @@ int ControlListeners(int i, int fd)
             //printf("[%d => %d] ", tmp[1], tmp[2]);
             if (parsed.length() == 2)
             {
-                CHANNEL_HANDLER_TABLES[int(tmp[0] - 1)](int(tmp[1]));
+				CHANNEL_HANDLER_TABLES[int(tmp[0] - 1)](int(tmp[1]));
                 ControllerInterface::RC_MASTER_DATA[int(tmp[0] - 1)] = uint8_t(int(tmp[1]));
             }
             else

@@ -32,12 +32,15 @@ int main(int argc, const char *argv[])
         rpcStub->bind("setRollAngle", &(ControllerInterface::setAutoRoll));
         rpcStub->bind("setPitchAngle", &(ControllerInterface::setAutoPitch));
 
-        //rpcStub->bind("setDestinationX", &(ControllerInterface::setDestinationX));
-        //rpcStub->bind("setDestinationY", &(ControllerInterface::setDestinationY));
         rpcStub->bind("setAltitude", &(ControllerInterface::setAltitude));
-        //rpcStub->bind("setDestination", &(ControllerInterface::setDestination));
         rpcStub->bind("toggleAutoActuator", &(ControllerInterface::toggleFeedbackControllers));
         rpcStub->bind("gotoLocation", &(ControllerInterface::gotoLocation));
+        rpcStub->bind("addWaypoint", &(ControllerInterface::addWaypoint));
+        rpcStub->bind("getCurrentPath", &(ControllerInterface::getCurrentPath));
+        rpcStub->bind("removePath", &(ControllerInterface::removePath));
+
+        rpcStub->bind("enableAutoNav", &(ControllerInterface::enableAutoNav));
+        rpcStub->bind("disableAutoNav", &(ControllerInterface::disableAutoNav));
 
 		/* get APIs--> */
         rpcStub->bind("getCameraView", &(ControllerInterface::getCameraView));

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(ControlServer)
 set (ONBOARD_ROOT ../)
-set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 14)
 
 # Include the Necessary Headers
 include_directories(include

@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(GardienOnboard)
 set (ONBOARD_ROOT ./)
+set (CMAKE_CXX_STANDARD 14)
 
 if(COMPILE_MODE STREQUAL "airsim")
     message("AIRSIM MODE")

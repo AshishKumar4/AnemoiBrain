@@ -133,8 +133,24 @@ uint8_t checksum(uint8_t *buf, int len);
 typedef int (*func_i_t)(int);						// function pointer
 typedef int (*func_vs_t)(std::vector<std::string>); // function pointer
 
+class FlightController
+{
+	std::string name;
+	std::string firmware;
+	std::string variant;
+
+	uintptr_t 	desc;
+public:
+	FlightController(std::string name, std::string firmware, std::string variant, uintptr_t desc) : name(name), firmware(firmware), variant(variant), desc(desc)
+	{
+	}
+};
+
 namespace ControllerInterface
 {
+
+FlightController* MainFC;
+
 InertialMeasurement_t *MainIMU;
 GlobalLocator_t *MainLocator;
 GlobalState_t *MainState;
@@ -153,6 +169,11 @@ void setAux3(int val);
 void setAux4(int val);
 
 void setDistance(float val);
+
+int enableAutoNav();
+int disableAutoNav();
+int getCurrentPath();
+int removePath(int path_id);
 
 uint8_t getGyro(int axis);
 uint8_t getAcc(int axis);
@@ -212,8 +233,6 @@ void set_X_Motion(int val);
 void set_X_MotionAbs(int val);
 void set_Y_MotionAbs(int val);
 
-int setDestinationX(float val);
-int setDestinationY(float val);
 int setAltitude(float altitude);
 
 void takeOff(float altitude = 5);
@@ -226,8 +245,10 @@ int set_Y_Velocity(float val);
     High Level APIs 
 */
 
-int setDestination(GeoPoint_t position, bool start_now = true);
+int AutoNavigate(GeoPoint_t destination, GeoPoint_t start);
 int gotoLocation(float x, float y, float z);
+int addWaypoint(float x, float y, float z);
+
 int returnToHome();
 
 int toggleFeedbackControllers(char type);

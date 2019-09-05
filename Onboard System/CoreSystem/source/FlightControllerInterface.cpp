@@ -201,7 +201,7 @@ void Channel_Updater(int threadid)
     }
 }
 
-void Raw_Init(int argc, char *argv[])
+void Raw_Init(int argc, const char *argv[])
 {
 #ifndef MODE_DEBUG_NO_FC
     //fd = SPI_init("/dev/spidev0.0");
@@ -308,7 +308,7 @@ int IssueCommand()
 {
 }
 
-void Raw_Init(int argc, char *argv[])
+void Raw_Init(int argc, const char *argv[])
 {
 }
 
@@ -331,7 +331,7 @@ int IssueCommand()
     NRF24_Send((uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
 }
 
-void Raw_Init(int argc, char *argv[])
+void Raw_Init(int argc, const char *argv[])
 {
 }
 
@@ -347,12 +347,12 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
 
 #if defined MSP_Serial_PROTOCOL
 
-#include "LowLevel/msp/MSP.hpp"
-#include "LowLevel/msp/msg_print.hpp"
-#include "LowLevel/msp/msp_id.hpp"
-#include "LowLevel/msp/FlightController.hpp"
+#include <msp/msp_msg.hpp>
+#include <msp/FlightController.hpp>
+#include <msp/FirmwareVariants.hpp>
 
 fcu::FlightController *FlController;
+msp::FirmwareVariant FCvariant; 
 
 int IssueCommand()
 {
@@ -375,26 +375,26 @@ void Channel_Updater(int threadId)
     {
         try
         {
-            mtx.lock();
+            //mtx.lock();
             FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), rcExpand(RC_DATA[AUX1]), rcExpand(RC_DATA[AUX2]), rcExpand(RC_DATA[AUX3]), rcExpand(RC_DATA[AUX4]));
-            mtx.unlock();
+            //mtx.unlock();
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
         catch (const std::future_error &e)
         {
             std::cout << "<Channel_Updater>Caught a future_error with code \"" << e.code()
                       << "\"\nMessage: \"" << e.what() << "\"\n";
-            mtx.unlock();
+            //mtx.unlock();
         }
         catch (std::exception &e)
         {
             std::cout << "Error in Channel Updater " << e.what();
-            mtx.unlock();
+            //mtx.unlock();
         }
     }
 }
 
-void Raw_Init(int argc, char *argv[])
+void Raw_Init(int argc, const char *argv[])
 {
     const std::string device = (argc > 1) ? std::string(argv[1]) : "/dev/ttyUSB0";
     const size_t baudrate = (argc > 2) ? std::stoul(argv[2]) : 115200;
@@ -404,24 +404,27 @@ void Raw_Init(int argc, char *argv[])
     */
     std::cout << "\n\tAttempting to connect to the Flight Controller...\n";
     std::chrono::high_resolution_clock::time_point start, end;
-    FlController = new fcu::FlightController(device, baudrate);
+    FlController = new fcu::FlightController();//(device, baudrate);
 
     // wait until connection is established
     // get unique box IDs
     start = std::chrono::high_resolution_clock::now();
-    FlController->initialise();
+    FlController->connect(device, baudrate);//initialise();
     end = std::chrono::high_resolution_clock::now();
+	if(!FlController->isConnected()) 
+	{
+		std::cout<<"FC Not Connected, exiting\n";	
+		exit(0);
+	}
     std::cout << "FC connected, ready after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
 
     // on cleanflight, we need to enable the "RX_MSP" feature
-    if (FlController->isFirmwareCleanflight())
-    {
-        std::cout << "\n\n\tCleanFlight/BetaFlight FC Identified and Successfully Connected\n\n";
-    }
-    else if (FlController->isFirmwareMultiWii())
-    {
-        std::cout << "\n\n\tMultiWii FC Identified and Successfully Connected\n\n";
-    }
+	FCvariant = FlController->getFwVariant();
+	std::string firmwareVariant = msp::firmwareVariantToString(FCvariant);
+	
+	std::cout<<"\nFC Recognized as " << firmwareVariant << " and successfully connected!\n";
+
+	ControllerInterface::MainFC = new FlightController("master", "multiwii", firmwareVariant, (uintptr_t)FlController);
 
     std::cout << "Armed? " << FlController->isArmed() << std::endl;
 
@@ -500,7 +503,7 @@ void Sensors_Updater()
             auto euler = eulerFromQuaternion(AIRSIM_oritentation);
             AIRSIM_euleroritentation.set(euler.x, euler.y, euler.z);
             //mtx.unlock();
-            //std::this_thread::sleep_for(std::chrono::microseconds(1));
+            //std::this_thread::sleep_for(std::chrono::miliseconds(1));
         }
         catch (const std::future_error &e)
         {
@@ -562,6 +565,7 @@ void Raw_Init(int argc, const char *argv[])
     //cout << "Press Enter to takeoff" << endl; cin.get();
     //client->takeoffAsync(5); //*/
     printf("\nInitialization complete");
+	ControllerInterface::MainFC = new FlightController("master", "AirSim", "Simple FC", (uintptr_t)client);
     ControllerInterface::MainIMU = new AirSim_IMU_t(client);
     ControllerInterface::MainLocator = new AirSim_Locator_t(client);
 }
@@ -591,7 +595,7 @@ void Channel_Updater(int threadid)
         ;
 }
 
-void Raw_Init(int argc, char *argv[])
+void Raw_Init(int argc, const char *argv[])
 {
 }
 
