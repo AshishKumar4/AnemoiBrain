@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include "../common.hpp"
 
@@ -7,42 +7,48 @@
 
 class GlobalState_t
 {
-    GlobalLocator_t* locator;
-    InertialMeasurement_t* imu;
+	GlobalLocator_t *locator;
+	InertialMeasurement_t *imu;
 
-public: 
-    GlobalState_t(GlobalLocator_t *locator, InertialMeasurement_t* imu)
-    {
-        this->locator = locator;
-        this->imu = imu;
-    }
+public:
+	GlobalState_t(GlobalLocator_t *locator, InertialMeasurement_t *imu)
+	{
+		this->locator = locator;
+		this->imu = imu;
+	}
 
-    float get_X_Coordinate();
-    float get_Y_Coordinate();
-    float get_Z_Coordinate();
-    
-    float get_X_VelocityRel();
-    float get_Y_VelocityRel();
-    float get_Z_VelocityRel();
-    
-    float get_X_VelocityAbs();
-    float get_Y_VelocityAbs();
-    float get_Z_VelocityAbs();
+	float get_X_Coordinate();
+	float get_Y_Coordinate();
+	float get_Z_Coordinate();
 
-    float getAltitude();
-    float getHeadingDegrees();
-    float getHeading();
+	float get_X_VelocityRel();
+	float get_Y_VelocityRel();
+	float get_Z_VelocityRel();
 
-    float getYaw();
-    float getRoll();
-    float getPitch();
+	float get_X_VelocityAbs();
+	float get_Y_VelocityAbs();
+	float get_Z_VelocityAbs();
 
-    float getYawDegrees();
-    float getRollDegrees();
-    float getPitchDegrees();
+	float getAltitude();
+	float getHeadingDegrees();
+	float getHeading();
 
-    vector3D_t getVelocityAbs();
-    vector3D_t getVelocityRel();
-    vector3D_t getVelocity();
-    GeoPoint_t getLocation();
+	float getYaw();
+	float getRoll();
+	float getPitch();
+
+	float getYawDegrees();
+	float getRollDegrees();
+	float getPitchDegrees();
+
+	vector3D_t getVelocityAbs();
+	vector3D_t getVelocityRel();
+	vector3D_t getVelocity();
+	GeoPoint_t getLocation();
 };
+
+#if defined(MODE_REALDRONE)
+
+int Sensor_Fusion_init(int argc, char **argv);
+
+#endif

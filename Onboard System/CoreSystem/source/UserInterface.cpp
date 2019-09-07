@@ -1,4 +1,3 @@
-#include "ControllerInterface.hpp"
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
 #include <fcntl.h>
@@ -14,13 +13,16 @@
 #include <functional>
 #include <math.h>
 
+#include "specificDefs.h"
+#include "UserInterface.hpp"
+#include "ControllerInterface.hpp"
+
+
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ------------------------------------------------------Cli Monitor------------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
 
 #if defined(CLI_MONITOR)
-
-int show_RC = 0, show_PID = 0, show_IMU = 0, show_Wifi = 0, show_armed = 1, show_VELOCITY = 0, show_POSITION = 0;
 
 #if defined(MSP_Serial_PROTOCOL)
 
@@ -39,7 +41,7 @@ void Channel_ViewRefresh(int threadId)
     {
         try
         {
-            mtx.lock();
+            Main_Mutex.lock();
 #if defined(MSP_Serial_PROTOCOL)
             if (show_armed)
             {
@@ -144,19 +146,19 @@ void Channel_ViewRefresh(int threadId)
 #endif
 #endif
             fflush(stdout);
-            mtx.unlock();
+            Main_Mutex.unlock();
             std::this_thread::sleep_for(std::chrono::milliseconds(CLI_UPDATE_RATE));
         }
         catch (const std::future_error &e)
         {
             std::cout << "<Channel_ViewRefresh>Caught a future_error with code \"" << e.code()
                       << "\"\nMessage: \"" << e.what() << "\"\n";
-            mtx.unlock();
+            Main_Mutex.unlock();
         }
         catch (std::exception &e)
         {
             std::cout << "Error in CLI Monitor " << e.what();
-            mtx.unlock();
+            Main_Mutex.unlock();
         }
     }
 }
@@ -231,26 +233,26 @@ int event_key_h()
     std::cin>>type;
     std::cin>>p>>i>>d;
     printf("\t {%f, %f, %f}", p, i, d);
-    if(type == 'Y')
-    {
-        ControllerInterface::FeedbackControl::YawActuator.CONTROLLER_P = p;
-        ControllerInterface::FeedbackControl::YawActuator.CONTROLLER_I = i;
-        ControllerInterface::FeedbackControl::YawActuator.CONTROLLER_D = d;
-    }
+    // if(type == 'Y')
+    // {
+    //     ControllerInterface::FeedbackControl::YawActuator.CONTROLLER_P = p;
+    //     ControllerInterface::FeedbackControl::YawActuator.CONTROLLER_I = i;
+    //     ControllerInterface::FeedbackControl::YawActuator.CONTROLLER_D = d;
+    // }
 
-    if(type == 'A')
-    {
-        ControllerInterface::FeedbackControl::Z_Actuator.CONTROLLER_P = p;
-        ControllerInterface::FeedbackControl::Z_Actuator.CONTROLLER_I = i;
-        ControllerInterface::FeedbackControl::Z_Actuator.CONTROLLER_D = d;
-    }
+    // if(type == 'A')
+    // {
+    //     ControllerInterface::FeedbackControl::Z_Actuator.CONTROLLER_P = p;
+    //     ControllerInterface::FeedbackControl::Z_Actuator.CONTROLLER_I = i;
+    //     ControllerInterface::FeedbackControl::Z_Actuator.CONTROLLER_D = d;
+    // }
 
-    if(type == 'H')
-    {
-        ControllerInterface::FeedbackControl::Distance_Actuator.CONTROLLER_P = p;
-        ControllerInterface::FeedbackControl::Distance_Actuator.CONTROLLER_I = i;
-        ControllerInterface::FeedbackControl::Distance_Actuator.CONTROLLER_D = d;
-    }
+    // if(type == 'H')
+    // {
+    //     ControllerInterface::FeedbackControl::Distance_Actuator.CONTROLLER_P = p;
+    //     ControllerInterface::FeedbackControl::Distance_Actuator.CONTROLLER_I = i;
+    //     ControllerInterface::FeedbackControl::Distance_Actuator.CONTROLLER_D = d;
+    // }
     return 0;
 }
 
@@ -258,9 +260,6 @@ int event_key_other()
 {
     return 0;
 }
-
-typedef int (*func_t)(); // function pointer
-func_t KeyMap[256];
 
 int Keyboard_handler(int id)
 {

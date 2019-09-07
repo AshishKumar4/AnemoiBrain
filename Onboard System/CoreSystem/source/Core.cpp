@@ -16,11 +16,12 @@
 #include "Sensors/Sensors.hpp"
 #include "Sensors/InertialMeasurement.hpp"
 #include "Sensors/Location.hpp"
-
-#include "FlightControllerInterface.cpp"
-#include "FeedbackControl.cpp"
-#include "AutoNavigation.cpp"
-#include "UserInterface.cpp"
+#include "ControllerInterface.hpp"
+#include "FlightControllerInterface.hpp"
+#include "specificDefs.h"
+#include "UserInterface.hpp"
+#include "FeedbackControl.hpp"
+#include "AutoNavigation.hpp"
 
 namespace ControllerInterface
 {
@@ -534,19 +535,19 @@ void setThrottle(int throttle)
 	try
 	{
 		unsigned char t = (unsigned char)throttle;
-		//mtx.lock();
+		//Main_Mutex.lock();
 		RC_DATA[THROTTLE] = t;
 #if defined(SYNCD_TRANSFER)
 		sendCommand(throttle, 0);
 #endif
-		//mtx.unlock();
+		//Main_Mutex.unlock();
 		//IssueCommand();
 	}
 	catch (const std::future_error &e)
 	{
 		std::cout << "<setThrottle>Caught a future_error with code \"" << e.code()
 				  << "\"\nMessage: \"" << e.what() << "\"\n";
-		//mtx.unlock();
+		//Main_Mutex.unlock();
 	}
 }
 
@@ -556,19 +557,19 @@ void setPitch(int pitch)
 	{
 		unsigned char t = (unsigned char)pitch;
 		//printf("-");
-		//mtx.lock();
+		//Main_Mutex.lock();
 		RC_DATA[PITCH] = t;
 #if defined(SYNCD_TRANSFER)
 		sendCommand(pitch, 1);
 #endif
-		//mtx.unlock();
+		//Main_Mutex.unlock();
 		//IssueCommand();
 	}
 	catch (const std::future_error &e)
 	{
 		std::cout << "<setPitch>Caught a future_error with code \"" << e.code()
 				  << "\"\nMessage: \"" << e.what() << "\"\n";
-		//mtx.unlock();
+		//Main_Mutex.unlock();
 	}
 }
 
@@ -578,19 +579,19 @@ void setRoll(int roll)
 	{
 		unsigned char t = (unsigned char)roll;
 		//printf("+[%d] ", roll);
-		//mtx.lock();
+		//Main_Mutex.lock();
 		RC_DATA[ROLL] = t;
 #if defined(SYNCD_TRANSFER)
 		sendCommand(roll, 2);
 #endif
-		//mtx.unlock();
+		//Main_Mutex.unlock();
 		//IssueCommand();
 	}
 	catch (const std::future_error &e)
 	{
 		std::cout << "<setRoll>Caught a future_error with code \"" << e.code()
 				  << "\"\nMessage: \"" << e.what() << "\"\n";
-		//mtx.unlock();
+		//Main_Mutex.unlock();
 	}
 }
 
@@ -614,19 +615,19 @@ void setYaw(int yaw)
 	try
 	{
 		unsigned char t = (unsigned char)yaw;
-		//mtx.lock();
+		//Main_Mutex.lock();
 		RC_DATA[YAW] = t;
 #if defined(SYNCD_TRANSFER)
 		sendCommand(yaw, 3);
 #endif
-		//mtx.unlock();
+		//Main_Mutex.unlock();
 		//IssueCommand();
 	}
 	catch (const std::future_error &e)
 	{
 		std::cout << "<setYaw>Caught a future_error with code \"" << e.code()
 				  << "\"\nMessage: \"" << e.what() << "\"\n";
-		//mtx.unlock();
+		//Main_Mutex.unlock();
 	}
 }
 
@@ -635,20 +636,20 @@ void setAux1(int val)
 	try
 	{
 		unsigned char t = (unsigned char)val;
-		mtx.lock();
+		Main_Mutex.lock();
 		// AUX1 to be used for PID Tuning, should set which
 		RC_DATA[AUX1] = t;
 #if defined(SYNCD_TRANSFER)
 		sendCommand(val, 4);
 #endif
-		mtx.unlock();
+		Main_Mutex.unlock();
 		//IssueCommand();
 	}
 	catch (const std::future_error &e)
 	{
 		std::cout << "<setAux1>Caught a future_error with code \"" << e.code()
 				  << "\"\nMessage: \"" << e.what() << "\"\n";
-		//mtx.unlock();
+		//Main_Mutex.unlock();
 	}
 }
 
@@ -657,19 +658,19 @@ void setAux2(int val)
 	try
 	{
 		unsigned char t = (unsigned char)val;
-		mtx.lock();
+		Main_Mutex.lock();
 		RC_DATA[AUX2] = t;
 #if defined(SYNCD_TRANSFER)
 		sendCommand(val, 5);
 #endif
-		mtx.unlock();
+		Main_Mutex.unlock();
 		//IssueCommand();
 	}
 	catch (const std::future_error &e)
 	{
 		std::cout << "<setAux2>Caught a future_error with code \"" << e.code()
 				  << "\"\nMessage: \"" << e.what() << "\"\n";
-		//mtx.unlock();
+		//Main_Mutex.unlock();
 	}
 }
 
@@ -678,19 +679,19 @@ void setAux3(int val)
 	try
 	{
 		unsigned char t = (unsigned char)val;
-		mtx.lock();
+		Main_Mutex.lock();
 		RC_DATA[AUX3] = t;
 #if defined(SYNCD_TRANSFER)
 		sendCommand(val, 6);
 #endif
-		mtx.unlock();
+		Main_Mutex.unlock();
 		//IssueCommand();
 	}
 	catch (const std::future_error &e)
 	{
 		std::cout << "<setAux3>Caught a future_error with code \"" << e.code()
 				  << "\"\nMessage: \"" << e.what() << "\"\n";
-		//mtx.unlock();
+		//Main_Mutex.unlock();
 	}
 }
 
@@ -699,19 +700,19 @@ void setAux4(int val)
 	try
 	{
 		unsigned char t = (unsigned char)val;
-		mtx.lock();
+		Main_Mutex.lock();
 		RC_DATA[AUX4] = t;
 #if defined(SYNCD_TRANSFER)
 		sendCommand(val, 7);
 #endif
-		mtx.unlock();
+		Main_Mutex.unlock();
 		//IssueCommand();
 	}
 	catch (const std::future_error &e)
 	{
 		std::cout << "<setAux4>Caught a future_error with code \"" << e.code()
 				  << "\"\nMessage: \"" << e.what() << "\"\n";
-		//mtx.unlock();
+		//Main_Mutex.unlock();
 	}
 }
 
@@ -723,7 +724,7 @@ int setHeading(float heading)
 {
 	try
 	{
-		return setAutoYaw(heading);
+		return setFeedbackYaw(heading);
 	}
 	catch (const std::future_error &e)
 	{
@@ -741,8 +742,6 @@ int setVelocity(vector3D_t val)
 {
 	try
 	{
-		set_X_Velocity(val.x);
-		set_Y_Velocity(val.y);
 		setAltitude(val.z);
 		return 0;
 	}
@@ -764,10 +763,7 @@ int setAltitude(float altitude)
 	{
 		if (IntentionOverride)
 			return 1; // If the Feedback Controllers are overriden by the user manually, Do not attempt anything
-		FeedbackControl::Z_Actuator.actuationControllerlock->lock();
-		FeedbackControl::Z_Actuator.setIntendedActuation(altitude);
-		printf("\n>>%f", altitude);
-		FeedbackControl::Z_Actuator.actuationControllerlock->unlock();
+		setFeedbackAltitude(altitude);
 	}
 	catch (const std::future_error &e)
 	{
@@ -782,58 +778,11 @@ int setAltitude(float altitude)
 	return 0;
 }
 
-int set_X_Velocity(float val)
-{
-	try
-	{
-		if (IntentionOverride)
-			return 1; // If the Feedback Controllers are overriden by the user manually, Do not attempt anything
-					  //FeedbackControl::X_Vrel_Actuator.actuationControllerlock->lock();
-					  //FeedbackControl::X_Vrel_Actuator.setIntendedActuation(val);
-					  //FeedbackControl::X_Vrel_Actuator.actuationControllerlock->unlock();
-	}
-	catch (const std::future_error &e)
-	{
-		std::cout << "<set_X_Velocity>Caught a future_error with code \"" << e.code()
-				  << "\"\nMessage: \"" << e.what() << "\"\n";
-	}
-	catch (std::exception &e)
-	{
-		std::cout << "Error in Outermost set_X_Velocity loop!" << e.what();
-	}
-	return 0;
-}
-
-int set_Y_Velocity(float val)
-{
-	try
-	{
-		if (IntentionOverride)
-			return 1; // If the Feedback Controllers are overriden by the user manually, Do not attempt anything
-					  //FeedbackControl::Y_Vrel_Actuator.actuationControllerlock->lock();
-					  //FeedbackControl::Y_Vrel_Actuator.setIntendedActuation(val);
-					  //FeedbackControl::Y_Vrel_Actuator.actuationControllerlock->unlock();
-	}
-	catch (const std::future_error &e)
-	{
-		std::cout << "<set_Y_Velocity>Caught a future_error with code \"" << e.code()
-				  << "\"\nMessage: \"" << e.what() << "\"\n";
-	}
-	catch (std::exception &e)
-	{
-		std::cout << "Error in Outermost set_Y_Velocity loop!" << e.what();
-	}
-	return 0;
-}
-
 int setAutoYaw(float heading)
 {
 	if (IntentionOverride)
 		return 1; // If the Feedback Controllers are overriden by the user manually, Do not attempt anything
-	//printf("<<<%f>>>", heading);
-	//FeedbackControl::YawActuator.actuationControllerlock->lock();
-	FeedbackControl::YawActuator.setIntendedActuation(heading);
-	//FeedbackControl::YawActuator.actuationControllerlock->unlock();
+	setFeedbackYaw(heading);
 
 	return 0;
 }
@@ -964,43 +913,43 @@ int toggleFeedbackControllers(char type)
 		else
 			IntentionOverride = true;
 
-		int j = 0;
-		if (type == 'R')
-			j = 0;
-		else if (type == 'V')
-			j = 1;
-		else if (type == 'P')
-			j = 2;
-		else if (type == 'A')
-		{
-			/*if(IntentionOverride)
-                IntentionOverride = false;
-            else IntentionOverride = true;*/
-			toggleFeedbackControllers('R');
-			toggleFeedbackControllers('P');
-			toggleFeedbackControllers('V');
-		}
-		else
-			return 1;
+		// int j = 0;
+		// if (type == 'R')
+		// 	j = 0;
+		// else if (type == 'V')
+		// 	j = 1;
+		// else if (type == 'P')
+		// 	j = 2;
+		// else if (type == 'A')
+		// {
+		// 	/*if(IntentionOverride)
+        //         IntentionOverride = false;
+        //     else IntentionOverride = true;*/
+		// 	toggleFeedbackControllers('R');
+		// 	toggleFeedbackControllers('P');
+		// 	toggleFeedbackControllers('V');
+		// }
+		// else
+		// 	return 1;
 
-		if (!FeedbackControl::FeedbackControllerStatus[j])
-		{
-			FeedbackControl::FeedbackControllerStatus[j] = true;
-			printf("\tLocking...");
-			for (int i = 0; i < 3; i++)
-			{
-				FeedbackControl::FeedbackControllers[j][i]->actuationControllerlock->lock();
-			}
-		}
-		else
-		{
-			FeedbackControl::FeedbackControllerStatus[j] = false;
-			printf("\tUnlocking...");
-			for (int i = 0; i < 3; i++)
-			{
-				FeedbackControl::FeedbackControllers[j][i]->actuationControllerlock->unlock();
-			}
-		}
+		// if (!FeedbackControl::FeedbackControllerStatus[j])
+		// {
+		// 	FeedbackControl::FeedbackControllerStatus[j] = true;
+		// 	printf("\tLocking...");
+		// 	for (int i = 0; i < 3; i++)
+		// 	{
+		// 		FeedbackControl::FeedbackControllers[j][i]->actuationControllerlock->lock();
+		// 	}
+		// }
+		// else
+		// {
+		// 	FeedbackControl::FeedbackControllerStatus[j] = false;
+		// 	printf("\tUnlocking...");
+		// 	for (int i = 0; i < 3; i++)
+		// 	{
+		// 		FeedbackControl::FeedbackControllers[j][i]->actuationControllerlock->unlock();
+		// 	}
+		// }
 	}
 	catch (const std::future_error &e)
 	{
@@ -1058,7 +1007,7 @@ void FailSafeMechanism()
 		FailSafeTrigger = true;
 		setAux1(51); // Trigger Failsafe
 		std::cout << "\nFailSafe Locked!";
-		mtx.lock(); // Grab the lock and don't release until the fault is fixed
+		Main_Mutex.lock(); // Grab the lock and don't release until the fault is fixed
 	}
 	catch (const std::future_error &e)
 	{
@@ -1082,7 +1031,7 @@ void ResumeHandler()
 		FailSafeThread->join();
 		if (FailSafeTrigger)
 		{
-			mtx.unlock();
+			Main_Mutex.unlock();
 			FailSafeTrigger = false;
 		}
 		std::cout << "Fault Resumed and Managed!\n";
@@ -1134,6 +1083,12 @@ int ControllerInterface_init(int argc, const char *argv[])
 
 		IntentionOverride = false;
 
+#if defined(MODE_REALDRONE)
+		Sensor_Fusion_init(argc, (char**)argv);
+		MainLocator = new Real_Locator_t();
+		MainIMU = new Real_IMU_t();
+#endif
+
 		MainState = new GlobalState_t(MainLocator, MainIMU);
 
 #if defined(MSP_SERIAL_FORWARDING)
@@ -1154,24 +1109,6 @@ int ControllerInterface_init(int argc, const char *argv[])
 		t10000n->tv_nsec = 10000;
 		t100000n->tv_sec = 0;
 		t100000n->tv_nsec = 100000;
-
-		//SPI_handshake();
-		//IssueCommand();
-
-		FeedbackControl::FeedbackControllers[0][0] = &FeedbackControl::YawActuator;
-		FeedbackControl::FeedbackControllers[0][1] = &FeedbackControl::RollActuator;
-		FeedbackControl::FeedbackControllers[0][2] = &FeedbackControl::PitchActuator;
-		FeedbackControl::FeedbackControllerStatus[0] = false;
-
-		/*FeedbackControl::FeedbackControllers[1][0] = &FeedbackControl::X_Vrel_Actuator;
-        FeedbackControl::FeedbackControllers[1][1] = &FeedbackControl::Y_Vrel_Actuator;
-        FeedbackControl::FeedbackControllers[1][2] = &FeedbackControl::Z_Vrel_Actuator;
-        FeedbackControl::FeedbackControllerStatus[1] = false;
-
-        FeedbackControl::FeedbackControllers[2][0] = &FeedbackControl::X_Actuator;
-        FeedbackControl::FeedbackControllers[2][1] = &FeedbackControl::Y_Actuator;*/
-		FeedbackControl::FeedbackControllers[2][2] = &FeedbackControl::Z_Actuator;
-		FeedbackControl::FeedbackControllerStatus[2] = false;
 
 		setAltitude(0);
 
@@ -1200,7 +1137,7 @@ int ControllerInterface_init(int argc, const char *argv[])
 	{
 		std::cout << "<ControllerInterface_init>Caught a future_error with code \"" << e.code()
 				  << "\"\nMessage: \"" << e.what() << "\"\n";
-		//mtx.unlock();
+		//Main_Mutex.unlock();
 	}
 	return 1;
 }

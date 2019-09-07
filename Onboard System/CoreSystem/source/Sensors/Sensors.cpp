@@ -12,6 +12,7 @@
 #include "Sensors/Sensors.hpp"
 #include "Sensors/Location.hpp"
 #include "Sensors/InertialMeasurement.hpp"
+
 //#include "common.hpp"
 
 float GlobalState_t::get_X_Coordinate()

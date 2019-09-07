@@ -53,11 +53,6 @@ public:
     virtual GeoPoint_t getLocation() = 0;
 };
 
-class GNSS_Locator_t : public GlobalLocator_t
-{
-
-};
-
 #if defined MODE_AIRSIM
 
 #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
@@ -75,11 +70,18 @@ public:
     vector3D_t getVelocity();
     GeoPoint_t getLocation();
 };
+#elif defined(MODE_REALDRONE)
+
+class Real_Locator_t : public GlobalLocator_t
+{
+	public:
+	Real_Locator_t()
+	{
+
+	}
+    vector3D_t getVelocity();
+    GeoPoint_t getLocation();
+};
 
 #endif
-
-class AdvancedGNSS_Locator_t : public GlobalLocator_t
-{
-
-};
 

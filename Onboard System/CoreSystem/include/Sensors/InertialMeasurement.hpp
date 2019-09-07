@@ -46,11 +46,6 @@ public:
     float getPitchDegrees();
 };
 
-class Real_IMU_t : public InertialMeasurement_t
-{
-
-};
-
 #if defined MODE_AIRSIM
 
 #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
@@ -65,6 +60,19 @@ public:
         this->client = client;
     }
 
+    quaternion_t getOrientation();
+    vector3D_t getEulerOrientation();
+};
+
+#elif defined MODE_REALDRONE
+
+class Real_IMU_t : public InertialMeasurement_t
+{
+	public:
+	Real_IMU_t()
+	{
+		
+	}
     quaternion_t getOrientation();
     vector3D_t getEulerOrientation();
 };

@@ -236,9 +236,7 @@ GeoPoint_t AirSim_Locator_t::getLocation() // CHANGE THIS
 {
     try
     {
-        //tmpLocation = AIRSIM_location;
-        // Airsim gives us relative position, with start position as 0,0,0, and altitude is negative above us
-        return AIRSIM_location;
+    	return AIRSIM_location;
     }
     catch (const std::future_error &e)
     {
@@ -250,6 +248,22 @@ GeoPoint_t AirSim_Locator_t::getLocation() // CHANGE THIS
     {
         std::cout << e.what() << '\n';
     }
+}
+
+#elif defined(MODE_REALDRONE)
+
+extern GeoPoint_t REAL_location;
+extern vector3D_t REAL_velocity;
+
+vector3D_t Real_Locator_t::getVelocity() // CHANGE THIS
+{
+    //tmpVelocity = REAL_velocity;
+    return REAL_velocity;
+}
+
+GeoPoint_t Real_Locator_t::getLocation() // CHANGE THIS
+{
+	return REAL_location;
 }
 
 #endif

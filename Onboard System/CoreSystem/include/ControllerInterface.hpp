@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef CONTROLLER_INTERFACE_H
+#define CONTROLLER_INTERFACE_H
+
 #include "stdint.h"
 #include "string"
 #include "iostream"
@@ -13,88 +16,6 @@
 #include "Sensors/Sensors.hpp"
 #include "Sensors/InertialMeasurement.hpp"
 #include "Sensors/Location.hpp"
-
-/* ------------------------------------------------------------------------------------------------------------------------ */
-/* --------------------------------------------------Some Configurations--------------------------------------------------- */
-/* ------------------------------------------------------------------------------------------------------------------------ */
-
-/*
-    Two Modes -> 
-        1. Aisim simulation mode, fake, simple flight controller using Airsim C++ APIs 
-        2. Real Drone Mode, To fly the real thing. Real Flight Controller required.
-*/
-//#define MODE_AIRSIM
-//#define MODE_MAVLINK_SIM
-//#define MODE_DEBUG_NO_FC
-
-#define MODE_REALDRONE
-
-#define SYNCD_TRANSFER
-#define UPDATER_THREAD
-
-/*
-    Outputs to be shown on CLI
-*/
-
-#define UPDATE_STATUS_RC
-#define UPDATE_STATUS_PID
-#define UPDATE_STATUS_IMU
-#define UPDATE_STATUS_WIFI_STRENGTH
-
-#define SHOW_STATUS_RC
-#define SHOW_STATUS_PID
-#define SHOW_STATUS_IMU
-#define SHOW_POSITION
-#define SHOW_VELOCITY
-#define SHOW_STATUS_ARMED
-#define SHOW_STATUS_WIFI_STRENGTH
-
-//#define ACTUATION_INTENTION_RELATIVE
-
-#define CLI_UPDATE_RATE 100 // Miliseconds
-#define FAILSAFE_LANDING_RATE 40
-
-/*
-        There are two possible configurations, 
-        1) RPI unit is on board the drone and communicates with 
-            flight controller, and so the telemetry unit is connected to RPI directly.
-        2) RPI unit is off board the drone and communicates with the flight controller through Radio (wifi/ Xbee)
-    */
-
-/*
-    Telemetry Protocol
-*/
-#if !defined(MODE_DEBUG_NO_FC)
-//#define ONBOARD_SPI_PROTOCOL
-//#define NRF24L01_SPI_PROTOCOL
-//#define I2C_PROTOCOL
-#define MSP_Serial_PROTOCOL
-#endif
-
-/*
-    Telemetry Type
-*/
-//#define NRF24
-//#define WIFI
-//#define Xbee
-
-/*
-    Data Gathering method
-*/
-
-#define CLI_MONITOR
-
-#if defined(MSP_Serial_PROTOCOL)
-//#define MSP_SERIAL_FORWARDING
-//#define MSP_REMOTE_TWEAKS
-
-#endif
-
-#if defined(MODE_AIRSIM)
-#define AIRSIM_MODE_API
-#define AUTONOMOUS_ACTUATION_CONTROLLERS
-//#define AIRSIM_MODE_SOCKETS
-#endif
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ---------------------------------------------------Some Definitions----------------------------------------------------- */
@@ -130,32 +51,14 @@ uint8_t checksum(uint8_t *buf, int len);
 #define HEADING_YAW_DAMPING 1
 #define HEADING_YAW_DAMPING_2 0.8
 
-typedef int (*func_i_t)(int);						// function pointer
-typedef int (*func_vs_t)(std::vector<std::string>); // function pointer
-
-class FlightController
-{
-	std::string name;
-	std::string firmware;
-	std::string variant;
-
-	uintptr_t 	desc;
-public:
-	FlightController(std::string name, std::string firmware, std::string variant, uintptr_t desc) : name(name), firmware(firmware), variant(variant), desc(desc)
-	{
-	}
-};
 
 namespace ControllerInterface
 {
+static InertialMeasurement_t *MainIMU;
+static GlobalLocator_t *MainLocator;
+static GlobalState_t *MainState;
 
-FlightController* MainFC;
-
-InertialMeasurement_t *MainIMU;
-GlobalLocator_t *MainLocator;
-GlobalState_t *MainState;
-
-uint8_t RC_MASTER_DATA[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static uint8_t RC_MASTER_DATA[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 int WriteToPort(int portnum, char *buff, int size);
 int ReadFromPort(int portnum, char *buff, int size);
@@ -169,11 +72,6 @@ void setAux3(int val);
 void setAux4(int val);
 
 void setDistance(float val);
-
-int enableAutoNav();
-int disableAutoNav();
-int getCurrentPath();
-int removePath(int path_id);
 
 uint8_t getGyro(int axis);
 uint8_t getAcc(int axis);
@@ -239,8 +137,6 @@ void takeOff(float altitude = 5);
 
 int setVelocity(vector3D_t val);
 int setPosition(GeoPoint_t val);
-int set_X_Velocity(float val);
-int set_Y_Velocity(float val);
 /*
     High Level APIs 
 */
@@ -260,6 +156,8 @@ void FaultHandler();
 int ControllerInterface_init(int argc, const char *argv[]);
 } // namespace ControllerInterface
 
-volatile std::thread *chnl_refresh;
-volatile std::thread *keyboard_handler;
-volatile std::thread *chnl_update;
+volatile static std::thread *chnl_refresh;
+volatile static std::thread *keyboard_handler;
+volatile static std::thread *chnl_update;
+
+#endif

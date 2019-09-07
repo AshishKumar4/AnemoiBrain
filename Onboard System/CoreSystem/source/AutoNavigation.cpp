@@ -19,6 +19,9 @@
 #include "Sensors/Location.hpp"
 
 #include "ControllerInterface.hpp"
+#include "FeedbackControl.hpp"
+
+#include "AutoNavigation.hpp"
 
 namespace ControllerInterface
 {
@@ -26,36 +29,7 @@ namespace ControllerInterface
 namespace AutoNavigation
 {
 
-int path_id_counter = 1;
-
-class Path_t
-{
-	GeoPoint_t start;
-	GeoPoint_t destination;
-
-	float cruise_velocity;
-
-public:
-	int id;
-
-	Path_t(GeoPoint_t &start, GeoPoint_t &end, float max_velocity = 10)
-	{
-		this->start.set(start.x, start.y, start.z);
-		this->destination.set(end.x, end.y, end.z);
-		this->cruise_velocity = max_velocity;
-		this->id = path_id_counter++;
-	}
-
-	friend void moveOnPath(Path_t &path);
-};
-
-Path_t* 				currentActivePath;
-std::list<Path_t *> 	MainPathQueue;
-std::thread* 			NavigatePathQueue_thread;
-std::atomic<bool> 		navigationInProgress;
-std::map<int, std::list<Path_t *>::iterator> 	idPathMap;	
-
-Path_t *makePath(GeoPoint_t start, GeoPoint_t destination, float max_velocity = 10)
+Path_t *makePath(GeoPoint_t start, GeoPoint_t destination, float max_velocity)
 {
 	Path_t* path = new Path_t(start, destination, max_velocity);
 	return path;
@@ -96,13 +70,10 @@ void moveOnPath(Path_t &path)
 	setAltitude(path.destination.z);
 	setLinearPath(path.start, path.destination);
 	//setDestination(destination.x, destination.y, destination.z);
-	moveThread = new std::thread(positionalLoop);
-	moveThread->join();
+	moveSavedPath();
 	printf("\nJob Done!");
 	navigationInProgress = false;
 }
-
-std::atomic<bool> auto_nav_toggle_flag;
 
 void NavigatePathQueue()
 {

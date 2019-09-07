@@ -13,6 +13,7 @@
 #include <functional>
 
 #include "ControllerInterface.hpp"
+#include "FlightControllerInterface.hpp"
 
 #include "common.hpp"
 
@@ -20,101 +21,7 @@
 #include "Sensors/InertialMeasurement.hpp"
 #include "Sensors/Location.hpp"
 
-/* ------------------------------------------------------------------------------------------------------------------------ */
-/* -----------------------------------------Some Pretty Definitions we may need-------------------------------------------- */
-/* ------------------------------------------------------------------------------------------------------------------------ */
-
-uint8_t RC_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-//using namespace std;
-std::mutex mtx;
-std::mutex failsafe;
-
-std::thread *FailSafeThread;
-
-bool FaultManaged = false;
-bool FailSafeTrigger = false;
-
-#if defined(ONBOARD_SPI_PROTOCOL) || defined(NRF24L01_SPI_PROTOCOL) || defined(I2C_PROTOCOL)
-struct ControlPackets
-{
-    unsigned char magic;
-    unsigned char throttle;
-    unsigned char pitch;
-    unsigned char roll;
-    unsigned char yaw;
-    unsigned char aux1;
-    unsigned char aux2;
-    unsigned char switches;
-    //unsigned char random[9];
-    unsigned char checksum;
-};
-
-struct ResponsePackets
-{
-    unsigned char magic;
-    unsigned char alt;
-    unsigned char pitch;
-    unsigned char roll;
-    unsigned char yaw;
-    unsigned char lat;
-    unsigned char lon;
-    unsigned char heading;
-    //unsigned char random[9];
-    unsigned char checksum;
-};
-
-struct CommandPackets
-{
-    uint8_t magic;
-    uint8_t value;
-    uint8_t channel;
-    uint8_t checksum;
-};
-
-ControlPackets defCp;
-ControlPackets oldDefCp;
-ResponsePackets rff;
-ControlPackets *pp = &defCp;
-ControlPackets *ppold = &oldDefCp;
-#else
-
-#endif
-
-timespec *t100n = new timespec;
-timespec *t1000n = new timespec;
-timespec *t10000n = new timespec;
-timespec *t100000n = new timespec;
-
-uint8_t IMU_Raw[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
-uint8_t PID_Raw[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
-uint8_t Current_PID_Var = 0;
-
-struct MSP_Packet
-{
-    char *buf;
-    int size;
-
-    MSP_Packet(char *buf, int sz) : buf(buf), size(sz){};
-};
-
-MSP_Packet MSP_Agent(char *buf, int size);
-
-/* ------------------------------------------------------------------------------------------------------------------------ */
-/* ----------------------------------------------Some Preprocessor Checkups------------------------------------------------ */
-/* ------------------------------------------------------------------------------------------------------------------------ */
-
-#if defined(MODE_AIRSIM)
-#undef MSP_SERIAL_CLI_MONITOR // We don't use MSP with airsim; instead we may use mavlink
-#undef MSP_Serial_PROTOCOL
-#endif
-
-#if !defined(MODE_AIRSIM) && !defined(MODE_MAVLINK_SIM) && !defined(MODE_DEBUG_NO_FC)
-#define MODE_REALDRONE
-#endif
-
-#if defined(MODE_DEBUG_FC) || (!defined(ONBOARD_SPI_PROTOCOL) && !defined(NRF24L01_SPI_PROTOCOL) && !defined(I2C_PROTOCOL) && !defined(MSP_Serial_PROTOCOL) && !defined(MODE_AIRSIM))
-#define FAKE_PROTOCOL
-#endif
+#include "specificDefs.h"
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ---------------------------------------------For SPI Based Communication------------------------------------------------ */
@@ -209,11 +116,11 @@ void Raw_Init(int argc, const char *argv[])
 #endif
 }
 
-static volatile void sendCommand(uint8_t val, uint8_t channel)
+void sendCommand(uint8_t val, uint8_t channel)
 {
     // First send the value, then the channel, then a dummy and check the returned checksum.
     // if its good, okay otherwise repeat.
-    mtx.lock();
+    Main_Mutex.lock();
     uint8_t *bv = new uint8_t;
     uint8_t *bc = new uint8_t;
     int flg1 = 0, flg2 = 0;
@@ -286,7 +193,7 @@ back:
         delete bc;
         delete tmp1;
         delete tmp2;
-        mtx.unlock();
+        Main_Mutex.unlock();
         return;
     }
     else
@@ -335,7 +242,7 @@ void Raw_Init(int argc, const char *argv[])
 {
 }
 
-static volatile void sendCommand(uint8_t val, uint8_t channel)
+void sendCommand(uint8_t val, uint8_t channel)
 {
 }
 
@@ -375,21 +282,21 @@ void Channel_Updater(int threadId)
     {
         try
         {
-            //mtx.lock();
+            //Main_Mutex.lock();
             FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), rcExpand(RC_DATA[AUX1]), rcExpand(RC_DATA[AUX2]), rcExpand(RC_DATA[AUX3]), rcExpand(RC_DATA[AUX4]));
-            //mtx.unlock();
+            //Main_Mutex.unlock();
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
         catch (const std::future_error &e)
         {
             std::cout << "<Channel_Updater>Caught a future_error with code \"" << e.code()
                       << "\"\nMessage: \"" << e.what() << "\"\n";
-            //mtx.unlock();
+            //Main_Mutex.unlock();
         }
         catch (std::exception &e)
         {
             std::cout << "Error in Channel Updater " << e.what();
-            //mtx.unlock();
+            //Main_Mutex.unlock();
         }
     }
 }
@@ -493,7 +400,7 @@ void Sensors_Updater()
     {
         try 
         {
-            //mtx.lock();
+            //Main_Mutex.lock();
             auto orien = client->getMultirotorState().getOrientation();
             AIRSIM_oritentation.set(orien.w(), orien.x(), orien.y(), orien.z());
             //auto velocity = client->getMultirotorState().kinematics_estimated.twist.linear;
@@ -502,19 +409,19 @@ void Sensors_Updater()
             AIRSIM_location.set(location.y(), location.x(), -location.z());
             auto euler = eulerFromQuaternion(AIRSIM_oritentation);
             AIRSIM_euleroritentation.set(euler.x, euler.y, euler.z);
-            //mtx.unlock();
+            //Main_Mutex.unlock();
             //std::this_thread::sleep_for(std::chrono::miliseconds(1));
         }
         catch (const std::future_error &e)
         {
             std::cout << "<Sensor_Updater>Caught a future_error with code \"" << e.code()
                       << "\"\nMessage: \"" << e.what() << "\"\n";
-            //mtx.unlock();
+            //Main_Mutex.unlock();
         }
         catch (std::exception &e)
         {
             std::cout << "Error in CLI Monitor " << e.what();
-            //mtx.unlock();
+            //Main_Mutex.unlock();
         }
     }
 }
@@ -526,9 +433,9 @@ void Channel_Updater(int threadid)
     {
         try
         {
-            //mtx.lock();
+            //Main_Mutex.lock();
             client->moveByAngleThrottleAsync(rcShrink(255 - RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 5), rcShrink(RC_DATA[YAW], -10.0, 10.0), TIMESLICE);
-            //mtx.unlock();
+            //Main_Mutex.unlock();
 
             std::this_thread::sleep_for(std::chrono::microseconds(int(TIMESLICE * 1000.0 * 1000.0)));
         }
@@ -536,12 +443,12 @@ void Channel_Updater(int threadid)
         {
             std::cout << "<Channel_Updater>Caught a future_error with code \"" << e.code()
                       << "\"\nMessage: \"" << e.what() << "\"\n";
-            //mtx.unlock();
+            //Main_Mutex.unlock();
         }
         catch (std::exception &e)
         {
             std::cout << "Error in CLI Monitor " << e.what();
-            //mtx.unlock();
+            //Main_Mutex.unlock();
         }
     }
     sensors.join();
@@ -570,7 +477,7 @@ void Raw_Init(int argc, const char *argv[])
     ControllerInterface::MainLocator = new AirSim_Locator_t(client);
 }
 
-static volatile void sendCommand(uint8_t val, uint8_t channel)
+void sendCommand(uint8_t val, uint8_t channel)
 {
     //client.moveByAngleThrottleAsync(rcShrink(RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 10), rcShrink(RC_DATA[YAW], -6, 6), 10);
 }
@@ -599,7 +506,7 @@ void Raw_Init(int argc, const char *argv[])
 {
 }
 
-static volatile void sendCommand(uint8_t val, uint8_t channel)
+void sendCommand(uint8_t val, uint8_t channel)
 {
     printf("\n[%d ------> %d", val, channel);
 }
@@ -634,6 +541,16 @@ static volatile void sendCommand(uint8_t val, uint8_t channel)
 #include "LowLevel/msp/FlightController.hpp"
 
 bolatile char *bb = new char[4096];
+
+struct MSP_Packet
+{
+    char *buf;
+    int size;
+
+    MSP_Packet(char *buf, int sz) : buf(buf), size(sz){};
+};
+
+MSP_Packet MSP_Agent(char *buf, int size);
 
 volatile msp::MSP *msp_agent;
 

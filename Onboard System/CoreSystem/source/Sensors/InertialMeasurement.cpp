@@ -247,4 +247,18 @@ vector3D_t AirSim_IMU_t::getEulerOrientation()
     }
 }
 
+#elif defined(MODE_REALDRONE)
+
+extern quaternion_t Real_IMU_oritentation;
+extern vector3D_t Real_IMU_euleroritentation;
+
+quaternion_t Real_IMU_t::getOrientation()
+{
+    return Real_IMU_oritentation;
+}
+
+vector3D_t Real_IMU_t::getEulerOrientation()
+{
+    return Real_IMU_euleroritentation;
+}
 #endif

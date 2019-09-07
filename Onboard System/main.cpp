@@ -11,6 +11,7 @@
 
 #include "AbstractServer.hpp"
 #include "ControllerInterface.hpp"
+#include "AutoNavigation.hpp"
 
 #include "ControlServer.hpp"
 #include "SensorsServer.hpp"
