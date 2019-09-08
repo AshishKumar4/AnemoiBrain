@@ -1,6 +1,6 @@
 #pragma once 
 
-#include "../common.hpp"
+#include "common.hpp"
 #include <string>
 #include <iostream>
 #include <vector>
@@ -36,7 +36,8 @@ public:
     }
 
     virtual quaternion_t getOrientation() = 0;
-    vector3D_t getEulerOrientation();
+    virtual vector3D_t getEulerOrientation();
+	
     float getYaw();
     float getRoll();
     float getPitch();
@@ -60,7 +61,7 @@ public:
         this->client = client;
     }
 
-    quaternion_t getOrientation();
+	quaternion_t getOrientation();
     vector3D_t getEulerOrientation();
 };
 

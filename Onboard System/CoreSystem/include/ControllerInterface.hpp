@@ -54,11 +54,11 @@ uint8_t checksum(uint8_t *buf, int len);
 
 namespace ControllerInterface
 {
-static InertialMeasurement_t *MainIMU;
-static GlobalLocator_t *MainLocator;
-static GlobalState_t *MainState;
+InertialMeasurement_t *MainIMU;
+GlobalLocator_t *MainLocator;
+GlobalState_t *MainState;
 
-static uint8_t RC_MASTER_DATA[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint8_t RC_MASTER_DATA[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 int WriteToPort(int portnum, char *buff, int size);
 int ReadFromPort(int portnum, char *buff, int size);
@@ -156,8 +156,8 @@ void FaultHandler();
 int ControllerInterface_init(int argc, const char *argv[]);
 } // namespace ControllerInterface
 
-volatile static std::thread *chnl_refresh;
-volatile static std::thread *keyboard_handler;
-volatile static std::thread *chnl_update;
+volatile std::thread *chnl_refresh;
+volatile std::thread *keyboard_handler;
+volatile std::thread *chnl_update;
 
 #endif

@@ -42,6 +42,10 @@ vector3D_t 			Real_IMU_euleroritentation;
 GeoPoint_t 			REAL_location;
 vector3D_t 			REAL_velocity;
 
+namespace {
+	
+}
+
 void Sensor_Fusion_worker()
 {
 	while(1)
@@ -52,12 +56,7 @@ void Sensor_Fusion_worker()
 
 int Sensor_Fusion_init(int argc, char **argv)
 {
-    char *settingsFile;
-
-    if (argc == 2)
-        settingsFile = argv[1];
-    else
-        settingsFile = (char *)"RTIMULib";
+    char *settingsFile = (argc > 2) ? argv[2]: (char*)"RTIMULib";
 
     printf("RTIMULibCal - using %s.ini\n", settingsFile);
 

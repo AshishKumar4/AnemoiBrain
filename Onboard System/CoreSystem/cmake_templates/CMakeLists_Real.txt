@@ -24,8 +24,8 @@ find_package(Threads REQUIRED)
 
 # Build our Library
 # Build our Abstract Server and Flight Controller Interface
-set(SERVER_SOURCES "source/AbstractServer.cpp" "source/UserInterface.cpp" "source/FlightControllerInterface.cpp" 
-	"source/FeedbackControl.cpp" "source/AutoNavigation.cpp" 
+set(SERVER_SOURCES "source/AbstractServer.cpp"
+	"source/AutoNavigation.cpp" 
     "source/Sensors/InertialMeasurement.cpp" "source/Sensors/Location.cpp" "source/Sensors/SensorFusion.cpp"
     "source/Sensors/Sensors.cpp"
 	"source/Core.cpp")

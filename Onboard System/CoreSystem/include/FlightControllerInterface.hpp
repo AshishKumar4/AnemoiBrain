@@ -26,5 +26,5 @@ void sendCommand(uint8_t val, uint8_t channel);
 
 namespace ControllerInterface
 {
-static FlightController *MainFC;
+FlightController *MainFC;
 }

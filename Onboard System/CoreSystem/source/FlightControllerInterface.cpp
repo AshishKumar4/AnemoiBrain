@@ -238,6 +238,35 @@ int IssueCommand()
     NRF24_Send((uintptr_t)pp, (uintptr_t)&rff, sizeof(ControlPackets));
 }
 
+void Channel_Updater(int threadId)
+{
+	while(1)
+	{
+		
+	}
+}
+
+void Raw_Init(int argc, const char *argv[])
+{
+}
+
+void sendCommand(uint8_t val, uint8_t channel)
+{
+}
+
+#endif
+
+
+/* ------------------------------------------------------------------------------------------------------------------------ */
+/* -------------------------------------------For MavLink based Communication---------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------ */
+
+#if defined MODE_MAVLINK
+
+int IssueCommand()
+{
+}
+
 void Raw_Init(int argc, const char *argv[])
 {
 }
@@ -400,6 +429,7 @@ void Sensors_Updater()
     {
         try 
         {
+#if !defined(MODE_DEBUG_NO_FC)
             //Main_Mutex.lock();
             auto orien = client->getMultirotorState().getOrientation();
             AIRSIM_oritentation.set(orien.w(), orien.x(), orien.y(), orien.z());
@@ -411,6 +441,7 @@ void Sensors_Updater()
             AIRSIM_euleroritentation.set(euler.x, euler.y, euler.z);
             //Main_Mutex.unlock();
             //std::this_thread::sleep_for(std::chrono::miliseconds(1));
+#endif
         }
         catch (const std::future_error &e)
         {
@@ -433,10 +464,11 @@ void Channel_Updater(int threadid)
     {
         try
         {
+#if !defined(MODE_DEBUG_NO_FC)
             //Main_Mutex.lock();
             client->moveByAngleThrottleAsync(rcShrink(255 - RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 5), rcShrink(RC_DATA[YAW], -10.0, 10.0), TIMESLICE);
             //Main_Mutex.unlock();
-
+#endif
             std::this_thread::sleep_for(std::chrono::microseconds(int(TIMESLICE * 1000.0 * 1000.0)));
         }
         catch (const std::future_error &e)
@@ -459,7 +491,7 @@ void Raw_Init(int argc, const char *argv[])
     const std::string ip = (argc > 1) ? std::string(argv[1]) : "localhost";
     const uint16_t port = (argc > 2) ? std::stoi(argv[2]) : 41451;
     //rpc::server srv(8080);
-
+#if !defined(MODE_DEBUG_NO_FC)
     //cout << "Press Enter to enable API control" << endl; cin.get();
     client = new msr::airlib::MultirotorRpcLibClient(ip, port);
     printf("\nEnabling AirSim API Control");
@@ -471,6 +503,9 @@ void Raw_Init(int argc, const char *argv[])
 
     //cout << "Press Enter to takeoff" << endl; cin.get();
     //client->takeoffAsync(5); //*/
+#else 
+	client = nullptr;
+#endif
     printf("\nInitialization complete");
 	ControllerInterface::MainFC = new FlightController("master", "AirSim", "Simple FC", (uintptr_t)client);
     ControllerInterface::MainIMU = new AirSim_IMU_t(client);
@@ -489,7 +524,7 @@ void sendCommand(uint8_t val, uint8_t channel)
 /* --------------------------------------For Testing without FC, on development PC----------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
 
-#if defined(MODE_DEBUG_NO_FC) || defined(FAKE_PROTOCOL)
+#if !defined(MODE_AIRSIM) && (defined(MODE_DEBUG_NO_FC) || defined(FAKE_PROTOCOL))
 
 int IssueCommand()
 {

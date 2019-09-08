@@ -257,7 +257,6 @@ extern vector3D_t REAL_velocity;
 
 vector3D_t Real_Locator_t::getVelocity() // CHANGE THIS
 {
-    //tmpVelocity = REAL_velocity;
     return REAL_velocity;
 }
 

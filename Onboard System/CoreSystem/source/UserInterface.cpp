@@ -116,7 +116,7 @@ void Channel_ViewRefresh(int threadId)
             if (show_IMU)
             {
 #if defined(SHOW_STATUS_IMU)
-                printf("\nHeading: %f,\tPitch: %f,\tRoll %f", ControllerInterface::getHeading(),ControllerInterface::getPitchDegrees(), ControllerInterface::getRollDegrees());
+                printf("\nHeading: %f,\tPitch: %f,\tRoll %f", ControllerInterface::getHeadingDegrees(),ControllerInterface::getPitchDegrees(), ControllerInterface::getRollDegrees());
 #endif
             }
 #endif

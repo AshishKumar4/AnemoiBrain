@@ -26,286 +26,264 @@ namespace Onboard
 
 int opt = 1;
 
-void AbstractServer::AddChannels(int index, func_iii_t function, func_iii_t initializer, int subchannel) // Should be called once
+void AbstractServer::AddChannels(int index, func_iii_t maincode, func_iii_t initializer) // Should be called once
 {
-    if (ChannelOperators.size() <= index)
-    {
-        std::vector<func_iii_t> vec;
-        vec.push_back(function);
-        ChannelOperators.push_back(vec);
-        ChannelInitializers.push_back(initializer);
-        server_fd.push_back(0);
-        addresses.push_back(NULL);
-    }
-    else
-    {
-        if (ChannelOperators[index].size() <= subchannel)
-        {
-            ChannelOperators[index].push_back(function);
-        }
-        else
-        {
-            ChannelOperators[index][subchannel] = function;
-        }
-        ChannelInitializers[index] = initializer;
-    }
+	if (ChannelOperators.size() <= index)
+	{
+		// std::vector<func_iii_t> vec;
+		// vec.push_back(function);
+		ChannelOperators.push_back(maincode); // (vec)
+		ChannelInitializers.push_back(initializer);
+		server_fd.push_back(0);
+		addresses.push_back(NULL);
+	}
+	else
+	{
+		// if (ChannelOperators[index].size() <= subchannel)
+		// {
+		// 	ChannelOperators[index].push_back(function);
+		// }
+		// else
+		// {
+		// 	ChannelOperators[index][subchannel] = function;
+		// }
+		ChannelInitializers[index] = initializer;
+		ChannelOperators[index] = maincode;
+	}
 }
 
-void AbstractServer::CreateChannels(int index, func_iii_t function, func_iii_t initializer, int subchannel, bool initPort) // Should be called once
+void AbstractServer::CreateChannels(int index, func_iii_t maincode, func_iii_t initializer, bool initPort) // Should be called once
 {
-    AddChannels(index, function, initializer, subchannel);
-    if (initPort)
-    {
-        SetupChannel(PORT_BASE + index, index);
-    }
-    this->ListenerThreads.push_back(new std::thread(&AbstractServer::ChannelListener, index, this));
+	AddChannels(index, maincode, initializer);
+	if (initPort)
+	{
+		SetupChannel(PORT_BASE + index, index);
+	}
+	this->ListenerThreads.push_back(new std::thread(&AbstractServer::ChannelListener, index, this));
 }
 
 int AbstractServer::LaunchThreads(bool initPort)
 {
-    if (!ListenerThreads.size())
-    {
-        for (int i = 0; i < ChannelOperators.size(); i++)
-        {
-            if (initPort)
-                SetupChannel(PORT_BASE + i, i);
-            this->ListenerThreads.push_back(new std::thread(&AbstractServer::ChannelListener, i, this));
-        }
-    }
-    return 0;
+	if (!ListenerThreads.size())
+	{
+		for (int i = 0; i < ChannelOperators.size(); i++)
+		{
+			if (initPort)
+				SetupChannel(PORT_BASE + i, i);
+			this->ListenerThreads.push_back(new std::thread(&AbstractServer::ChannelListener, i, this));
+		}
+	}
+	return 0;
 }
 
 int AbstractServer::JoinThreads()
 {
-    for (int i = 0; i < ChannelOperators.size(); i++)
-    {
-        ListenerThreads[i]->join();
-    }
-    return 0;
+	for (int i = 0; i < ChannelOperators.size(); i++)
+	{
+		ListenerThreads[i]->join();
+	}
+	return 0;
 }
 
 AbstractServer::AbstractServer(int portBase)
 {
-    PORT_BASE = portBase;
+	PORT_BASE = portBase;
 }
 
 AbstractServer::AbstractServer(AbstractServer *obj)
 {
-    PORT_BASE = obj->PORT_BASE;
-    // Make this up
+	PORT_BASE = obj->PORT_BASE;
+	// Make this up
 }
 
 AbstractServer::~AbstractServer()
 {
-    // TODO: Release all the sockets here
+	// TODO: Release all the sockets here
 }
 
-void AbstractServer::ChannelLogic(int i, int j, int fd, AbstractServer *thisObj)
+void AbstractServer::ChannelLogic(int i, int fd, AbstractServer *thisObj)
 {
-    try
-    {
-        while (1)
-        {
-            try
-            {
-                if (thisObj->ChannelOperators[i][j](i, fd))
-                    break;
-            }
-            catch (const std::future_error &e)
-            {
-                std::cout << "<AbstractServer::ChannelLogic>[inner]Caught a future_error with code \"" << e.code()
-                          << "\"\nMessage: \"" << e.what() << "\"\n";
-            }
-            catch (std::exception &e)
-            {
-                std::cout << "Error in Outermost Z_Actuator loop!" << e.what();
-            }
-        }
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<AbstractServer::ChannelLogic>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (std::exception &e)
-    {
-        std::cout << "Some ERROR!!!" << e.what() << "\n";
-    }
+	while (1)
+	{
+		try
+		{
+			if (thisObj->ChannelOperators[i](i, fd))
+			{
+				printf("\nGOT Connection Break [%d]!!! EXITING....", i);
+				return;
+			}
+		}
+		catch (std::exception &e)
+		{
+			std::cout << "Error in Channel Logic loop!" << e.what();
+		}
+	}
 }
+
+namespace
+{
 
 int faultOccured = false;
-
 std::mutex FaultTrigger;
+
+} // Anonymous namespace
+
+void AbstractServer::triggerFault()
+{
+	FaultTrigger.lock();
+	if (!faultOccured)
+		this->ExceptionHandler();
+	faultOccured = true;
+	FaultTrigger.unlock();
+}
+
+void AbstractServer::manageFault()
+{
+	FaultTrigger.lock(); // Only let a Single thread trigger the Fault!
+	if (faultOccured)
+		this->ResumeHandler();
+	faultOccured = false;
+	FaultTrigger.unlock();
+}
 
 void AbstractServer::ChannelListener(int i, AbstractServer *thisObj)
 {
-    int PORT = i + thisObj->PORT_BASE;
-    //thisObj->SetupChannel(PORT, i);
-    int new_socket;
-    ssize_t valread = 0;
+	int addrlen = sizeof(struct sockaddr);
+	int PORT = i + thisObj->PORT_BASE;
+	//thisObj->SetupChannel(PORT, i);
+	int new_socket;
+	ssize_t valread = 0;
 back:
-    thisObj->smtx.lock();
-    int sfd = thisObj->server_fd[i];
-    struct sockaddr_in *address = thisObj->addresses[i];
-    char *buff = new char[4096];
+	thisObj->smtx.lock();
+	int sfd = thisObj->server_fd[i];
+	struct sockaddr_in *address = thisObj->addresses[i];
+	char *buff = new char[4096];
 
-    std::cout << "\n\nServer Started at port " << PORT << " Successfully...";
-    if (listen(sfd, 5) < 0)
-    {
-        perror("listen");
-        exit(EXIT_FAILURE);
-    }
-    std::cout << "\nwaiting for incoming Connections...";
-    thisObj->smtx.unlock();
-    try
-    {
-        while (1)
-        {
-            try
-            {
-                int addrlen = sizeof(struct sockaddr);
-                if ((new_socket = accept(sfd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
-                {
-                    //perror("accept");
-                    //exit(EXIT_FAILURE);
-                    printf("accept");
-                    delete[] buff;
-                    goto back;
-                }
-                if (faultOccured)
-                {
-                    FaultTrigger.lock(); // Only let a Single thread trigger the Fault!
-                    if (faultOccured)
-                        thisObj->ResumeHandler();
-                    faultOccured = false;
-                    FaultTrigger.unlock();
-                }
-                std::cout << "\nGot an incoming connection request...\n";
-                if (thisObj->ChannelInitializers[i](i, new_socket))
-                {
-                    std::cout << "\nHandshake Not Success!";
-                    continue;
-                }
-                try
-                {
-                    /*while (1)
-                {
-                    if (thisObj->ChannelOperators[i](i, new_socket))
-                        break;
-                }*/
-                    std::vector<std::thread *> reader;
-                    for (int k = 0; k < thisObj->ChannelOperators[i].size(); k++)
-                    {
-                        reader.push_back(new std::thread(&(thisObj->ChannelLogic), i, k, new_socket, thisObj));
-                    }
-                    for (int k = 0; k < thisObj->ChannelOperators[i].size(); k++)
-                    {
-                        reader[k]->join();
-                    }
-                    throw std::runtime_error("Broken Pipe");
-                }
-                catch (const std::future_error &e)
-                {
-                    std::cout << "<AbstractServer::ChannelListener>[01]Caught a future_error with code \"" << e.code()
-                              << "\"\nMessage: \"" << e.what() << "\"\n";
-                    FaultTrigger.lock();
-                    if (!faultOccured)
-                        thisObj->ExceptionHandler();
-                    faultOccured = true;
-                    FaultTrigger.unlock();
-                }
-                catch (std::exception &e)
-                {
-                    std::cout << "\nBroken Pipe, Waiting for incoming Connections...";
-                    FaultTrigger.lock();
-                    if (!faultOccured)
-                        thisObj->ExceptionHandler();
-                    faultOccured = true;
-                    FaultTrigger.unlock();
-                }
-            }
-            catch (const std::future_error &e)
-            {
-                std::cout << "<AbstractServer::ChannelListener>[02]Caught a future_error with code \"" << e.code()
-                          << "\"\nMessage: \"" << e.what() << "\"\n";
-                std::cout << "Some Serious ERROR!!!" << e.what() << "\n";
-                FaultTrigger.lock();
-                if (!faultOccured)
-                    thisObj->ExceptionHandler();
-                faultOccured = true;
-                FaultTrigger.unlock();
-            }
-            catch (std::exception &e)
-            {
-                std::cout << "Some Serious ERROR!!!" << e.what() << "\n";
-                FaultTrigger.lock();
-                if (!faultOccured)
-                    thisObj->ExceptionHandler();
-                faultOccured = true;
-                FaultTrigger.unlock();
-            }
-        }
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<AbstractServer::ChannelListener>[03]Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cout << "Error in AbstractServer::ChannelListener --> " << e.what() << '\n';
-    }
+	std::cout << "\n\nServer Started at port " << PORT << " Successfully...";
+	fflush(stdout);
+	if (listen(sfd, 5) < 0)
+	{
+		perror("listen");
+	}
+	std::cout << "\nwaiting for incoming Connections...";
+	fflush(stdout);
+	thisObj->smtx.unlock();
+
+	try
+	{
+		while (1)
+		{
+			try
+			{
+				// Listen for incoming connection...
+				if ((new_socket = accept(sfd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
+				{
+					printf("accept");
+					goto back;
+				}
+				std::cout << "\nGot an incoming connection request...\n";
+				fflush(stdout);
+				if (thisObj->ChannelInitializers[i](i, new_socket))
+				{
+					perror("\nHandshake Not Success!");
+					continue;
+				}
+				// Resume any Fault Handlers previously called
+				if (faultOccured)
+				{
+					thisObj->manageFault();
+				}
+				try
+				{
+					// Launch actual worker threads
+					// std::vector<std::thread *> reader;
+					// for (int k = 0; k < thisObj->ChannelOperators[i].size(); k++)
+					// {
+					// 	reader.push_back(new std::thread(&(thisObj->ChannelLogic), i, k, new_socket, thisObj));
+					// }
+					// for (int k = 0; k < reader.size(); k++)
+					// {
+					// 	reader[k]->join();
+					// }
+					thisObj->ChannelLogic(i, new_socket, thisObj);
+					throw std::runtime_error("Broken Pipe");
+				}
+				catch (std::exception &e)
+				{
+					perror(e.what());
+					thisObj->triggerFault();
+				}
+			}
+			catch (std::exception &e)
+			{
+				perror(e.what());
+				thisObj->triggerFault();
+			}
+		}
+	}
+	catch (const std::future_error &e)
+	{
+		std::cout << "<AbstractServer::ChannelListener>[03]Caught a future_error with code \"" << e.code()
+				  << "\"\nMessage: \"" << e.what() << "\"\n";
+		fflush(stdout);
+	}
+	catch (const std::exception &e)
+	{
+		std::cout << "Error in AbstractServer::ChannelListener --> " << e.what() << '\n';
+		fflush(stdout);
+	}
+	perror("\nReached the end of Channel Listener, Shouldn't have been here!");
 }
 
 int AbstractServer::SetupChannel(int port, int channel) // This would create a port for a particular channel
 {
-    smtx.lock();
-    int sfd;
-    if (server_fd[channel])
-    {
-        //delete server_fd[channel];
-        //free((void*)server_fd[channel]);
-        //delete addresses[channel];
-    }
-    struct sockaddr_in *address = new struct sockaddr_in;
-    // Creating socket file descriptor
-    if ((sfd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
-    {
-        perror("socket failed");
-        exit(EXIT_FAILURE);
-    }
+	smtx.lock();
+	int sfd;
+	if (server_fd[channel])
+	{
+		//delete server_fd[channel];
+		//free((void*)server_fd[channel]);
+		//delete addresses[channel];
+	}
+	struct sockaddr_in *address = new struct sockaddr_in;
+	// Creating socket file descriptor
+	if ((sfd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+	{
+		perror("socket failed");
+		// exit(EXIT_FAILURE);
+	}
 
-    // Forcefully attaching socket to the port
-    if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)))
-    {
-        perror("setsockopt");
-        exit(EXIT_FAILURE);
-    }
-    address->sin_family = AF_INET;
-    address->sin_addr.s_addr = INADDR_ANY;
-    address->sin_port = htons(port);
+	// Forcefully attaching socket to the port
+	if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)))
+	{
+		perror("setsockopt");
+		//exit(EXIT_FAILURE);
+	}
+	address->sin_family = AF_INET;
+	address->sin_addr.s_addr = INADDR_ANY;
+	address->sin_port = htons(port);
 
-    // Forcefully attaching socket to the given port
-    //bind(sfd, (struct sockaddr *)address, sizeof(struct sockaddr_in));
-    if (::bind(sfd, (struct sockaddr *)address, sizeof(struct sockaddr_in)) < 0)
-    {
-        perror("bind failed");
-        exit(EXIT_FAILURE);
-    }
-    try
-    {
-        // TODO: Free up the existing sockets
-        server_fd[channel] = sfd;
-        //delete addresses[channel];
-        addresses[channel] = address;
-    }
-    catch (...)
-    {
-        perror("Error while Saving the Socket Memory Structures");
-        exit(EXIT_FAILURE);
-    }
-    std::cout << "Socket for port " << port << " Created Successfully!" << std::endl;
-    smtx.unlock();
-    return 0;
+	// Forcefully attaching socket to the given port
+	//bind(sfd, (struct sockaddr *)address, sizeof(struct sockaddr_in));
+	if (::bind(sfd, (struct sockaddr *)address, sizeof(struct sockaddr_in)) < 0)
+	{
+		perror("bind failed");
+		// exit(EXIT_FAILURE);
+	}
+	try
+	{
+		// TODO: Free up the existing sockets
+		server_fd[channel] = sfd;
+		//delete addresses[channel];
+		addresses[channel] = address;
+	}
+	catch (...)
+	{
+		perror("Error while Saving the Socket Memory Structures");
+		// exit(EXIT_FAILURE);
+	}
+	std::cout << "Socket for port " << port << " Created Successfully!" << std::endl;
+	smtx.unlock();
+	return 0;
 }
 } // namespace Onboard

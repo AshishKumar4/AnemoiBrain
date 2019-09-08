@@ -13,11 +13,6 @@
 //#include "common.hpp"
 #include "Sensors/InertialMeasurement.hpp"
 
-namespace // Anonymous Namespace
-{
-
-}; // namespace
-
 vector3D_t InertialMeasurement_t::getEulerOrientation() // Returns Euler angle orientation
 {
     try
@@ -79,7 +74,7 @@ float InertialMeasurement_t::getYaw() // Gives in Radians
     //this->yawLock.lock();
     try
     {
-        h = this->getEulerOrientation().z;//yawBuffer;
+		h = this->getEulerOrientation().z;
     }
     catch (const std::future_error &e)
     {
@@ -213,7 +208,6 @@ quaternion_t AirSim_IMU_t::getOrientation()
 {
     try
     {
-        //tmporien = AIRSIM_oritentation;
         return AIRSIM_oritentation;
     }
     catch (const std::future_error &e)

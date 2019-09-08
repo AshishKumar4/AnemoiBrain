@@ -38,7 +38,7 @@ int main(int argc, const char *argv[])
         rpcStub->bind("gotoLocation", &(ControllerInterface::gotoLocation));
         rpcStub->bind("addWaypoint", &(ControllerInterface::addWaypoint));
         rpcStub->bind("getCurrentPath", &(ControllerInterface::getCurrentPath));
-        rpcStub->bind("removePath", &(ControllerInterface::removePath));
+        rpcStub->bind("removePath", &(ControllerInterface::removePathFromCurrentTrajectory));
 
         rpcStub->bind("enableAutoNav", &(ControllerInterface::enableAutoNav));
         rpcStub->bind("disableAutoNav", &(ControllerInterface::disableAutoNav));

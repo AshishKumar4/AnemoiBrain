@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.0)
 project(OnboardCore)
 set (ONBOARD_ROOT ./)
 set (AIRSIM_ROOT /opt/AirSim)
-set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 17)
 
 # We need to compile in AIRSIM MODE
 add_definitions(-DMODE_AIRSIM)
@@ -36,8 +36,8 @@ find_package(Threads REQUIRED)
 
 # Build our Library
 # Build our Abstract Server and Flight Controller Interface
-set(SERVER_SOURCES "source/AbstractServer.cpp" "source/UserInterface.cpp" "source/FlightControllerInterface.cpp" 
-	"source/FeedbackControl.cpp" "source/AutoNavigation.cpp" 
+set(SERVER_SOURCES "source/AbstractServer.cpp"
+	"source/AutoNavigation.cpp" 
     "source/Sensors/InertialMeasurement.cpp" "source/Sensors/Location.cpp" "source/Sensors/SensorFusion.cpp"
     "source/Sensors/Sensors.cpp"
 	"source/Core.cpp")

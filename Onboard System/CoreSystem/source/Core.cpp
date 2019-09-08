@@ -1,3 +1,4 @@
+
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
 #include <fcntl.h>
@@ -17,11 +18,18 @@
 #include "Sensors/InertialMeasurement.hpp"
 #include "Sensors/Location.hpp"
 #include "ControllerInterface.hpp"
-#include "FlightControllerInterface.hpp"
 #include "specificDefs.h"
-#include "UserInterface.hpp"
-#include "FeedbackControl.hpp"
+#include "CommonControl.hpp"
 #include "AutoNavigation.hpp"
+
+#include "FlightControllerInterface.cpp"
+#include "UserInterface.cpp"
+
+#if defined(MODE_CONTROL_EXTERNAL)
+#include "ExternalControl.cpp"
+#else
+#include "FeedbackControl.cpp"
+#endif
 
 namespace ControllerInterface
 {
@@ -859,8 +867,12 @@ int AutoNavigate(GeoPoint_t destination, GeoPoint_t start = lastDestination)
 	try
 	{
 		printf("\n Got here!");
-		AutoNavigation::Path_t* path = AutoNavigation::makePath(start, destination);
-		AutoNavigation::addToPathQueue(path);
+		AutoNavigation::Path_t* path = AutoNavigation::makeLinearPath(start, destination);
+		printf("\nDone till here");
+		fflush(stdout);
+		getCurrentTrajectory()->addPath(path);
+		printf("\nDone till here");
+		fflush(stdout);
 		lastDestination.set(destination);
 		return path->id;
 	}

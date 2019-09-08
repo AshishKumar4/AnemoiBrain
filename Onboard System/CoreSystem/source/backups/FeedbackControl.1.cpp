@@ -32,7 +32,7 @@ namespace ControllerInterface
     All SI Units, Meters, Degrees
     Forward pitch direction in Y Axis, Left Right is X axis, up is Z
 */
-std::atomic<bool> IntentionOverride;
+bool IntentionOverride;
 
 float getPathLength();
 float getPathDeviation();

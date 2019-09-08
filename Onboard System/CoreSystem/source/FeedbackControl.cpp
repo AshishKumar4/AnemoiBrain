@@ -19,7 +19,7 @@
 #include "Sensors/Location.hpp"
 
 #include "ControllerInterface.hpp"
-#include "FeedbackControl.hpp"
+#include "CommonControl.hpp"
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* -----------------------------------------------General Purpose tools---------------------------------------------------- */
@@ -33,6 +33,9 @@ namespace ControllerInterface
     All SI Units, Meters, Degrees
     Forward pitch direction in Y Axis, Left Right is X axis, up is Z
 */
+
+float getPathDeviation();
+float getPathLength();
 
 float E_VALUE = 0;
 
@@ -183,23 +186,17 @@ public:
 	{
 		try
 		{
-			/* if (IntentionOverride)
+			 if (IntentionOverride)
             {
-                return; // If the Feedback Controllers are overriden by the user manually, Do not attempt anything
+                return -1; // If the Feedback Controllers are overriden by the user manually, Do not attempt anything
             }
-            this->actuationControllerlock->lock();*/
+            //this->actuationControllerlock->lock();*/
 			float h = this->getCurrentStateValues();
 			float newError = h - this->getIntendedActuation();
-			/*if (h == newError)
-            {
-                this->actuationControllerlock->unlock();
-                std::this_thread::sleep_for(std::chrono::microseconds(int(deltaTime * 1000)));
 
-                return;
-            }*/
 			// Any processing needed?
-			//printf("\n{>>%f, \t%f<<},", h, newError);
 			newError = ErrorProcessor(newError);
+			//printf("\n{>>%f, \t%f<<},", h, newError);
 
 			if (this->EscapeFunction(newError, oldError))
 			{
@@ -207,15 +204,6 @@ public:
 				return -1;
 			}
 
-			/*float absNewError = std::abs(newError);
-            if (absNewError <= 2)
-            {
-                //if (this->ACTUATION_HALT_VALUE >= 0)
-                //    this->setActuation(this->ACTUATION_HALT_VALUE); // Make it not move anymore
-                //printf("\nDone...%f %f", newError, h);            
-                this->actuationControllerlock->unlock();
-                return;
-            }*/
 			// Our Equation
 			float P_term = newError * this->CONTROLLER_P; //clamp(newError * errorScale, -180, 180, -127, 127);
 			this->errorAccumulator += double(newError) * deltaTime * 0.001;
@@ -230,7 +218,7 @@ public:
 			float E_term = derivative * (1 - tanh(abs(double(newError) * this->CONTROLLER_E_RANGE))) * this->CONTROLLER_E;
 			//float E_term = (derivative / (double(newError)*double(newError))) * this->CONTROLLER_E;
 
-			if (this->CONTROLLER_E)
+			//if (this->CONTROLLER_E)
 			{
 				//printf(" <%f> ", E_term);
 			}
@@ -308,6 +296,7 @@ public:
 		this->CONTROLLER_P = 0.8;
 		this->CONTROLLER_I = 0;
 		this->CONTROLLER_D = 10;
+		this->CONTROLLER_E = 0;
 
 		ErrorProcessor = DegreeRoundclamp;
 	}
@@ -422,14 +411,8 @@ int destroy_RotationalControllers()
 /*--------------------------------------------- LateralControllers (Positional) --------------------------------------------*/
 /* ------------------------------------------------------------------------------------------------------------------------ */
 
-float AltitudeControllerErrorScaler(float val) // Use a function
+float InverseErrorScaler(float val) // Use a function
 {
-	return -val; //- tanh(val/max_scale) * max_scale;
-}
-
-float Planner_X_ControllerErrorScaler(float val) // Use a function
-{
-	//printf("Xerr: %f\t", val);
 	return -val; //- tanh(val/max_scale) * max_scale;
 }
 
@@ -443,10 +426,10 @@ float LateralControllerErrorScaler(float val) // Use a function
 {
 	//printf("Yerr: %f\t", val);
 
-	if (val <= 4)
-	{
-		val /= 1.5;
-	}
+	// if (val <= 4)
+	// {
+	// 	val /= 1.5;
+	// }
 	return val;
 }
 
@@ -468,13 +451,6 @@ public:
 		ACTUATION_MAX_VALUE = 60;  //0;
 		ACTUATION_MIN_VALUE = -60; //255;
 
-		/*actuateVal = 127;
-        currentactuation = 127;
-        ACTUATION_HALT_VALUE = 127;
-        ACTUATION_MAX_VALUE = 105;
-        ACTUATION_MIN_VALUE = 155;
- */
-
 		oldError = 1;
 		oldAbsError = 1;
 		deltaTime = 1;
@@ -483,10 +459,10 @@ public:
 		this->CONTROLLER_P = 0.6;
 		this->CONTROLLER_I = 0.01;
 		this->CONTROLLER_D = 1000;
-		this->CONTROLLER_E = 10000;
-		this->CONTROLLER_E_RANGE = 0.085;
+		this->CONTROLLER_E = 30000;
+		this->CONTROLLER_E_RANGE = 0.07;
 
-		ErrorProcessor = Planner_X_ControllerErrorScaler;
+		ErrorProcessor = InverseErrorScaler;
 	}
 
 	void deployFeedbackControllers()
@@ -510,22 +486,10 @@ public:
 		ACTUATION_HALT_VALUE = 0;  //127;
 		ACTUATION_MAX_VALUE = 90;  //0;
 		ACTUATION_MIN_VALUE = -90; //255;
-		/*
-        actuateVal = 127;
-        currentactuation = 127;
-        ACTUATION_HALT_VALUE = 127;
-        ACTUATION_MAX_VALUE = 155;
-        ACTUATION_MIN_VALUE = 105; */
 
 		oldError = 1;
 		oldAbsError = 1;
 		deltaTime = 1;
-
-		// this->MAX_I_BOUNDARY = 100;
-		// this->CONTROLLER_P = 4.5;
-		// this->CONTROLLER_I = 0.001;
-		// this->CONTROLLER_D = 15;
-		// this->CONTROLLER_E = 0;
 
 		this->MAX_I_BOUNDARY = 1000;
 		this->CONTROLLER_P = 3;
@@ -569,7 +533,7 @@ public:
 		this->CONTROLLER_D = 1000;
 		this->CONTROLLER_E_RANGE = 0.16;
 		E_VALUE = 100000;
-		//this->CONTROLLER_E = 40000;
+		//this->CONTROLLER_E = 100000;
 
 		ErrorProcessor = LateralControllerErrorScaler;
 		//EscapeFunction = PositionHoldEscapeFunction;
@@ -606,7 +570,7 @@ public:
 		this->CONTROLLER_I = 0.01;
 		this->CONTROLLER_D = 10000;
 
-		ErrorProcessor = AltitudeControllerErrorScaler;
+		ErrorProcessor = InverseErrorScaler;
 	}
 
 	void deployFeedbackControllers()
@@ -960,8 +924,8 @@ inline void updateTargetStatus(GeoPoint_t currentLocation = getLocation())
 	//float dev = sinf(dTheta) * currentDistance;
 
 	float lenXY = currentDistance;
-
-	printf("\n{{%f=>%f} {%f},\t{%f}}", desiredHeading, circularToSignAngle(getHeadingDegrees()), lenXY, dev);
+	//desiredHeading, circularToSignAngle(getHeadingDegrees())
+	printf("\n{%f},\t{%f}}", lenXY, dev);
 	currentDeviation = dev;
 	FeedbackControl::YawActuator.setIntendedActuation(desiredHeading);
 }
@@ -1000,7 +964,7 @@ void positionalLoop()
 	//gazeThread = new std::thread(gazeLoop);
 	shouldHoldPosition = false;
 	updateTargetStatus();
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	std::this_thread::sleep_for(std::chrono::milliseconds(1500));
 	std::thread *distanceControllerThread = new std::thread(distanceController);
 	std::thread *deviationControllerThread = new std::thread(deviationController);
 	while (1)
@@ -1106,8 +1070,9 @@ int setFeedbackYaw(float heading)
 
 int moveSavedPath()
 {
-	moveThread = new std::thread(positionalLoop);
-	moveThread->join();
+	// moveThread = new std::thread(positionalLoop);
+	// moveThread->join();
+	positionalLoop();
 	return 0;
 }
 

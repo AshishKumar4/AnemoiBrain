@@ -8,15 +8,15 @@
 /* -----------------------------------------Some Pretty Definitions we may need-------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
 
-static uint8_t RC_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+uint8_t RC_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 //using namespace std;
-static std::mutex Main_Mutex;
-static std::mutex failsafe;
+std::mutex Main_Mutex;
+std::mutex failsafe;
 
-static std::thread *FailSafeThread;
+std::thread *FailSafeThread;
 
-static bool FaultManaged = false;
-static bool FailSafeTrigger = false;
+bool FaultManaged = false;
+bool FailSafeTrigger = false;
 
 #if defined(ONBOARD_SPI_PROTOCOL) || defined(NRF24L01_SPI_PROTOCOL) || defined(I2C_PROTOCOL)
 struct ControlPackets
@@ -64,14 +64,14 @@ ControlPackets *ppold = &oldDefCp;
 
 #endif
 
-static timespec *t100n = new timespec;
-static timespec *t1000n = new timespec;
-static timespec *t10000n = new timespec;
-static timespec *t100000n = new timespec;
+timespec *t100n = new timespec;
+timespec *t1000n = new timespec;
+timespec *t10000n = new timespec;
+timespec *t100000n = new timespec;
 
-static uint8_t IMU_Raw[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
-static uint8_t PID_Raw[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
-static uint8_t Current_PID_Var = 0;
+uint8_t IMU_Raw[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+uint8_t PID_Raw[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+uint8_t Current_PID_Var = 0;
 
-static std::atomic<bool> IntentionOverride;
+bool IntentionOverride;
 

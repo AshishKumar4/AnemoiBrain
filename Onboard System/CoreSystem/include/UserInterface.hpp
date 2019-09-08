@@ -3,8 +3,8 @@
 #if defined(CLI_MONITOR)
 
 typedef int (*func_t)(); // function pointer
-static func_t KeyMap[256];
-static int show_RC = 0, show_PID = 0, show_IMU = 0, show_Wifi = 0, show_armed = 1, show_VELOCITY = 0, show_POSITION = 0;
+func_t KeyMap[256];
+int show_RC = 0, show_PID = 0, show_IMU = 0, show_Wifi = 0, show_armed = 1, show_VELOCITY = 0, show_POSITION = 0;
 
 
 void Channel_ViewRefresh(int threadId);

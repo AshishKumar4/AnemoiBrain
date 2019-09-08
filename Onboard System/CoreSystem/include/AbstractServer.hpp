@@ -9,6 +9,7 @@
 #include <sstream>
 #include <thread> // std::thread
 #include <mutex>
+#include <functional>
 
 namespace Onboard
 {
@@ -39,8 +40,8 @@ namespace Onboard
 /* ---------------------------------------------------Main Definitions----------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
     
-typedef int (*func_iii_t)(int, int); //void function pointer
-typedef void (*func_vi_t)(int); //void function pointer
+ typedef int (*func_iii_t)(int, int); //void function pointer
+// typedef void (*func_vi_t)(int); //void function pointer
 
 class AbstractServer
 {
@@ -54,21 +55,26 @@ class AbstractServer
 
     int SetupChannel(int port, int channel); // This would create a port for a particular channel
     static void ChannelListener(int i, AbstractServer* thisObj);
-    static void ChannelLogic(int i, int j, int fd, AbstractServer* thisObj);
+    static void ChannelLogic(int i, int fd, AbstractServer* thisObj);
   public:
+	bool connectionBroken;
     int (*ExceptionHandler)();
     int (*ResumeHandler)();
     int PORT_BASE;
-    std::vector<std::vector<func_iii_t>> ChannelOperators;
+
+    std::vector<func_iii_t> ChannelOperators;
     std::vector<func_iii_t> ChannelInitializers;
-    std::vector<func_vi_t> ChannelListeners;
+    //std::vector<std::function<void(int)>> ChannelListeners;
 
     AbstractServer(int portBase = 8400);
     AbstractServer(AbstractServer* obj);
     ~AbstractServer();
 
-    void AddChannels(int index, func_iii_t function, func_iii_t initializer, int subchannel = 0);      // Create now and launch later
-    void CreateChannels(int index, func_iii_t function, func_iii_t initializer, int subchannel = 0, bool initPort = true);   // Create and launch simultaneously
+	void triggerFault();
+	void manageFault();
+
+    void AddChannels(int index, func_iii_t maincode, func_iii_t initializer);      // Create now and launch later
+    void CreateChannels(int index, func_iii_t maincode, func_iii_t initializer, bool initPort = true);   // Create and launch simultaneously
     
     int LaunchThreads(bool initPort = true);
     int JoinThreads();
