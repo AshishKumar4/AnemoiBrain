@@ -16,12 +16,26 @@
 #include "ControlServer.hpp"
 #include "SensorsServer.hpp"
 
+#include "FlightControllerInterface.hpp"
+
+#include <signal.h>
+
 rpc::server *rpcStub;
+
+void ctrlHandler(int dummy) 
+{
+	delete rpcStub;
+	printf("\n here");
+	destroyFlightControllerObjs();
+	printf("\nCaught Signal!");
+	exit(0);
+}
 
 int main(int argc, const char *argv[])
 {
     try
     {
+		signal(SIGINT, ctrlHandler);
 #ifndef DRONELESS_LOCAL_TEST
         /*
         New Feature, RPC Communication!!! 

@@ -43,6 +43,13 @@ public:
         y = yval; 
         z = zval;
     }
+
+    void set(vector3D_t vec)
+    {
+        x = vec.x;
+        y = vec.y; 
+        z = vec.z;
+    }
 };
 
 class quaternion_t 

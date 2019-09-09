@@ -17,6 +17,10 @@ public:
 	FlightController(std::string name, std::string firmware, std::string variant, uintptr_t desc) : name(name), firmware(firmware), variant(variant), desc(desc)
 	{
 	}
+
+	~FlightController() 
+	{
+	}
 };
 
 int IssueCommand();
@@ -28,3 +32,5 @@ namespace ControllerInterface
 {
 FlightController *MainFC;
 }
+
+void destroyFlightControllerObjs();

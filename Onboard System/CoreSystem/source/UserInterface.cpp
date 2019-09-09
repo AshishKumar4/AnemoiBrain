@@ -116,7 +116,7 @@ void Channel_ViewRefresh(int threadId)
             if (show_IMU)
             {
 #if defined(SHOW_STATUS_IMU)
-                printf("\nHeading: %f,\tPitch: %f,\tRoll %f", ControllerInterface::getHeadingDegrees(),ControllerInterface::getPitchDegrees(), ControllerInterface::getRollDegrees());
+                printf("\nHeading: %f[%f],\tPitch: %f,\tRoll %f", ControllerInterface::getYaw(), ControllerInterface::getHeadingDegrees(),ControllerInterface::getPitchDegrees(), ControllerInterface::getRollDegrees());
 #endif
             }
 #endif
@@ -130,7 +130,9 @@ void Channel_ViewRefresh(int threadId)
 #if defined(SHOW_VELOCITY)
             if (show_VELOCITY)
             {
+				//printf("\nForward Velocity[%f] ", ControllerInterface::get_Y_VelocityRel());
                 printf("\nvX: %f\tvY: %f\tvZ: %f", ControllerInterface::get_X_VelocityRel(), ControllerInterface::get_Y_VelocityRel(), ControllerInterface::get_Z_VelocityRel());
+                //printf("\naX: %f\taY: %f\taZ: %f", ControllerInterface::get_X_VelocityAbs(), ControllerInterface::get_Y_VelocityAbs(), ControllerInterface::get_Z_VelocityAbs());
             }
 #endif
 #endif

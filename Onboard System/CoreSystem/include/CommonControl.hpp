@@ -10,4 +10,8 @@ int moveSavedPath();
 
 int setFeedbackAltitude(float altitude);
 int setFeedbackYaw(float heading);
+
+float getForwardVelocity();
+float getDesiredVelocity();
+void HeadlessMoveTowardsTarget(float val);
 }

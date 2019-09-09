@@ -114,9 +114,7 @@ DroneState_t getCompleteState();
 quaternion_t getOrientationQuaternion();
 vector3D_t getOrientation(); // Returns Euler angle orientation
 
-float getDesiredVelocity();
 float getCurrentTargetDistance();
-void HeadlessMoveTowardsTarget(float val);
 
 int setAutoYaw(float heading);
 int setAutoRoll(float heading);

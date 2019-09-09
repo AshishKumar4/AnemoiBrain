@@ -47,8 +47,8 @@ public:
     float get_Y_VelocityAbs();
     float get_Z_VelocityAbs();
 
-    vector3D_t getVelocityAbs();
-    vector3D_t getVelocityRel();
+    virtual vector3D_t getVelocityAbs() = 0;
+    virtual vector3D_t getVelocityRel() = 0;
     virtual vector3D_t getVelocity() = 0;
     virtual GeoPoint_t getLocation() = 0;
 };
@@ -69,6 +69,8 @@ public:
 
     vector3D_t getVelocity();
     GeoPoint_t getLocation();
+   	vector3D_t getVelocityAbs();
+    vector3D_t getVelocityRel();
 };
 #elif defined(MODE_REALDRONE)
 

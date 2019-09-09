@@ -220,6 +220,7 @@ quaternion_t AirSim_IMU_t::getOrientation()
     {
         std::cout << e.what() << '\n';
     }
+	return AIRSIM_oritentation;
 }
 
 vector3D_t AirSim_IMU_t::getEulerOrientation()
@@ -239,6 +240,7 @@ vector3D_t AirSim_IMU_t::getEulerOrientation()
     {
         std::cout << e.what() << '\n';
     }
+	return AIRSIM_euleroritentation;
 }
 
 #elif defined(MODE_REALDRONE)

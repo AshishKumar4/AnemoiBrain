@@ -381,6 +381,11 @@ void sendCommand(uint8_t val, uint8_t channel)
     FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), rcExpand(RC_DATA[AUX1]), rcExpand(RC_DATA[AUX2]), rcExpand(RC_DATA[AUX3]), rcExpand(RC_DATA[AUX4]));
 }
 
+void destroyFlightControllerObjs()
+{
+	
+}
+
 #endif
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
@@ -395,9 +400,9 @@ void sendCommand(uint8_t val, uint8_t channel)
 #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
 #include "rpc/server.h"
 
-#define TIMESLICE 0.001
-
 msr::airlib::MultirotorRpcLibClient *client;
+
+#define TIMESLICE 0.001
 
 /*
 
@@ -418,25 +423,41 @@ int IssueCommand(int threadId)
     return 0;
 }
 
-quaternion_t AIRSIM_oritentation;
-GeoPoint_t AIRSIM_location;
-vector3D_t AIRSIM_velocity;
-vector3D_t AIRSIM_euleroritentation;
+quaternion_t 	AIRSIM_oritentation;
+GeoPoint_t 		AIRSIM_location;
+float 			AIRSIM_velocity;
+vector3D_t 		AIRSIM_velocityAbs;
+vector3D_t 		AIRSIM_velocityRel;
+vector3D_t 		AIRSIM_euleroritentation;
+
+bool exitFlag = false;
 
 void Sensors_Updater()
 {
+	float theta, tmpx, tmpy;
     while (1)
     {
         try 
         {
+			if(exitFlag)	
+				return;
 #if !defined(MODE_DEBUG_NO_FC)
+			auto state = client->getMultirotorState();
             //Main_Mutex.lock();
-            auto orien = client->getMultirotorState().getOrientation();
+            auto orien = state.getOrientation();
             AIRSIM_oritentation.set(orien.w(), orien.x(), orien.y(), orien.z());
-            //auto velocity = client->getMultirotorState().kinematics_estimated.twist.linear;
-            //AIRSIM_velocity.set(velocity.x(), velocity.y(), velocity.z());
-            auto location = client->getMultirotorState().getPosition();
+
+            auto velocity = state.kinematics_estimated.twist.linear;
+            AIRSIM_velocityAbs.set(velocity.y(), velocity.x(), velocity.z());
+
+			theta = AIRSIM_euleroritentation.z;
+			tmpx = AIRSIM_velocityAbs.x*cos(theta) - AIRSIM_velocityAbs.y*sin(theta);
+			tmpy = AIRSIM_velocityAbs.x*sin(theta) + AIRSIM_velocityAbs.y*cos(theta);
+            AIRSIM_velocityRel.set(tmpx, tmpy, velocity.z());
+
+            auto location = state.getPosition();
             AIRSIM_location.set(location.y(), location.x(), -location.z());
+			
             auto euler = eulerFromQuaternion(AIRSIM_oritentation);
             AIRSIM_euleroritentation.set(euler.x, euler.y, euler.z);
             //Main_Mutex.unlock();
@@ -464,6 +485,8 @@ void Channel_Updater(int threadid)
     {
         try
         {
+			if(exitFlag)	
+				return;
 #if !defined(MODE_DEBUG_NO_FC)
             //Main_Mutex.lock();
             client->moveByAngleThrottleAsync(rcShrink(255 - RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 5), rcShrink(RC_DATA[YAW], -10.0, 10.0), TIMESLICE);
@@ -515,6 +538,15 @@ void Raw_Init(int argc, const char *argv[])
 void sendCommand(uint8_t val, uint8_t channel)
 {
     //client.moveByAngleThrottleAsync(rcShrink(RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 10), rcShrink(RC_DATA[YAW], -6, 6), 10);
+}
+
+void destroyFlightControllerObjs()
+{
+	exitFlag = true;
+	printf("\nDestroying Objects...");
+	fflush(stdout);
+	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	delete client;
 }
 
 #endif

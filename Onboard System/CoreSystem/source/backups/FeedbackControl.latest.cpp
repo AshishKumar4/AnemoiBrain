@@ -416,10 +416,21 @@ float InverseErrorScaler(float val) // Use a function
 	return -val; //- tanh(val/max_scale) * max_scale;
 }
 
-float IdentityErrorScaler(float val) // Use a function
+float Planner_Y_ControllerErrorScaler(float val) // Use a function
 {
 	//printf("Yerr: %f\t", val);
 	return val; //- tanh(val/max_scale) * max_scale;
+}
+
+float LateralControllerErrorScaler(float val) // Use a function
+{
+	//printf("Yerr: %f\t", val);
+
+	// if (val <= 4)
+	// {
+	// 	val /= 1.5;
+	// }
+	return val;
 }
 
 int PositionHoldEscapeFunction(float error, float dval)
@@ -437,21 +448,21 @@ public:
 		actuateVal = 0;			   //127;
 		currentactuation = 0;	  // 127;
 		ACTUATION_HALT_VALUE = 0;  //127;
-		ACTUATION_MAX_VALUE = 90;  //0;
-		ACTUATION_MIN_VALUE = -90; //255;
+		ACTUATION_MAX_VALUE = 60;  //0;
+		ACTUATION_MIN_VALUE = -60; //255;
 
 		oldError = 1;
 		oldAbsError = 1;
 		deltaTime = 1;
 
 		this->MAX_I_BOUNDARY = 100;
-		this->CONTROLLER_P = 15;
-		this->CONTROLLER_I = 1;
-		this->CONTROLLER_D = 10;
-		this->CONTROLLER_E = 0;//20000;
-		this->CONTROLLER_E_RANGE = 0;//.08;
+		this->CONTROLLER_P = 0.6;
+		this->CONTROLLER_I = 0.01;
+		this->CONTROLLER_D = 1000;
+		this->CONTROLLER_E = 20000;
+		this->CONTROLLER_E_RANGE = 0.08;
 
-		ErrorProcessor = IdentityErrorScaler;
+		ErrorProcessor = InverseErrorScaler;
 	}
 
 	void deployFeedbackControllers()
@@ -487,7 +498,7 @@ public:
 		this->CONTROLLER_E_RANGE = 0.20;
 		this->CONTROLLER_E = 100000;
 
-		ErrorProcessor = IdentityErrorScaler;
+		ErrorProcessor = Planner_Y_ControllerErrorScaler;
 	}
 
 	void deployFeedbackControllers()
@@ -524,7 +535,7 @@ public:
 		E_VALUE = 100000;
 		//this->CONTROLLER_E = 100000;
 
-		ErrorProcessor = IdentityErrorScaler;
+		ErrorProcessor = LateralControllerErrorScaler;
 		//EscapeFunction = PositionHoldEscapeFunction;
 	}
 
@@ -573,10 +584,7 @@ public:
 	}
 };
 
-//Planner_X_Controller_t Xrel_Actuator(setAutoPitch, getDesiredVelocity, RC_X_MOTION); // instead of getPathLength, use clamped value of it
-
-// The X actuator is indeed a Velocity Controller!
-Planner_X_Controller_t Xrel_Actuator(setAutoPitch, getForwardVelocity, RC_X_MOTION);
+Planner_X_Controller_t Xrel_Actuator(setAutoPitch, getDesiredVelocity, RC_X_MOTION); // instead of getPathLength, use clamped value of it
 Planner_Y_Controller_t Yrel_Actuator(setAutoRoll, getPathDeviation, RC_Y_MOTION);
 AltitudeController_t Z_Actuator(setThrottle, getAltitude, THROTTLE);
 
@@ -684,8 +692,8 @@ float deltaX;
 float deltaY;
 
 float desiredHeading;
-float currentDistance;
-float currentDeviation;
+std::atomic<float> currentDistance;
+std::atomic<float> currentDeviation;
 float olderDistance;
 float initialHeading;
 
@@ -718,8 +726,8 @@ void gazeLoop();
      +90 ---|--- -90
 */
 
-#define MAX_DESIRED_VELOCITY 15
-#define CLAMP_FACTOR 40
+#define MAX_DESIRED_VELOCITY 30
+#define CLAMP_FACTOR 50
 #define TRANSITION_DISTANCE 15
 #define MAX_DEVIATION_ALLOWED 20
 
@@ -729,17 +737,11 @@ float getDesiredVelocity()
 	return tanh(val / CLAMP_FACTOR) * MAX_DESIRED_VELOCITY;
 }
 
-float getForwardVelocity()
-{
-	float v = get_Y_VelocityRel();
-	printf("\t<<%f>>", v);
-	return v;
-}
-
 float getPathLength()
 {
 	try
 	{
+		float sign = 1;
 		return currentDistance; //sqrt(pow(pathStartX - pathDestinationX, 2) + pow(pathStartY - pathDestinationY, 2));
 	}
 
@@ -778,9 +780,9 @@ float getPathDeviation()
 void HeadlessMoveTowardsTarget(float val)
 {
 	float currentHeading = circularToSignAngle(getHeadingDegrees());
-	float dTheta = degreesToRads(desiredHeading - currentHeading);
-	float pitch = -cosf(dTheta) * val;
-	float roll = sinf(dTheta) * val;
+	float dTheta = desiredHeading - currentHeading;
+	float pitch = -cosf(degreesToRads(dTheta)) * val;
+	float roll = sinf(degreesToRads(dTheta)) * val;
 	printf(" -> {%f}  [%f %f]; %f,", val, pitch, roll, dTheta);
 	setAutoPitch(pitch);
 	setAutoRoll(roll);
@@ -853,8 +855,8 @@ int setLinearPath(GeoPoint_t start, GeoPoint_t destination)
 	return 0;
 }
 
-int exitCourseDistanceController;
-int exitCourseDeviationController;
+std::atomic<int> exitCourseDistanceController;
+std::atomic<int> exitCourseDeviationController;
 
 void distanceController()
 {
@@ -931,11 +933,9 @@ inline void updateTargetStatus(GeoPoint_t currentLocation = getLocation())
 
 	float lenXY = currentDistance;
 	//desiredHeading, circularToSignAngle(getHeadingDegrees())
-	float desiredVel = getDesiredVelocity();
-	printf("\n{%f},\t{%f}\t[%f]", lenXY, dev, desiredVel);
+	printf("\n{%f},\t{%f}}", lenXY, dev);
 	currentDeviation = dev;
 	FeedbackControl::YawActuator.setIntendedActuation(desiredHeading);
-	FeedbackControl::Xrel_Actuator.setIntendedActuation(desiredVel);
 }
 
 void holdPositionLoop()

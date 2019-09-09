@@ -4,12 +4,31 @@ set (ONBOARD_ROOT ./)
 set (CMAKE_CXX_STANDARD 14)
 
 if(COMPILE_MODE STREQUAL "airsim")
-    message("AIRSIM MODE")
+    ADD_DEFINITIONS(-DMODE_AIRSIM)
+    message("Compiling in AIRSIM MODE")
     set (AIRSIM_ROOT /opt/AirSim)
     set (CMAKE_CXX_STANDARD 11)
     LIST(APPEND CMAKE_MODULE_PATH "cmake_templates") 
     INCLUDE("CoreSystem/cmake_templates/CommonSetup.cmake")
     CommonSetup()
+
+	# Include the Necessary Headers
+	# Set the path to AirLib directly correctly !!!
+	include_directories(
+		${AIRSIM_ROOT}/AirLib/include
+		${RPC_LIB_INCLUDES}
+		${AIRSIM_ROOT}/MavLinkCom/include
+		${AIRSIM_ROOT}/MavLinkCom/common_utils
+		${AIRSIM_ROOT}/AirLib/deps/eigen3
+		)
+
+
+	# Add the Linker Directories
+	# Set the path to AirLib directly correctly !!!
+	link_directories(lib/
+		build/
+		${AIRSIM_ROOT}/AirLib/lib/x64/Debug
+		)
 endif()
 
 # Include the Necessary Headers
