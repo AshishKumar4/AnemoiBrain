@@ -1,6 +1,6 @@
 Well, This is, in a way, an Operating System for Multicopters and UAVs.
 This consists of the software stack, I have been developing for a hobby project 
-to achieve a level 5 Autonomous UAV System.
+to achieve a level 3 Autonomous UAV System.
 
 The Base System consists of code and abstractions for systems that would run
 on a local offboard machine. It also contains code for manual control and intervention 
