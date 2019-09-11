@@ -523,7 +523,7 @@ public:
 		this->CONTROLLER_I = 0.1;
 		this->CONTROLLER_D = 1000;
 		this->CONTROLLER_E_RANGE = 0.20;
-		E_VALUE = 100000;
+		E_VALUE = 10000;
 		//this->CONTROLLER_E = 100000;
 
 		ErrorProcessor = IdentityErrorScaler;
@@ -699,6 +699,8 @@ bool shouldHoldPosition = false;
 bool hoverStableFlag = false;
 bool exitPathFollowingLoop = false;
 bool PositionalLoopActive = false;
+
+std::mutex PathFollowingLoopLock;
 } // namespace
 
 std::thread *moveThread, *gazeThread, *holdPositionThread;
@@ -724,9 +726,12 @@ std::thread *moveThread, *gazeThread, *holdPositionThread;
 
 float MAX_DESIRED_VELOCITY = 15;
 float CLAMP_FACTOR = 30;
-#define TRANSITION_DISTANCE 		2
+// For primary Path Following ==>
+#define TRANSITION_DISTANCE 		3
+#define MAX_DEVIATION_ALLOWED 		5
+
+// These parameters govern action if hover gets unstable ==>
 #define SECONDARY_TRANSITION_DISTANCE 		3
-#define MAX_DEVIATION_ALLOWED 		10
 #define MAX_HOVER_DEVIATION_ALLOWED 5
 
 float getDesiredVelocity()
@@ -741,7 +746,7 @@ float getForwardVelocity()
 	float theta = -degreesToRads(desiredHeading);//getHeading();;
 	float _v = v.y*cos(theta) + v.x*sin(theta);
 	printf("\t<<%f, [%f, %f]; %f>>", _v, theta, getHeading(), get_Y_VelocityRel());
-	return (_v);
+	return abs(_v);
 }
 
 float TEMP_FORWARD_COMPONENT = 0;
@@ -1001,11 +1006,13 @@ void holdPositionLoop()
 
 inline void PathFollowingLoop(float transition_distance)
 {
+	// exitPathFollowingLoop = false;
+	PathFollowingLoopLock.lock();
+	exitPathFollowingLoop = false;
+
 	exitCourseDistanceController = 0;
 	exitCourseDeviationController = 0;
 
-	PositionalLoopActive = true;
-	exitPathFollowingLoop = false;
 	std::thread *distanceControllerThread = new std::thread(distanceController);
 	std::thread *deviationControllerThread = new std::thread(deviationController);
 	while (1)
@@ -1036,7 +1043,8 @@ inline void PathFollowingLoop(float transition_distance)
 		}
 		std::this_thread::sleep_for(std::chrono::microseconds(100));
 	}
-	PositionalLoopActive = false;
+
+	PathFollowingLoopLock.unlock();
 }
 
 void executeLinearPathFollowing()
@@ -1045,19 +1053,13 @@ void executeLinearPathFollowing()
 	shouldHoldPosition = false;
 	updateTargetStatus();
 
-	if(PositionalLoopActive)
-	{
-		exitPathFollowingLoop = true;
-		while(PositionalLoopActive) std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Wait for any previous path following to finish
-	}
+	exitPathFollowingLoop = true;
 
 	std::this_thread::sleep_for(std::chrono::milliseconds(1500));
 
 	PathFollowingLoop();	// Wait for it to finish
 
 	printf("\nEngaging Position Hold System");
-	//motionAccumulator = 0;
-	//motionCounter = 0;
 	FeedbackControl::Distance_Actuator.CONTROLLER_E = E_VALUE;
 	shouldHoldPosition = true;
 	hoverStableFlag = false;
