@@ -297,14 +297,14 @@ float GlobalState_t::getPitchDegrees()
 
 vector3D_t GlobalState_t::getVelocityAbs()
 {
-    return this->getVelocity(); // CHANGE THIS
+    return this->locator->getVelocityAbs(); // CHANGE THIS
 }
 
 vector3D_t GlobalState_t::getVelocityRel()
 {
     try
     {
-        return this->getVelocity(); // CHANGE THIS
+        return this->locator->getVelocityRel(); // CHANGE THIS
     }
     catch (const std::future_error &e)
     {

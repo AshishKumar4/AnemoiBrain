@@ -432,6 +432,16 @@ vector3D_t 		AIRSIM_euleroritentation;
 
 bool exitFlag = false;
 
+/*
+
+Airsim Coordinate system is fucked up
+
+North is X axis, East is Y axis, Clockwise from north is +ve angle and viceversa
+
+We do a few cartesian transforms to make North as Y axis, East as X axis, Counter-Clockwise as +ve
+
+ */
+
 void Sensors_Updater()
 {
 	float theta, tmpx, tmpy;
@@ -451,8 +461,8 @@ void Sensors_Updater()
             AIRSIM_velocityAbs.set(velocity.y(), velocity.x(), velocity.z());
 
 			theta = AIRSIM_euleroritentation.z;
-			tmpx = AIRSIM_velocityAbs.x*cos(theta) - AIRSIM_velocityAbs.y*sin(theta);
-			tmpy = AIRSIM_velocityAbs.x*sin(theta) + AIRSIM_velocityAbs.y*cos(theta);
+			tmpy = AIRSIM_velocityAbs.y*cos(theta) + AIRSIM_velocityAbs.x*sin(theta);
+			tmpx = -AIRSIM_velocityAbs.y*sin(theta) + AIRSIM_velocityAbs.x*cos(theta);
             AIRSIM_velocityRel.set(tmpx, tmpy, velocity.z());
 
             auto location = state.getPosition();

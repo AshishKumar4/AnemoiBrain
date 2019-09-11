@@ -59,13 +59,23 @@ GlobalLocator_t *MainLocator;
 GlobalState_t *MainState;
 
 uint8_t RC_MASTER_DATA[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint8_t* RC_APPARENT_DATA;
 
 int WriteToPort(int portnum, char *buff, int size);
 int ReadFromPort(int portnum, char *buff, int size);
-void setThrottle(int throttle);
-void setPitch(int pitch);
-void setRoll(int roll);
-void setYaw(int yaw);
+
+void switchApparentRCstream();
+void switchApparentRCstream(uint8_t* stream);
+
+void _setPitch(int pitch);
+void _setRoll(int roll);
+void _setThrottle(int throttle);
+void _setYaw(int yaw);
+
+void setThrottle(float throttle);
+void setPitch(float pitch);
+void setRoll(float roll);
+void setYaw(float yaw);
 void setAux1(int val);
 void setAux2(int val);
 void setAux3(int val);
@@ -139,9 +149,9 @@ int setPosition(GeoPoint_t val);
     High Level APIs 
 */
 
-int AutoNavigate(GeoPoint_t destination, GeoPoint_t start);
+int AutoNavigate(GeoPoint_t destination, GeoPoint_t start, float max_velocity = 15);
 int gotoLocation(float x, float y, float z);
-int addWaypoint(float x, float y, float z);
+int addWaypoint(float x, float y, float z, float max_velocity = 15);
 
 int returnToHome();
 

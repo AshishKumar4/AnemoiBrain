@@ -36,6 +36,8 @@ namespace ControllerInterface
 
 float getPathDeviation();
 float getPathLength();
+void setForwardComponent(float vel);
+void setSidewaysComponent(float val);
 
 float E_VALUE = 0;
 
@@ -485,7 +487,7 @@ public:
 		this->CONTROLLER_I = 0.1;
 		this->CONTROLLER_D = 1000;
 		this->CONTROLLER_E_RANGE = 0.20;
-		this->CONTROLLER_E = 100000;
+		this->CONTROLLER_E = 10000;
 
 		ErrorProcessor = IdentityErrorScaler;
 	}
@@ -576,11 +578,13 @@ public:
 //Planner_X_Controller_t Xrel_Actuator(setAutoPitch, getDesiredVelocity, RC_X_MOTION); // instead of getPathLength, use clamped value of it
 
 // The X actuator is indeed a Velocity Controller!
-Planner_X_Controller_t Xrel_Actuator(setAutoPitch, getForwardVelocity, RC_X_MOTION);
-Planner_Y_Controller_t Yrel_Actuator(setAutoRoll, getPathDeviation, RC_Y_MOTION);
+// Planner_X_Controller_t Xrel_Actuator(setAutoPitch, getForwardVelocity, RC_X_MOTION);
+// Planner_Y_Controller_t Yrel_Actuator(setAutoRoll, getPathDeviation, RC_Y_MOTION);
+Planner_X_Controller_t Xrel_Actuator(setForwardComponent, getForwardVelocity, RC_X_MOTION);
+Planner_Y_Controller_t Yrel_Actuator(setSidewaysComponent, getPathDeviation, RC_Y_MOTION);
 AltitudeController_t Z_Actuator(setThrottle, getAltitude, THROTTLE);
 
-LateralController_t Distance_Actuator(HeadlessMoveTowardsTarget, getCurrentTargetDistance, RC_X_MOTION);
+LateralController_t Distance_Actuator(HeadlessHover, getDesiredVelocity, RC_X_MOTION);
 
 void Z_Lateral_Controllers()
 {
@@ -691,13 +695,13 @@ float initialHeading;
 
 float pathConstant;
 
-bool shouldHoldPosition;
-bool hoverStableFlag;
+bool shouldHoldPosition = false;
+bool hoverStableFlag = false;
+bool exitPathFollowingLoop = false;
+bool PositionalLoopActive = false;
 } // namespace
 
 std::thread *moveThread, *gazeThread, *holdPositionThread;
-
-void gazeLoop();
 
 /*
     Convention ==>
@@ -718,10 +722,12 @@ void gazeLoop();
      +90 ---|--- -90
 */
 
-#define MAX_DESIRED_VELOCITY 15
-#define CLAMP_FACTOR 40
-#define TRANSITION_DISTANCE 15
-#define MAX_DEVIATION_ALLOWED 20
+float MAX_DESIRED_VELOCITY = 15;
+float CLAMP_FACTOR = 30;
+#define TRANSITION_DISTANCE 		2
+#define SECONDARY_TRANSITION_DISTANCE 		3
+#define MAX_DEVIATION_ALLOWED 		10
+#define MAX_HOVER_DEVIATION_ALLOWED 5
 
 float getDesiredVelocity()
 {
@@ -731,9 +737,24 @@ float getDesiredVelocity()
 
 float getForwardVelocity()
 {
-	float v = get_Y_VelocityRel();
-	printf("\t<<%f>>", v);
-	return v;
+	vector3D_t v = getVelocityAbs();//get_Y_VelocityRel();
+	float theta = -degreesToRads(desiredHeading);//getHeading();;
+	float _v = v.y*cos(theta) + v.x*sin(theta);
+	printf("\t<<%f, [%f, %f]; %f>>", _v, theta, getHeading(), get_Y_VelocityRel());
+	return (_v);
+}
+
+float TEMP_FORWARD_COMPONENT = 0;
+float TEMP_DRIFT_COMPONENT = 0;
+
+void setForwardComponent(float vel)
+{
+	TEMP_FORWARD_COMPONENT = vel;
+}
+
+void setSidewaysComponent(float val)
+{
+	TEMP_DRIFT_COMPONENT = val;
 }
 
 float getPathLength()
@@ -775,17 +796,6 @@ float getPathDeviation()
 	return 0;
 }
 
-void HeadlessMoveTowardsTarget(float val)
-{
-	float currentHeading = circularToSignAngle(getHeadingDegrees());
-	float dTheta = degreesToRads(desiredHeading - currentHeading);
-	float pitch = -cosf(dTheta) * val;
-	float roll = sinf(dTheta) * val;
-	printf(" -> {%f}  [%f %f]; %f,", val, pitch, roll, dTheta);
-	setAutoPitch(pitch);
-	setAutoRoll(roll);
-}
-
 inline float euclideanDistance2d(float x2, float y2, float x1, float y1)
 {
 	return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
@@ -798,12 +808,6 @@ inline float calcPathDeviation(GeoPoint_t currentLocation)
 
 float getCurrentTargetDistance()
 {
-	/*GeoPoint_t currentLocation = getLocation();
-    // Firstly move to the direction to face the destination
-    float dY = pathDestinationY - currentLocation.y;
-    float dX = pathDestinationX - currentLocation.x;
-    float lenXY = sqrt(pow(dX, 2) + pow(dY, 2));
-    currentDistance = lenXY;*/
 	return currentDistance;
 }
 
@@ -833,12 +837,14 @@ int set2DLinearPath(float startX, float startY, float destX, float destY)
 	return 0;
 }
 
-int setLinearPath(GeoPoint_t start, GeoPoint_t destination)
+int setLinearPath(GeoPoint_t start, GeoPoint_t destination, float cruise_velocity, float final_velocity, float clamp_factor)
 {
 	try
 	{
 		pathDestinationZ = destination.z;
 		pathStartZ = start.z;
+		MAX_DESIRED_VELOCITY = cruise_velocity;
+		CLAMP_FACTOR = clamp_factor;
 		set2DLinearPath(start.x, start.y, destination.x, destination.y);
 	}
 	catch (const std::future_error &e)
@@ -900,6 +906,25 @@ void deviationController()
 	}
 }
 
+void HeadlessHover(float val)
+{
+	float dTheta = degreesToRads(desiredHeading) - (-getHeading());
+	float pitch = -cosf(dTheta) * val;
+	float roll = sinf(dTheta) * val;
+	setAutoPitch(pitch);
+	setAutoRoll(roll);
+}
+
+inline void HeadlessMoveTowardsTarget()
+{
+	float dTheta = degreesToRads(desiredHeading) - (-getHeading());
+	float pitch = (cosf(dTheta) * TEMP_FORWARD_COMPONENT) + (sinf(dTheta) * TEMP_DRIFT_COMPONENT);
+	float roll = (-sinf(dTheta) * TEMP_FORWARD_COMPONENT) + (cosf(dTheta) * TEMP_DRIFT_COMPONENT);
+	setAutoRoll(roll);
+	setAutoPitch(pitch);
+	//printf("{{%f, %f}}", TEMP_DRIFT_COMPONENT, roll);
+}
+
 inline void updateTargetDistanceDirection(GeoPoint_t currentLocation = getLocation())
 {
 	// Firstly move to the direction to face the destination
@@ -913,8 +938,6 @@ inline void updateTargetDistanceDirection(GeoPoint_t currentLocation = getLocati
 
 	if (isnan(headingDegrees))
 		return;
-	//printf("[%f\t%f\t%f]", dX, dY, heading);
-	//setHeading(headingDegrees);
 
 	desiredHeading = headingDegrees;
 	currentDistance = lenXY;
@@ -936,7 +959,10 @@ inline void updateTargetStatus(GeoPoint_t currentLocation = getLocation())
 	currentDeviation = dev;
 	FeedbackControl::YawActuator.setIntendedActuation(desiredHeading);
 	FeedbackControl::Xrel_Actuator.setIntendedActuation(desiredVel);
+	HeadlessMoveTowardsTarget();
 }
+
+inline void PathFollowingLoop(float transition_distance = TRANSITION_DISTANCE);
 
 void holdPositionLoop()
 {
@@ -948,59 +974,87 @@ void holdPositionLoop()
 			float motion = FeedbackControl::Distance_Actuator.FeedbackController();
 			float len = currentDistance;
 			printf("\n{%f}", len);
-			if (FeedbackControl::Distance_Actuator.CONTROLLER_E >= 10000)
-				FeedbackControl::Distance_Actuator.CONTROLLER_E -= 100;
-			else
+
+			// if (FeedbackControl::Distance_Actuator.CONTROLLER_E >= 10000)
+			// 	FeedbackControl::Distance_Actuator.CONTROLLER_E -= 100;
+			// else
+			// {
+			// 	//printf("$$$$$");
+			// 	//printf("<<{%f}>>", motion);
+			// }
+			if(len >= MAX_HOVER_DEVIATION_ALLOWED)
 			{
-				//printf("$$$$$");
-				printf("<<{%f}>>", motion);
+				PathFollowingLoop(SECONDARY_TRANSITION_DISTANCE);
 			}
-			if (!hoverStableFlag && len < 3 && motion == 0)
+			if (!hoverStableFlag && len < 2.5 && motion == 0)
 			{
 				hoverStableFlag = true;
 			}
+			// else 
+			// {
+			// 	hoverStableFlag = false;
+			// }
 		}
-		std::this_thread::sleep_for(std::chrono::microseconds(1000));
+		std::this_thread::sleep_for(std::chrono::microseconds(100));
 	}
 }
 
-void positionalLoop()
+inline void PathFollowingLoop(float transition_distance)
 {
 	exitCourseDistanceController = 0;
 	exitCourseDeviationController = 0;
-	//currentDistance = INT_MAX;
-	// Launch a thread to make the drone point in the desired direction
-	//gazeThread = new std::thread(gazeLoop);
-	shouldHoldPosition = false;
-	updateTargetStatus();
-	std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+
+	PositionalLoopActive = true;
+	exitPathFollowingLoop = false;
 	std::thread *distanceControllerThread = new std::thread(distanceController);
 	std::thread *deviationControllerThread = new std::thread(deviationController);
 	while (1)
 	{
 		updateTargetStatus();
 		// If deviation is too much, stop and fix it first!
-		if (currentDeviation >= MAX_DEVIATION_ALLOWED)
+		if (abs(currentDeviation) >= MAX_DEVIATION_ALLOWED)
 		{
+			printf("\n\nChanging Start Position");
 			exitCourseDeviationController = 1;
 			deviationControllerThread->join();
+			exitCourseDeviationController = 0;
 			GeoPoint_t curr = getLocation();
 			set2DLinearPath(curr.x, curr.y, pathDestinationX, pathDestinationY);
 			deviationControllerThread = new std::thread(deviationController);
 		}
 
-		if (currentDistance <= TRANSITION_DISTANCE)
+		if (currentDistance <= transition_distance || exitPathFollowingLoop)
 		{
 			exitCourseDistanceController = 1;
 			exitCourseDeviationController = 1;
 			distanceControllerThread->join();
 			deviationControllerThread->join();
+			exitPathFollowingLoop = false;
 			std::cout << "\nWe are here";
 			fflush(stdout);
 			break;
 		}
-		std::this_thread::sleep_for(std::chrono::microseconds(500));
+		std::this_thread::sleep_for(std::chrono::microseconds(100));
 	}
+	PositionalLoopActive = false;
+}
+
+void executeLinearPathFollowing()
+{
+
+	shouldHoldPosition = false;
+	updateTargetStatus();
+
+	if(PositionalLoopActive)
+	{
+		exitPathFollowingLoop = true;
+		while(PositionalLoopActive) std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Wait for any previous path following to finish
+	}
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+
+	PathFollowingLoop();	// Wait for it to finish
+
 	printf("\nEngaging Position Hold System");
 	//motionAccumulator = 0;
 	//motionCounter = 0;
@@ -1010,39 +1064,6 @@ void positionalLoop()
 	while (!hoverStableFlag)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}
-}
-
-void gazeLoop()
-{
-	try
-	{
-		while (1)
-		{
-			try
-			{
-				updateTargetStatus();
-				std::this_thread::sleep_for(std::chrono::microseconds(1000));
-			}
-			catch (const std::future_error &e)
-			{
-				std::cout << "<gazeLoop>Caught a future_error with code \"" << e.code()
-						  << "\"\nMessage: \"" << e.what() << "\"\n";
-			}
-			catch (std::exception &e)
-			{
-				std::cout << "Error in Outermost Y_Actuator loop!" << e.what();
-			}
-		}
-	}
-	catch (const std::future_error &e)
-	{
-		std::cout << "<gazeLoop Outer>Caught a future_error with code \"" << e.code()
-				  << "\"\nMessage: \"" << e.what() << "\"\n";
-	}
-	catch (std::exception &e)
-	{
-		std::cout << "Error in Outermost Y_Actuator loop!" << e.what();
 	}
 }
 
@@ -1083,9 +1104,9 @@ int setFeedbackYaw(float heading)
 
 int moveSavedPath()
 {
-	// moveThread = new std::thread(positionalLoop);
+	// moveThread = new std::thread(executeLinearPathFollowing);
 	// moveThread->join();
-	positionalLoop();
+	executeLinearPathFollowing();
 	return 0;
 }
 

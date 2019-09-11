@@ -63,7 +63,7 @@ int LinearPath_t::executePath()
 	printf("\nReaching Altitude completed, hovering...");
 	fflush(stdout);
 
-	setLinearPath(this->start, this->destination);
+	setLinearPath(this->start, this->destination, this->cruise_velocity, this->final_velocity);
 	moveSavedPath();
 
 	printf("\nPath completed, hovering...");
@@ -199,20 +199,26 @@ void initialize_AutoNavigation()
 
 } // namespace AutoNavigation
 
+extern void switchApparentRCstream();
+
 int enableAutoNav()
 {
 	if (!AutoNavigation::auto_nav_toggle_flag)
 		return 1;
 	AutoNavigation::auto_nav_toggle_flag = 0;
 	IntentionOverride = false;
+	switchApparentRCstream();
 	AutoNavigation::NavigatePathQueue_thread = new std::thread(AutoNavigation::NavigatePathQueue);
 	return 0;
 }
 
 int disableAutoNav()
 {
+	if (AutoNavigation::auto_nav_toggle_flag)
+		return 1;
 	AutoNavigation::auto_nav_toggle_flag = 1;
 	IntentionOverride = true;
+	switchApparentRCstream();
 	return 0;
 }
 

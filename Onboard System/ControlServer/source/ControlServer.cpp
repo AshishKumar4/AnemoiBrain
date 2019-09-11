@@ -32,7 +32,7 @@ namespace Controls
 
 int opt = 1;
 
-std::function<void(int)> CHANNEL_HANDLER_TABLES[] = {&ControllerInterface::setThrottle, &ControllerInterface::setPitch, &ControllerInterface::setRoll, &ControllerInterface::setYaw, &ControllerInterface::setAux1, &ControllerInterface::setAux2, &ControllerInterface::setAux3, &ControllerInterface::setAux4};
+std::function<void(int)> CHANNEL_HANDLER_TABLES[] = {&ControllerInterface::_setThrottle, &ControllerInterface::_setPitch, &ControllerInterface::_setRoll, &ControllerInterface::_setYaw, &ControllerInterface::setAux1, &ControllerInterface::setAux2, &ControllerInterface::setAux3, &ControllerInterface::setAux4};
 std::string CHANNEL_NAME_TABLES[] = {"throttle", "pitch", "roll", "yaw", "aux1", "aux2", "aux3", "aux4"};
 
 char **ControlChannelBuffer = (char **)malloc(sizeof(char *) * 12);

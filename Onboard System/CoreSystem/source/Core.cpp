@@ -538,105 +538,74 @@ DroneState_t getCompleteState()
 /************************************ All the Set APIs ************************************/
 /******************************************************************************************/
 
-void setThrottle(int throttle)
+
+void _setPitch(int pitch)
 {
-	try
-	{
-		unsigned char t = (unsigned char)throttle;
-		//Main_Mutex.lock();
-		RC_DATA[THROTTLE] = t;
+	RC_APPARENT_DATA[PITCH] = (unsigned char)pitch;
 #if defined(SYNCD_TRANSFER)
-		sendCommand(throttle, 0);
+	sendCommand(pitch, 1);
 #endif
-		//Main_Mutex.unlock();
-		//IssueCommand();
-	}
-	catch (const std::future_error &e)
-	{
-		std::cout << "<setThrottle>Caught a future_error with code \"" << e.code()
-				  << "\"\nMessage: \"" << e.what() << "\"\n";
-		//Main_Mutex.unlock();
-	}
 }
 
-void setPitch(int pitch)
+void _setRoll(int roll)
 {
-	try
-	{
-		unsigned char t = (unsigned char)pitch;
-		//printf("-");
-		//Main_Mutex.lock();
-		RC_DATA[PITCH] = t;
+	RC_APPARENT_DATA[ROLL] = (unsigned char)roll;
 #if defined(SYNCD_TRANSFER)
-		sendCommand(pitch, 1);
+	sendCommand(roll, 2);
 #endif
-		//Main_Mutex.unlock();
-		//IssueCommand();
-	}
-	catch (const std::future_error &e)
-	{
-		std::cout << "<setPitch>Caught a future_error with code \"" << e.code()
-				  << "\"\nMessage: \"" << e.what() << "\"\n";
-		//Main_Mutex.unlock();
-	}
 }
 
-void setRoll(int roll)
+void _setYaw(int yaw)
 {
-	try
-	{
-		unsigned char t = (unsigned char)roll;
-		//printf("+[%d] ", roll);
-		//Main_Mutex.lock();
-		RC_DATA[ROLL] = t;
+	RC_APPARENT_DATA[YAW] = (unsigned char)yaw;
 #if defined(SYNCD_TRANSFER)
-		sendCommand(roll, 2);
+	sendCommand(yaw, 3);
 #endif
-		//Main_Mutex.unlock();
-		//IssueCommand();
-	}
-	catch (const std::future_error &e)
-	{
-		std::cout << "<setRoll>Caught a future_error with code \"" << e.code()
-				  << "\"\nMessage: \"" << e.what() << "\"\n";
-		//Main_Mutex.unlock();
-	}
 }
+
+void _setThrottle(int throttle)
+{
+	RC_APPARENT_DATA[THROTTLE] = (unsigned char)throttle;
+#if defined(SYNCD_TRANSFER)
+	sendCommand(throttle, 0);
+#endif
+}
+
+void switchApparentRCstream()
+{
+	if(RC_APPARENT_DATA == (uint8_t*)RC_DATA)
+		RC_APPARENT_DATA = (uint8_t*)RC_MASTER_DATA;
+	else RC_APPARENT_DATA = (uint8_t*)RC_DATA;
+}
+
+void switchApparentRCstream(uint8_t* stream)
+{
+	RC_APPARENT_DATA = stream;
+}
+
+/*
+	Actual Direct control functions =>
+	(Includes Controller Overrides as well)
+ */
 
 void setRoll(float roll)
 {
-	setRoll(int(roll));
+	RC_DATA[ROLL] = (unsigned char)roll + (RC_MASTER_DATA[ROLL] - 127);
 }
 
-void setPitch(float roll)
+void setPitch(float pitch)
 {
-	setPitch(int(roll));
+	RC_DATA[PITCH] = (unsigned char)pitch + (RC_MASTER_DATA[PITCH] - 127);
 }
 
-void setYaw(float roll)
+void setThrottle(float throttle)
 {
-	setYaw(int(roll));
+	RC_DATA[THROTTLE] = (unsigned char)throttle;// + (RC_MASTER_DATA[THROTTLE]);
 }
 
-void setYaw(int yaw)
+void setYaw(float yaw)
 {
-	try
-	{
-		unsigned char t = (unsigned char)yaw;
-		//Main_Mutex.lock();
-		RC_DATA[YAW] = t;
-#if defined(SYNCD_TRANSFER)
-		sendCommand(yaw, 3);
-#endif
-		//Main_Mutex.unlock();
-		//IssueCommand();
-	}
-	catch (const std::future_error &e)
-	{
-		std::cout << "<setYaw>Caught a future_error with code \"" << e.code()
-				  << "\"\nMessage: \"" << e.what() << "\"\n";
-		//Main_Mutex.unlock();
-	}
+	RC_DATA[YAW] = (unsigned char)yaw + (RC_MASTER_DATA[YAW] - 127);
 }
 
 void setAux1(int val)
@@ -809,9 +778,11 @@ int setAutoRoll(float angle)
 
 	// Convert 90, 0, -90 to 0, 127, 255
 	//printf("<%d>", angle);
-	float val = clamp(angle,-ROLL_RANGE, ROLL_RANGE, 255, 0);
-	if(val < 0) val = 0;
-	else if(val > 255) val = 255;
+	float val = clamp(angle, -ROLL_RANGE, ROLL_RANGE, 255, 0);
+	if (val < 0)
+		val = 0;
+	else if (val > 255)
+		val = 255;
 	setRoll(val);
 	return 0;
 }
@@ -826,11 +797,12 @@ int setAutoPitch(float angle)
 	//FeedbackControl::PitchActuator.setIntendedActuation(angle);
 	//FeedbackControl::PitchActuator.actuationControllerlock->unlock();
 
-
 	// Convert 90, 0, -90 to 0, 127, 255
-	float val = clamp(angle,-PITCH_RANGE, PITCH_RANGE, 255, 0);
-	if(val < 0) val = 0;
-	else if(val > 255) val = 255;
+	float val = clamp(angle, -PITCH_RANGE, PITCH_RANGE, 255, 0);
+	if (val < 0)
+		val = 0;
+	else if (val > 255)
+		val = 255;
 	setPitch(val);
 	return 0;
 }
@@ -856,18 +828,18 @@ int setHeadingToPoint(GeoPoint_t destination)
 
 void holdPosition(float x, float y, float z)
 {
-	gotoLocation(x,y,z);
+	gotoLocation(x, y, z);
 	// Unimplemented
 }
 
 GeoPoint_t lastDestination(0, 0, 0);
 
-int AutoNavigate(GeoPoint_t destination, GeoPoint_t start = lastDestination)
+int AutoNavigate(GeoPoint_t destination, GeoPoint_t start = lastDestination, float max_velocity)
 {
 	try
 	{
 		printf("\n Got here!");
-		AutoNavigation::Path_t* path = AutoNavigation::makeLinearPath(start, destination);
+		AutoNavigation::Path_t *path = AutoNavigation::makeLinearPath(start, destination, max_velocity);
 		printf("\nDone till here");
 		fflush(stdout);
 		getCurrentTrajectory()->addPath(path);
@@ -894,10 +866,10 @@ int gotoLocation(float x, float y, float z)
 	return AutoNavigate(GeoPoint_t(x, y, z), getLocation());
 }
 
-int addWaypoint(float x, float y, float z)
+int addWaypoint(float x, float y, float z, float max_velocity)
 {
 	printf("\nTrying to move to position x=%f y=%f z=%f", x, y, z);
-	return AutoNavigate(GeoPoint_t(x, y, z));
+	return AutoNavigate(GeoPoint_t(x, y, z), lastDestination, max_velocity);
 }
 
 int returnToHome()
@@ -935,8 +907,8 @@ int toggleFeedbackControllers(char type)
 		// else if (type == 'A')
 		// {
 		// 	/*if(IntentionOverride)
-        //         IntentionOverride = false;
-        //     else IntentionOverride = true;*/
+		//         IntentionOverride = false;
+		//     else IntentionOverride = true;*/
 		// 	toggleFeedbackControllers('R');
 		// 	toggleFeedbackControllers('P');
 		// 	toggleFeedbackControllers('V');
@@ -1090,13 +1062,14 @@ int ControllerInterface_init(int argc, const char *argv[])
 	try
 	{
 		printf("\n Initializing Flight Controller Interface...");
+		switchApparentRCstream((uint8_t*)RC_DATA);
 		//int fd = wiringPiSPISetup(0, SPI_IOC_WR_MAX_SPEED_HZ);//SPI_init("/dev/spidev0.0");
 		Raw_Init(argc, argv);
 
 		IntentionOverride = false;
 
 #if defined(MODE_REALDRONE)
-		Sensor_Fusion_init(argc, (char**)argv);
+		Sensor_Fusion_init(argc, (char **)argv);
 		MainLocator = new Real_Locator_t();
 		MainIMU = new Real_IMU_t();
 #endif
