@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.0.0)
 project(OnboardCore)
 set (ONBOARD_ROOT ./)
 set (AIRSIM_ROOT /opt/AirSim)
-set (CMAKE_CXX_STANDARD 17)
 
 # We need to compile in AIRSIM MODE
 add_definitions(-DMODE_AIRSIM)
@@ -10,6 +9,9 @@ add_definitions(-DMODE_AIRSIM)
 LIST(APPEND CMAKE_MODULE_PATH "cmake_templates") 
 INCLUDE("cmake_templates/CommonSetup.cmake")
 CommonSetup()
+set (CMAKE_CXX_STANDARD 17)
+#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_CONSOLE ")
+#message(${CMAKE_CXX_FLAGS})
 
 # Include the Necessary Headers
 # Set the path to AirLib directly correctly !!!

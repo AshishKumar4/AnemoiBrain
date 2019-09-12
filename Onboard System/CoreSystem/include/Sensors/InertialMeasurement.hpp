@@ -49,16 +49,14 @@ public:
 
 #if defined MODE_AIRSIM
 
-#include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
-#include "rpc/server.h"
+// #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
+// #include "rpc/server.h"
 
 class AirSim_IMU_t : public InertialMeasurement_t
 {
-    msr::airlib::MultirotorRpcLibClient* client;
 public: 
-    AirSim_IMU_t(msr::airlib::MultirotorRpcLibClient *client) : InertialMeasurement_t()
+    AirSim_IMU_t() : InertialMeasurement_t()
     {
-        this->client = client;
     }
 
 	quaternion_t getOrientation();

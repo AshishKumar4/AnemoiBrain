@@ -209,7 +209,7 @@ int ControlListeners(int i, int fd)
 			//printf("\n [%s] Command Issued ", CHANNEL_NAME_TABLES[i].c_str());
 			int numVal = atoi(val.c_str());
 #ifndef DRONELESS_LOCAL_TEST
-			ControllerInterface::RC_MASTER_DATA[i] = uint8_t(numVal);
+			ControllerInterface::setRC_Buffered(i, uint8_t(numVal));
 			CHANNEL_HANDLER_TABLES[i](numVal);
 #endif
 		}
@@ -217,7 +217,7 @@ int ControlListeners(int i, int fd)
 		for (int j = 0; j < valread; j++)
 		{
 			CHANNEL_HANDLER_TABLES[i](int(ControlChannelBuffer[i][j]));
-			ControllerInterface::RC_MASTER_DATA[i] = uint8_t(ControlChannelBuffer[i][j]);
+			ControllerInterface::setRC_Buffered(i, uint8_t(ControlChannelBuffer[i][j]));
 		}
 #elif defined(STREAM_PROTOCOL_3)
 		// Format --> .xy.xy.xy.xy.xy.xy.xy.
@@ -240,7 +240,7 @@ int ControlListeners(int i, int fd)
 			if (parsed.length() == 2)
 			{
 				CHANNEL_HANDLER_TABLES[int(tmp[0] - 1)](int(tmp[1]));
-				ControllerInterface::RC_MASTER_DATA[int(tmp[0] - 1)] = uint8_t(int(tmp[1]));
+				ControllerInterface::setRC_Buffered(int(tmp[0] - 1), uint8_t(int(tmp[1])));
 			}
 			else
 			{

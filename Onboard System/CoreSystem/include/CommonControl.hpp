@@ -14,4 +14,5 @@ int setFeedbackYaw(float heading);
 float getForwardVelocity();
 float getDesiredVelocity();
 void HeadlessHover(float val);
+int terminateActiveFollowing();
 }

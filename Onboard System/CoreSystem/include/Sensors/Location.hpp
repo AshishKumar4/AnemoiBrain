@@ -55,16 +55,16 @@ public:
 
 #if defined MODE_AIRSIM
 
-#include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
-#include "rpc/server.h"
+// #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
+// #include "rpc/server.h"
 
 class AirSim_Locator_t : public GlobalLocator_t
 {
-    msr::airlib::MultirotorRpcLibClient* client;
+    // msr::airlib::MultirotorRpcLibClient* client;
 public:
-    AirSim_Locator_t(msr::airlib::MultirotorRpcLibClient *client)
+    AirSim_Locator_t()//msr::airlib::MultirotorRpcLibClient *client)
     {
-        this->client = client;
+        // this->client = client;
     }
 
     vector3D_t getVelocity();

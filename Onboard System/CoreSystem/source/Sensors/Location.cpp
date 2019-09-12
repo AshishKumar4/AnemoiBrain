@@ -219,8 +219,8 @@ float GlobalLocator_t::get_Z_VelocityAbs()
 
 #if defined MODE_AIRSIM
 
-#include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
-#include "rpc/server.h"
+// #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
+// #include "rpc/server.h"
 
 namespace
 {
@@ -237,13 +237,39 @@ extern vector3D_t AIRSIM_euleroritentation;
 vector3D_t AirSim_Locator_t::getVelocity() // CHANGE THIS
 {
 	//tmpVelocity = AIRSIM_velocity;
-	return AIRSIM_velocity;
+	try
+	{
+		return AIRSIM_velocity;
+    }
+    catch (const std::future_error &e)
+    {
+        std::cout << "<AirSim_Locator_t::getVelocity>Caught a future_error with code \"" << e.code()
+                  << "\"\nMessage: \"" << e.what() << "\"\n";
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << e.what() << '\n';
+    }
+	return vector3D_t(0,0,0);
 }
 
 vector3D_t AirSim_Locator_t::getVelocityAbs() // CHANGE THIS
 {
 	//tmpVelocity = AIRSIM_velocity;
-	return AIRSIM_velocityAbs;
+	try
+	{
+		return AIRSIM_velocityAbs;
+    }
+    catch (const std::future_error &e)
+    {
+        std::cout << "<AirSim_Locator_t::getVelocityAbs>Caught a future_error with code \"" << e.code()
+                  << "\"\nMessage: \"" << e.what() << "\"\n";
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << e.what() << '\n';
+    }
+	return vector3D_t(0,0,0);
 }
 
 
@@ -269,8 +295,20 @@ vector3D_t AirSim_Locator_t::getVelocityRel() // CHANGE THIS
 	// We are leaving Z axis undisturbed
 	// float theta = degreesToRads(circularToSignAngle(getHeadingDegrees()));
 	//printf("\ntheta: [%f\t%f\t%f]", theta, rel_vec.x, rel_vec.y);
-	return AIRSIM_velocityRel;
-	// return AIRSIM_velocity;
+	try
+	{
+		return AIRSIM_velocityRel;
+    }
+    catch (const std::future_error &e)
+    {
+        std::cout << "<AirSim_Locator_t::getVelocityRel>Caught a future_error with code \"" << e.code()
+                  << "\"\nMessage: \"" << e.what() << "\"\n";
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << e.what() << '\n';
+    }
+	return vector3D_t(0,0,0);
 }
 
 GeoPoint_t AirSim_Locator_t::getLocation() // CHANGE THIS

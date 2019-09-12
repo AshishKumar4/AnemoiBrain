@@ -18,7 +18,7 @@
 #include "Sensors/InertialMeasurement.hpp"
 #include "Sensors/Location.hpp"
 #include "ControllerInterface.hpp"
-#include "specificDefs.h"
+// #include "specificDefs.h"
 #include "CommonControl.hpp"
 #include "AutoNavigation.hpp"
 
@@ -33,6 +33,51 @@
 
 namespace ControllerInterface
 {
+
+volatile std::thread *chnl_refresh;
+volatile std::thread *keyboard_handler;
+volatile std::thread *chnl_update;
+
+InertialMeasurement_t *MainIMU;
+GlobalLocator_t *MainLocator;
+GlobalState_t *MainState;
+
+uint8_t *RC_APPARENT_DATA;
+
+void setRC_Direct(int channel, uint8_t val)
+{
+	RC_DATA[channel] = val;
+}
+
+void setRC_Buffered(int channel, uint8_t val)
+{
+	RC_MASTER_DATA[channel] = val;
+}
+
+uint8_t getRC_Direct(int channel)
+{
+	return RC_DATA[channel];
+}
+
+uint8_t getRC_Buffered(int channel)
+{
+	return RC_MASTER_DATA[channel];
+}
+
+InertialMeasurement_t *getMainIMU()
+{
+	return MainIMU;
+}
+
+GlobalLocator_t *getMainLocator()
+{
+	return MainLocator;
+}
+
+GlobalState_t *getMainState()
+{
+	return MainState;
+}
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ----------------------------------------------General APIs for Control-------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------------ */
@@ -538,7 +583,6 @@ DroneState_t getCompleteState()
 /************************************ All the Set APIs ************************************/
 /******************************************************************************************/
 
-
 void _setPitch(int pitch)
 {
 	RC_APPARENT_DATA[PITCH] = (unsigned char)pitch;
@@ -573,12 +617,13 @@ void _setThrottle(int throttle)
 
 void switchApparentRCstream()
 {
-	if(RC_APPARENT_DATA == (uint8_t*)RC_DATA)
-		RC_APPARENT_DATA = (uint8_t*)RC_MASTER_DATA;
-	else RC_APPARENT_DATA = (uint8_t*)RC_DATA;
+	if (RC_APPARENT_DATA == (uint8_t *)RC_DATA)
+		RC_APPARENT_DATA = (uint8_t *)RC_MASTER_DATA;
+	else
+		RC_APPARENT_DATA = (uint8_t *)RC_DATA;
 }
 
-void switchApparentRCstream(uint8_t* stream)
+void switchApparentRCstream(uint8_t *stream)
 {
 	RC_APPARENT_DATA = stream;
 }
@@ -600,7 +645,7 @@ void setPitch(float pitch)
 
 void setThrottle(float throttle)
 {
-	RC_DATA[THROTTLE] = (unsigned char)throttle;// + (RC_MASTER_DATA[THROTTLE]);
+	RC_DATA[THROTTLE] = (unsigned char)throttle; // + (RC_MASTER_DATA[THROTTLE]);
 }
 
 void setYaw(float yaw)
@@ -834,15 +879,15 @@ void holdPosition(float x, float y, float z)
 
 GeoPoint_t lastDestination(0, 0, 0);
 
-int AutoNavigate(GeoPoint_t destination, GeoPoint_t start = lastDestination, float max_velocity)
+int AutoNavigate(GeoPoint_t destination, GeoPoint_t start = lastDestination, float max_velocity, bool override)
 {
 	try
 	{
 		printf("\n Got here!");
+		if (override)
+			start = getLocation();
 		AutoNavigation::Path_t *path = AutoNavigation::makeLinearPath(start, destination, max_velocity);
-		printf("\nDone till here");
-		fflush(stdout);
-		getCurrentTrajectory()->addPath(path);
+		getCurrentTrajectory()->addPath(path, override);
 		printf("\nDone till here");
 		fflush(stdout);
 		lastDestination.set(destination);
@@ -860,10 +905,10 @@ int AutoNavigate(GeoPoint_t destination, GeoPoint_t start = lastDestination, flo
 	return 0;
 }
 
-int gotoLocation(float x, float y, float z)
+int gotoLocation(float x, float y, float z, float max_velocity)
 {
-	printf("\nTrying to move to position x=%f y=%f z=%f", x, y, z);
-	return AutoNavigate(GeoPoint_t(x, y, z), getLocation());
+	printf("\n\n\nOVERRIDE Trying to move to position x=%f y=%f z=%f", x, y, z);
+	return AutoNavigate(GeoPoint_t(x, y, z), getLocation(), max_velocity, true);
 }
 
 int addWaypoint(float x, float y, float z, float max_velocity)
@@ -1062,13 +1107,20 @@ int ControllerInterface_init(int argc, const char *argv[])
 	try
 	{
 		printf("\n Initializing Flight Controller Interface...");
-		switchApparentRCstream((uint8_t*)RC_DATA);
+		switchApparentRCstream((uint8_t *)RC_DATA);
 		//int fd = wiringPiSPISetup(0, SPI_IOC_WR_MAX_SPEED_HZ);//SPI_init("/dev/spidev0.0");
 		Raw_Init(argc, argv);
 
 		IntentionOverride = false;
 
-#if defined(MODE_REALDRONE)
+#if defined(MODE_AIRSIM)
+
+// #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
+// #include "rpc/server.h"
+		//auto client = (msr::airlib::MultirotorRpcLibClient *)MainFC->getDesc();
+		MainIMU = new AirSim_IMU_t();//(client);
+		MainLocator = new AirSim_Locator_t();//(client);
+#elif defined(MODE_REALDRONE)
 		Sensor_Fusion_init(argc, (char **)argv);
 		MainLocator = new Real_Locator_t();
 		MainIMU = new Real_IMU_t();

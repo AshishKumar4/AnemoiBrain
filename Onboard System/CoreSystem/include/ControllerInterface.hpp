@@ -54,18 +54,20 @@ uint8_t checksum(uint8_t *buf, int len);
 
 namespace ControllerInterface
 {
-InertialMeasurement_t *MainIMU;
-GlobalLocator_t *MainLocator;
-GlobalState_t *MainState;
-
-uint8_t RC_MASTER_DATA[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-uint8_t* RC_APPARENT_DATA;
-
 int WriteToPort(int portnum, char *buff, int size);
 int ReadFromPort(int portnum, char *buff, int size);
 
+void setRC_Direct(int channel, uint8_t val);
+void setRC_Buffered(int channel, uint8_t val);
+uint8_t getRC_Direct(int channel);
+uint8_t getRC_Buffered(int channel);
+
 void switchApparentRCstream();
 void switchApparentRCstream(uint8_t* stream);
+
+InertialMeasurement_t* getMainIMU();
+GlobalLocator_t* getMainLocator();
+GlobalState_t* getMainState();
 
 void _setPitch(int pitch);
 void _setRoll(int roll);
@@ -124,8 +126,6 @@ DroneState_t getCompleteState();
 quaternion_t getOrientationQuaternion();
 vector3D_t getOrientation(); // Returns Euler angle orientation
 
-float getCurrentTargetDistance();
-
 int setAutoYaw(float heading);
 int setAutoRoll(float heading);
 int setAutoPitch(float heading);
@@ -149,8 +149,8 @@ int setPosition(GeoPoint_t val);
     High Level APIs 
 */
 
-int AutoNavigate(GeoPoint_t destination, GeoPoint_t start, float max_velocity = 15);
-int gotoLocation(float x, float y, float z);
+int AutoNavigate(GeoPoint_t destination, GeoPoint_t start, float max_velocity = 15, bool override = false);
+int gotoLocation(float x, float y, float z, float max_velocity = 15);
 int addWaypoint(float x, float y, float z, float max_velocity = 15);
 
 int returnToHome();
@@ -164,8 +164,5 @@ void FaultHandler();
 int ControllerInterface_init(int argc, const char *argv[]);
 } // namespace ControllerInterface
 
-volatile std::thread *chnl_refresh;
-volatile std::thread *keyboard_handler;
-volatile std::thread *chnl_update;
 
 #endif

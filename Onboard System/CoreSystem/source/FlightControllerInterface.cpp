@@ -21,7 +21,7 @@
 #include "Sensors/InertialMeasurement.hpp"
 #include "Sensors/Location.hpp"
 
-#include "specificDefs.h"
+// #include "specificDefs.h"
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ---------------------------------------------For SPI Based Communication------------------------------------------------ */
@@ -400,7 +400,7 @@ void destroyFlightControllerObjs()
 #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
 #include "rpc/server.h"
 
-msr::airlib::MultirotorRpcLibClient *client;
+std::atomic<msr::airlib::MultirotorRpcLibClient*> client;
 
 #define TIMESLICE 0.001
 
@@ -452,7 +452,7 @@ void Sensors_Updater()
 			if(exitFlag)	
 				return;
 #if !defined(MODE_DEBUG_NO_FC)
-			auto state = client->getMultirotorState();
+			auto state = client.load()->getMultirotorState();
             //Main_Mutex.lock();
             auto orien = state.getOrientation();
             AIRSIM_oritentation.set(orien.w(), orien.x(), orien.y(), orien.z());
@@ -499,7 +499,7 @@ void Channel_Updater(int threadid)
 				return;
 #if !defined(MODE_DEBUG_NO_FC)
             //Main_Mutex.lock();
-            client->moveByAngleThrottleAsync(rcShrink(255 - RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 5), rcShrink(RC_DATA[YAW], -10.0, 10.0), TIMESLICE);
+            client.load()->moveByAngleThrottleAsync(rcShrink(255 - RC_DATA[PITCH]), rcShrink(RC_DATA[ROLL]), rcShrink(RC_DATA[THROTTLE], 0, 5), rcShrink(RC_DATA[YAW], -10.0, 10.0), TIMESLICE);
             //Main_Mutex.unlock();
 #endif
             std::this_thread::sleep_for(std::chrono::microseconds(int(TIMESLICE * 1000.0 * 1000.0)));
@@ -526,23 +526,22 @@ void Raw_Init(int argc, const char *argv[])
     //rpc::server srv(8080);
 #if !defined(MODE_DEBUG_NO_FC)
     //cout << "Press Enter to enable API control" << endl; cin.get();
-    client = new msr::airlib::MultirotorRpcLibClient(ip, port);
+	msr::airlib::MultirotorRpcLibClient* obj = new msr::airlib::MultirotorRpcLibClient(ip, port);
+    client.store(obj);
     printf("\nEnabling AirSim API Control");
-    client->enableApiControl(true);
+    obj->enableApiControl(true);
 
     //cout << "Press Enter to arm the drone" << endl; cin.get();
     printf("\nArming the multirotor");
-    client->armDisarm(true);
+    obj->armDisarm(true);
 
     //cout << "Press Enter to takeoff" << endl; cin.get();
     //client->takeoffAsync(5); //*/
 #else 
-	client = nullptr;
+	obj = nullptr;
 #endif
     printf("\nInitialization complete");
-	ControllerInterface::MainFC = new FlightController("master", "AirSim", "Simple FC", (uintptr_t)client);
-    ControllerInterface::MainIMU = new AirSim_IMU_t(client);
-    ControllerInterface::MainLocator = new AirSim_Locator_t(client);
+	ControllerInterface::MainFC = new FlightController("master", "AirSim", "Simple FC", (uintptr_t)obj);
 }
 
 void sendCommand(uint8_t val, uint8_t channel)
@@ -556,7 +555,7 @@ void destroyFlightControllerObjs()
 	printf("\nDestroying Objects...");
 	fflush(stdout);
 	std::this_thread::sleep_for(std::chrono::milliseconds(10));
-	delete client;
+	delete client.load();
 }
 
 #endif

@@ -193,8 +193,8 @@ float InertialMeasurement_t::getPitchDegrees()
 
 #if defined MODE_AIRSIM
 
-#include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
-#include "rpc/server.h"
+// #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
+// #include "rpc/server.h"
 
 namespace
 {

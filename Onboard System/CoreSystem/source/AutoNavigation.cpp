@@ -19,7 +19,6 @@
 #include "Sensors/Location.hpp"
 
 #include "CommonControl.hpp"
-
 #include "AutoNavigation.hpp"
 
 extern bool IntentionOverride;
@@ -29,6 +28,12 @@ namespace ControllerInterface
 
 namespace AutoNavigation
 {
+
+
+int Path_t::path_id_counter = 1;
+
+int 	trajectoryIDcounter;
+std::map<int, Trajectory_t*> 	idTrajectoryMap;
 
 Path_t *currentActivePath;
 std::list<Path_t *> MainPathQueue;
@@ -78,6 +83,7 @@ int LinearPath_t::executePath()
 
 int ArcPath_t::executePath()
 {
+	return 0;
 }
 
 Path_t *makeLinearPath(GeoPoint_t start, GeoPoint_t destination, float max_velocity)
@@ -93,10 +99,23 @@ Trajectory_t::Trajectory_t(float final_wait_time, Trajectory_t *next) : final_wa
 	idTrajectoryMap[id] = this;
 }
 
-void Trajectory_t::addPath(Path_t *path)
+void Trajectory_t::addPath(Path_t *path, bool override)
 {
-	this->queue.push_back(path);
-	this->idPathMap[path->id] = this->queue.end();
+	if (!override || currentActivePath == nullptr)
+	{
+		this->queue.push_back(path);
+		this->idPathMap[path->id] = this->queue.end();
+	}
+	else
+	{
+		path->setType(OVERRIDE);
+		currentActivePath->mergeIntoPath(path);
+		// Save old path onto the queue's front, tp be executed just after this overriden path
+		this->queue.push_front(currentActivePath);
+		this->queue.push_front(path);
+		this->idPathMap[path->id] = this->queue.begin();
+		suspendCurrentPath();
+	}
 }
 
 Path_t *Trajectory_t::popPath()
@@ -195,6 +214,15 @@ void initialize_AutoNavigation()
 {
 	auto_nav_toggle_flag = 1;
 	defaultTrajectory = currentTrajectory = new Trajectory_t();
+}
+
+void suspendCurrentPath()
+{
+
+	// If Override was given, Terminate any ongoing auto navigation and execute this first
+	// Then the others
+	//suspendAutoNavFlag = true;
+	terminateActiveFollowing();
 }
 
 } // namespace AutoNavigation

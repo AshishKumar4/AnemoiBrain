@@ -13,7 +13,7 @@
 #include <functional>
 #include <math.h>
 
-#include "specificDefs.h"
+#include "FlightControllerInterface.hpp"
 #include "UserInterface.hpp"
 #include "ControllerInterface.hpp"
 

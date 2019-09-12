@@ -5,13 +5,16 @@
 #include "list"
 #include <rpc/msgpack.hpp>
 
+enum PATH_FLAGS
+{
+	OVERRIDE
+};
+
 namespace ControllerInterface
 {
 
 namespace AutoNavigation
 {
-
-static int path_id_counter = 1;
 
 class Path_t
 {
@@ -19,6 +22,10 @@ protected:
 	int 	end_style;	// Action to perform on path completion
 	float 	final_velocity;
 	float 	cruise_velocity;
+
+	int 	type;
+
+	static int path_id_counter;
 
 public:
 	int id;
@@ -28,10 +35,18 @@ public:
 	Path_t(float cruise_velocity, float final_velocity = 0, int end_style = 0) : cruise_velocity(cruise_velocity), final_velocity(final_velocity), end_style(end_style)
 	{
 		this->id = path_id_counter++;
+		type = 0;
+	}
+
+	void setType(int flag)
+	{
+		type = flag;
 	}
 
 	friend void moveOnPath(Path_t &path);
 	virtual int executePath() = 0;
+
+	virtual void mergeIntoPath(Path_t* prev) = 0;
 };
 
 class LinearPath_t : public Path_t
@@ -49,6 +64,11 @@ public:
 
 	int executePath();
 	friend Path_t *makeLinearPath(GeoPoint_t start, GeoPoint_t destination, float max_velocity);
+	
+	void mergeIntoPath(Path_t* prev)
+	{
+		this->start = ((LinearPath_t*)(prev))->destination;
+	}
 };
 
 class ArcPath_t : public Path_t
@@ -82,7 +102,7 @@ public:
 
 	Trajectory_t(float final_wait_time = 0, Trajectory_t* next = nullptr);
 
-	void 		addPath(Path_t *path);
+	void 		addPath(Path_t *path, bool override = false);
 	Path_t* 	popPath();
 	int 		removePath(std::list<Path_t *>::iterator pathIterator);
 	std::list<Path_t *>::iterator getPathFromID(int id);
@@ -90,9 +110,6 @@ public:
 	friend void NavigatePathQueue();
 	friend void addNextTrajectory(Trajectory_t* prev, Trajectory_t* next);
 };
-
-static int 	trajectoryIDcounter;
-static std::map<int, Trajectory_t*> 	idTrajectoryMap;
 
 Path_t *makeLinearPath(GeoPoint_t start, GeoPoint_t destination, float max_velocity = 15);
 void addToPathQueue(Path_t *path);
@@ -108,6 +125,7 @@ void addNextTrajectory(Trajectory_t *prev, Trajectory_t *next);
 Trajectory_t* getTrajectoryFromID(int id);
 void addPathToTrajectory(Path_t* path, int trajectoryID);
 
+void suspendCurrentPath();
 } // namespace AutoNavigation
 
 int enableAutoNav();
