@@ -12,6 +12,7 @@ int setFeedbackAltitude(float altitude);
 int setFeedbackYaw(float heading);
 
 float getForwardVelocity();
+float getSidewaysVelocity();
 float getDesiredVelocity();
 void HeadlessHover(float val);
 int terminateActiveFollowing();

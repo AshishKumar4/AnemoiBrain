@@ -454,11 +454,11 @@ public:
 		deltaTime = 1;
 
 		this->MAX_I_BOUNDARY = 1000;
-		this->CONTROLLER_P = 3;
-		this->CONTROLLER_I = 0.1;
-		this->CONTROLLER_D = 1000;
-		this->CONTROLLER_E_RANGE = 0.20;
-		this->CONTROLLER_E = 10000;
+		this->CONTROLLER_P = 15;
+		this->CONTROLLER_I = 1;
+		this->CONTROLLER_D = 10;
+		this->CONTROLLER_E_RANGE = 0.0;
+		this->CONTROLLER_E = 0;
 
 		ErrorProcessor = IdentityErrorScaler;
 	}
@@ -551,7 +551,7 @@ public:
 // Planner_X_Controller_t Xrel_Actuator(setAutoPitch, getForwardVelocity, RC_X_MOTION);
 // Planner_Y_Controller_t Yrel_Actuator(setAutoRoll, getPathDeviation, RC_Y_MOTION);
 Planner_X_Controller_t Xrel_Actuator(setForwardComponent, getForwardVelocity, RC_X_MOTION);
-Planner_Y_Controller_t Yrel_Actuator(setSidewaysComponent, getPathDeviation, RC_Y_MOTION);
+Planner_Y_Controller_t Yrel_Actuator(setSidewaysComponent, getSidewaysVelocity, RC_Y_MOTION);
 AltitudeController_t Z_Actuator(setThrottle, getAltitude, THROTTLE);
 
 LateralController_t Distance_Actuator(HeadlessHover, getDesiredVelocity, RC_X_MOTION);
@@ -665,6 +665,9 @@ std::atomic<float> desiredHeading;
 std::atomic<float> currentDistance;
 std::atomic<float> currentDeviation;
 
+std::atomic<float> ForwardVelocity;
+std::atomic<float> SidewaysVelocity;
+
 std::atomic<float> TEMP_FORWARD_COMPONENT;
 std::atomic<float> TEMP_DRIFT_COMPONENT;
 
@@ -718,11 +721,20 @@ float getDesiredVelocity()
 
 float getForwardVelocity()
 {
-	vector3D_t v = getVelocityAbs();			  //get_Y_VelocityRel();
-	float theta = -degreesToRads(desiredHeading); //getHeading();;
-	float _v = v.y * cos(theta) + v.x * sin(theta);
-	printf("\t<<%f, [%f, %f]; %f>>", _v, theta, getHeading(), get_Y_VelocityRel());
-	return (_v);
+	// vector3D_t v = getVelocityAbs();			  //get_Y_VelocityRel();
+	// float theta = -degreesToRads(desiredHeading); //getHeading();;
+	// float _v = v.y * cos(theta) + v.x * sin(theta);
+	//printf("\t<<F: %f>>", _v);
+	return ForwardVelocity;//(_v);
+}
+
+float getSidewaysVelocity()
+{
+	// vector3D_t v = getVelocityAbs();			  //get_Y_VelocityRel();
+	// float theta = -degreesToRads(desiredHeading); //getHeading();;
+	// float _v = -v.y * sin(theta) + v.x * cos(theta);
+	//printf("\t{{S: %f}}", _v);
+	return SidewaysVelocity;//(_v);
 }
 
 void setForwardComponent(float vel)
@@ -758,7 +770,8 @@ float getPathDeviation()
 {
 	try
 	{ // This should give me the deviation
-		return currentDeviation;
+	
+		return tanh(currentDeviation / 20) * 40;
 	}
 	catch (const std::future_error &e)
 	{
@@ -901,11 +914,19 @@ inline void updateTargetStatus(GeoPoint_t currentLocation = getLocation())
 	float dev = calcPathDeviation(currentLocation);
 
 	float lenXY = currentDistance;
-	float desiredVel = getDesiredVelocity();
-	printf("\n{%f},\t{%f}\t[%f]", lenXY, dev, desiredVel);
+	float desiredFvel = getDesiredVelocity();
+	float desiredSvel = getPathDeviation();
+
+	vector3D_t v = getVelocityAbs();			  
+	float theta = -degreesToRads(desiredHeading);
+	ForwardVelocity = v.y * cos(theta) + v.x * sin(theta);
+	SidewaysVelocity = -v.y * sin(theta) + v.x * cos(theta);
+
+	printf("\n{%f}\t{%f}\t[%f]\t<%f>", lenXY, dev, desiredFvel, desiredSvel);
 	currentDeviation = dev;
 	FeedbackControl::YawActuator.setIntendedActuation(desiredHeading);
-	FeedbackControl::Xrel_Actuator.setIntendedActuation(desiredVel);
+	FeedbackControl::Xrel_Actuator.setIntendedActuation(desiredFvel);
+	FeedbackControl::Yrel_Actuator.setIntendedActuation(-desiredSvel);
 	HeadlessMoveTowardsTarget();
 }
 
