@@ -35,7 +35,8 @@ public:
         //bufferWriterThread->join();
     }
 
-    virtual quaternion_t getOrientation() = 0;
+    virtual quaternion_t& getOrientation() = 0;
+
     virtual vector3D_t getEulerOrientation();
 	
     float getYaw();
@@ -59,7 +60,7 @@ public:
     {
     }
 
-	quaternion_t getOrientation();
+	quaternion_t& getOrientation();
     vector3D_t getEulerOrientation();
 };
 
@@ -72,7 +73,7 @@ class Real_IMU_t : public InertialMeasurement_t
 	{
 		
 	}
-    quaternion_t getOrientation();
+    quaternion_t& getOrientation();
     vector3D_t getEulerOrientation();
 };
 

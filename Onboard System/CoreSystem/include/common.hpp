@@ -23,18 +23,12 @@ public:
         z = 0;
     }
 
-    vector3D_t(float xval, float yval, float zval)
+    vector3D_t(float xval, float yval, float zval) : x(xval), y(yval), z(zval)
     {
-        x = xval;
-        y = yval; 
-        z = zval;
     }
 	
-    vector3D_t(uint8_t arr[])
+    vector3D_t(uint8_t arr[]) : x((float)arr[0]), y((float)arr[1]), z((float)arr[2])
     {
-        x = (float)arr[0];
-        y = (float)arr[1]; 
-        z = (float)arr[2];
     }
 
     void set(float xval, float yval, float zval)
@@ -62,20 +56,12 @@ public:
     float _z;
 	MSGPACK_DEFINE_MAP(this->_w, this->_x, this->_y, this->_z);
 
-    quaternion_t()
+    quaternion_t() : _w(1), _x(0), _y(0), _z(0)
     {
-        _w = 1;
-        _x = 0;
-        _y = 0;
-        _z = 0;
     }
 
-    quaternion_t(float w, float x, float y, float z)
+    quaternion_t(float w, float x, float y, float z) : _w(w), _x(x), _y(y), _z(z)
     {
-        this->_w = w;
-        this->_x = x;
-        this->_y = y;
-        this->_z = z;
     }
 
     void set(float w, float x, float y, float z)
@@ -115,18 +101,12 @@ public:
     float z;
 	MSGPACK_DEFINE_MAP(this->x, this->y, this->z);
 
-    GeoPoint_t()
+    GeoPoint_t() : x(0), y(0), z(0)
     {
-        x = 0;
-        y = 0;
-        z = 0;
     }
     
-    GeoPoint_t(float xval, float yval, float zval)
+    GeoPoint_t(float xval, float yval, float zval) : x(xval), y(yval), z(zval)
     {
-        x = xval;
-        y = yval; 
-        z = zval;
     }
 
     void set(float xval, float yval, float zval)
@@ -152,11 +132,12 @@ public:
 	vector3D_t 	mag;
 	MSGPACK_DEFINE_MAP(this->acc, this->gyro, this->mag);
 
-	data_imu_t(vector3D_t acc, vector3D_t gyro, vector3D_t mag)
+	data_imu_t(vector3D_t &acc, vector3D_t &gyro, vector3D_t &mag) : acc(acc), gyro(gyro), mag(mag)
 	{
-		this->acc = acc;
-		this->gyro = gyro;
-		this->mag = mag;
+	}
+
+	data_imu_t(vector3D_t acc, vector3D_t gyro, vector3D_t mag) : acc(acc), gyro(gyro), mag(mag)
+	{
 	}
 };
 
@@ -175,6 +156,10 @@ public:
 	float 		altitude;
 	float 		heading;	// in Radians
 	MSGPACK_DEFINE_MAP(this->imu, this->vel, this->altitude, this->heading);
+
+	DroneState_t(data_imu_t &imu, vector3D_t &vel, float altitude, float heading) : imu(imu), vel(vel), altitude(altitude), heading(heading)
+	{
+	}
 
 	DroneState_t(data_imu_t imu, vector3D_t vel, float altitude, float heading) : imu(imu), vel(vel), altitude(altitude), heading(heading)
 	{
@@ -226,7 +211,7 @@ inline float circularToSignAngle(float angle)
     return angle;
 }
 
-inline vector3D_t eulerFromQuaternion(quaternion_t orien)
+inline vector3D_t eulerFromQuaternion(quaternion_t &orien)
 {
     try
     {

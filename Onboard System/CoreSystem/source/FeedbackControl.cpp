@@ -127,14 +127,7 @@ public:
 	{
 		try
 		{
-//intentionLock->lock();
-#if defined(ACTUATION_INTENTION_RELATIVE)
-			// The Intended actuation should be relative to the current state
-			IntendedActuation = float(this->getCurrentStateValues() + intention);
-#else
 			IntendedActuation = intention;
-#endif
-			//intentionLock->unlock();
 		}
 		catch (const std::future_error &e)
 		{
@@ -153,17 +146,7 @@ public:
 	{
 		try
 		{
-			float intention;
-#if defined(ACTUATION_INTENTION_RELATIVE)
-			//intentionLock->lock();
-			intention = IntendedActuation;
-#else
-			intention = IntendedActuation;
-#endif
-			//if(IntentionOverride)
-			//    intention = RC_MASTER_DATA[this->RC_Channel];
-			//intentionLock->unlock();
-			return intention;
+			return IntendedActuation;
 		}
 		catch (const std::future_error &e)
 		{
@@ -419,13 +402,6 @@ float IdentityErrorScaler(float val) // Use a function
 	return val; //- tanh(val/max_scale) * max_scale;
 }
 
-int PositionHoldEscapeFunction(float error, float dval)
-{
-	//if(abs(error) <= 3)// && abs(error - dval) <= 10)
-	//    return 1;
-	return 0;
-}
-
 class Planner_X_Controller_t : public FeedbackController_t
 {
 public:
@@ -522,7 +498,6 @@ public:
 		//this->CONTROLLER_E = 100000;
 
 		ErrorProcessor = IdentityErrorScaler;
-		//EscapeFunction = PositionHoldEscapeFunction;
 	}
 
 	void deployFeedbackControllers()
@@ -802,7 +777,7 @@ inline float euclideanDistance2d(float x2, float y2, float x1, float y1)
 	return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
 }
 
-inline float calcPathDeviation(GeoPoint_t currentLocation)
+inline float calcPathDeviation(GeoPoint_t &currentLocation)
 {
 	if (totalDistance)
 		return ((deltaY * currentLocation.x) - (deltaX * currentLocation.y) + (pathConstant)) / totalDistance;
@@ -830,7 +805,7 @@ int set2DLinearPath(float startX, float startY, float destX, float destY)
 	return 0;
 }
 
-int setLinearPath(GeoPoint_t start, GeoPoint_t destination, float cruise_velocity, float final_velocity, float clamp_factor)
+int setLinearPath(GeoPoint_t &start, GeoPoint_t &destination, float cruise_velocity, float final_velocity, float clamp_factor)
 {
 	try
 	{
@@ -1033,7 +1008,7 @@ void executeLinearPathFollowing()
 	}
 }
 
-int setGazeOn(GeoPoint_t destination)
+int setGazeOn(GeoPoint_t &destination)
 {
 	try
 	{

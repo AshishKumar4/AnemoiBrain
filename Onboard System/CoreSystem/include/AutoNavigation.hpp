@@ -63,7 +63,7 @@ public:
 	}
 
 	int executePath();
-	friend Path_t *makeLinearPath(GeoPoint_t start, GeoPoint_t destination, float max_velocity);
+	friend Path_t *makeLinearPath(GeoPoint_t &start, GeoPoint_t &destination, float max_velocity);
 	
 	void mergeIntoPath(Path_t* prev)
 	{
@@ -79,11 +79,8 @@ class ArcPath_t : public Path_t
 public:
 	MSGPACK_DEFINE_MAP(this->focus, this->radius, this->arcLength);
 
-	ArcPath_t(GeoPoint_t focus, float arcLength, float radius, float max_velocity = 15, float final_velocity = 0, int end_style = 0) : Path_t(max_velocity, final_velocity, end_style)
+	ArcPath_t(GeoPoint_t focus, float arcLength, float radius, float max_velocity = 15, float final_velocity = 0, int end_style = 0) : Path_t(max_velocity, final_velocity, end_style), focus(focus), arcLength(arcLength), radius(radius)
 	{
-		this->focus = focus;
-		this->radius = radius;
-		this->arcLength = arcLength;
 	}
 
 	int executePath();
@@ -111,19 +108,21 @@ public:
 	friend void addNextTrajectory(Trajectory_t* prev, Trajectory_t* next);
 };
 
-Path_t *makeLinearPath(GeoPoint_t start, GeoPoint_t destination, float max_velocity = 15);
-void addToPathQueue(Path_t *path);
-Path_t *popFromPathQueue();
-int removeFromPathQueue(std::list<Path_t *>::iterator pathIterator);
-std::list<Path_t *>::iterator getPathFromID(int id);
-bool isNavigationInProgress();
-void moveOnPath(Path_t &path);
-void NavigatePathQueue();
-void initialize_AutoNavigation();
+Path_t*		makeLinearPath(GeoPoint_t &start, GeoPoint_t &destination, float max_velocity = 15);
+void 		addToPathQueue(Path_t *path);
+Path_t* 	popFromPathQueue();
+int 		removeFromPathQueue(std::list<Path_t *>::iterator pathIterator);
 
-void addNextTrajectory(Trajectory_t *prev, Trajectory_t *next);
-Trajectory_t* getTrajectoryFromID(int id);
-void addPathToTrajectory(Path_t* path, int trajectoryID);
+std::list<Path_t *>::iterator getPathFromID(int id);
+
+bool 		isNavigationInProgress();
+void 		moveOnPath(Path_t &path);
+void 		NavigatePathQueue();
+void 		initialize_AutoNavigation();
+
+void 			addNextTrajectory(Trajectory_t *prev, Trajectory_t *next);
+void 			addPathToTrajectory(Path_t* path, int trajectoryID);
+Trajectory_t* 	getTrajectoryFromID(int id);
 
 void suspendCurrentPath();
 } // namespace AutoNavigation

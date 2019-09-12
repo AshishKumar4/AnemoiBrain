@@ -4,8 +4,8 @@
 
 namespace ControllerInterface
 {
-int setGazeOn(GeoPoint_t destination);
-int setLinearPath(GeoPoint_t start, GeoPoint_t destination, float cruise_velocity = 15, float final_velocity = 0, float clamp_factor = 40);
+int setGazeOn(GeoPoint_t &destination);
+int setLinearPath(GeoPoint_t &start, GeoPoint_t &destination, float cruise_velocity = 15, float final_velocity = 0, float clamp_factor = 40);
 int moveSavedPath();
 
 int setFeedbackAltitude(float altitude);

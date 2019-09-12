@@ -204,7 +204,7 @@ quaternion_t tmporien;
 extern quaternion_t AIRSIM_oritentation;
 extern vector3D_t AIRSIM_euleroritentation;
 
-quaternion_t AirSim_IMU_t::getOrientation()
+quaternion_t& AirSim_IMU_t::getOrientation()
 {
     try
     {
@@ -248,7 +248,7 @@ vector3D_t AirSim_IMU_t::getEulerOrientation()
 extern quaternion_t Real_IMU_oritentation;
 extern vector3D_t Real_IMU_euleroritentation;
 
-quaternion_t Real_IMU_t::getOrientation()
+quaternion_t& Real_IMU_t::getOrientation()
 {
     return Real_IMU_oritentation;
 }
