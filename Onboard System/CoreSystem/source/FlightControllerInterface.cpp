@@ -634,7 +634,6 @@ MSP_Packet MSP_Agent(char *buf, int size)
 {
     try
     {
-        int j = 0;
         std::vector<uint8_t> vec((uint8_t *)buf, (uint8_t *)(buf + size));
         /*for (int i = 0; i < size; i++)
         {
@@ -653,7 +652,6 @@ MSP_Packet MSP_Agent(char *buf, int size)
         if (msp_agent->hasData() < 1)
         {
             exit(0);
-            throw "No Data";
         }
 
         while (char(msp_agent->read()) != '$')

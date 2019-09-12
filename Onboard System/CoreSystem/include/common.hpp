@@ -132,7 +132,7 @@ public:
 	// MSGPACK_DEFINE_MAP(this->acc, this->gyro, this->mag);
 	MSGPACK_DEFINE_MAP(this->orien);
 
-	data_imu_t(const quaternion_t &orien) : orien(orien)
+	explicit data_imu_t(const quaternion_t &orien) : orien(orien)
 	{
 	}
 

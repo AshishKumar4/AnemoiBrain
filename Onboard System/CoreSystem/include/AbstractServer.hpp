@@ -66,8 +66,8 @@ class AbstractServer
     std::vector<func_iii_t> ChannelInitializers;
     //std::vector<std::function<void(int)>> ChannelListeners;
 
-    AbstractServer(int portBase = 8400);
-    AbstractServer(AbstractServer* obj);
+    explicit AbstractServer(int portBase = 8400);
+    explicit AbstractServer(AbstractServer* obj);
     ~AbstractServer();
 
 	void triggerFault();

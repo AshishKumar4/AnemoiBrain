@@ -108,9 +108,10 @@ public:
 	FeedbackController_t(std::function<void(int)> actuatorSet, std::function<float(void)> actuatorGet, int rcChannel, float CONSTANT_P = 0.8, float CONSTANT_I = 1.0, float CONSTANT_D = 200) :
 			setActuation(actuatorSet), getCurrentStateValues(actuatorGet), IntendedActuation(0), 
 			CONTROLLER_P(CONSTANT_P), CONTROLLER_I(CONSTANT_I), CONTROLLER_D(CONSTANT_D),
-			intentionLock(new std::mutex()), actuationControllerlock(new std::mutex()),
 			RC_Channel(rcChannel), EscapeFunction(DefaultEscapeFunction)
 	{
+		intentionLock = new std::mutex();
+		actuationControllerlock = new std::mutex();
 	}
 
 	int setIntendedActuation(float intention)
