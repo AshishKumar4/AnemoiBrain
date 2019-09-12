@@ -71,7 +71,7 @@ int IssueCommand()
         uint8_t *ht = ((uint8_t *)pp);
         uint8_t *hr = ((uint8_t *)&rff);
         pp->checksum = checksum(ht, sizeof(ControlPackets));
-        uint8_t tb = 0;
+        // uint8_t tb = 0;
 #ifndef MODE_DEBUG_NO_FC
         SPI_ReadWrite((int)fd, (uintptr_t)ht, (uintptr_t)hr, (size_t)sizeof(ControlPackets));
 #endif
@@ -194,7 +194,7 @@ back:
         delete tmp1;
         delete tmp2;
         Main_Mutex.unlock();
-        return;
+        return void;
     }
     else
     {

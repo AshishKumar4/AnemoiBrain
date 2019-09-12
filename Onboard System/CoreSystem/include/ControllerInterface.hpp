@@ -133,7 +133,7 @@ int setAutoPitch(float heading);
 int setHeading(float heading);
 int testHeading(int test);
 
-int setVelocity(vector3D_t val);
+int setVelocity(const vector3D_t &val);
 void set_Y_Motion(int val);
 void set_X_Motion(int val);
 void set_X_MotionAbs(int val);
@@ -143,13 +143,13 @@ int setAltitude(float altitude);
 
 void takeOff(float altitude = 5);
 
-int setVelocity(vector3D_t val);
-int setPosition(GeoPoint_t val);
+int setVelocity(const vector3D_t &val);
+// int setPosition(const GeoPoint_t &val);
 /*
     High Level APIs 
 */
 
-int AutoNavigate(GeoPoint_t destination, GeoPoint_t start, float max_velocity = 15, bool override = false);
+int AutoNavigate(const GeoPoint_t &destination, const GeoPoint_t &start, float max_velocity = 15, bool override = false);
 int gotoLocation(float x, float y, float z, float max_velocity = 15);
 int addWaypoint(float x, float y, float z, float max_velocity = 15);
 

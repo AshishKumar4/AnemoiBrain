@@ -33,40 +33,40 @@ vector3D_t InertialMeasurement_t::getEulerOrientation() // Returns Euler angle o
 }
 
 
-void InertialMeasurement_t::bufferWriter(InertialMeasurement_t *imu)
-{
-    while (1)
-    {
-        try
-        {
-            /* code */
+// void InertialMeasurement_t::bufferWriter(InertialMeasurement_t *imu)
+// {
+//     while (1)
+//     {
+//         try
+//         {
+//             /* code */
 
-            /*imu->rollLock.lock();
-            imu->pitchLock.lock();
-            imu->yawLock.lock();*/
+//             /*imu->rollLock.lock();
+//             imu->pitchLock.lock();
+//             imu->yawLock.lock();*/
 
-            vector3D_t eulerOrient = eulerFromQuaternion(imu->getOrientation());
-            imu->yawBuffer = (eulerOrient.z);
-            imu->rollBuffer = (eulerOrient.y);
-            imu->pitchBuffer = (eulerOrient.x);
-            //std::cout << "<" << eulerOrient.z << ">" ;
+//             vector3D_t eulerOrient = eulerFromQuaternion(imu->getOrientation());
+//             imu->yawBuffer = (eulerOrient.z);
+//             imu->rollBuffer = (eulerOrient.y);
+//             imu->pitchBuffer = (eulerOrient.x);
+//             //std::cout << "<" << eulerOrient.z << ">" ;
 
-            /*imu->rollLock.unlock();
-            imu->pitchLock.unlock();
-            imu->yawLock.unlock();*/
-            //std::this_thread::sleep_for(std::chrono::microseconds(1));
-        }
-        catch (const std::future_error &e)
-        {
-            std::cout << "<InertialMeasurement_t::bufferWriter>Caught a future_error with code \"" << e.code()
-                      << "\"\nMessage: \"" << e.what() << "\"\n";
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << e.what() << '\n';
-        }
-    }
-}
+//             /*imu->rollLock.unlock();
+//             imu->pitchLock.unlock();
+//             imu->yawLock.unlock();*/
+//             //std::this_thread::sleep_for(std::chrono::microseconds(1));
+//         }
+//         catch (const std::future_error &e)
+//         {
+//             std::cout << "<InertialMeasurement_t::bufferWriter>Caught a future_error with code \"" << e.code()
+//                       << "\"\nMessage: \"" << e.what() << "\"\n";
+//         }
+//         catch (const std::exception &e)
+//         {
+//             std::cerr << e.what() << '\n';
+//         }
+//     }
+// }
 
 float InertialMeasurement_t::getYaw() // Gives in Radians
 {

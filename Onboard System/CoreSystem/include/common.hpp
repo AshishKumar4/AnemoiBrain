@@ -27,7 +27,7 @@ public:
     {
     }
 	
-    vector3D_t(uint8_t arr[]) : x((float)arr[0]), y((float)arr[1]), z((float)arr[2])
+    explicit vector3D_t(uint8_t arr[]) : x((float)arr[0]), y((float)arr[1]), z((float)arr[2])
     {
     }
 
@@ -116,7 +116,7 @@ public:
         z = zval;
     }
 
-    void set(GeoPoint_t &point)
+    void set(const GeoPoint_t &point)
     {
         x = point.x;
         y = point.y;
@@ -127,18 +127,22 @@ public:
 class data_imu_t
 {
 public: 
-	vector3D_t 	acc;
-	vector3D_t 	gyro;
-	vector3D_t 	mag;
-	MSGPACK_DEFINE_MAP(this->acc, this->gyro, this->mag);
+	quaternion_t orien;
 
-	data_imu_t(vector3D_t &acc, vector3D_t &gyro, vector3D_t &mag) : acc(acc), gyro(gyro), mag(mag)
+	// MSGPACK_DEFINE_MAP(this->acc, this->gyro, this->mag);
+	MSGPACK_DEFINE_MAP(this->orien);
+
+	data_imu_t(const quaternion_t &orien) : orien(orien)
 	{
 	}
 
-	data_imu_t(vector3D_t acc, vector3D_t gyro, vector3D_t mag) : acc(acc), gyro(gyro), mag(mag)
-	{
-	}
+	// data_imu_t(vector3D_t &acc, vector3D_t &gyro, vector3D_t &mag) : acc(acc), gyro(gyro), mag(mag)
+	// {
+	// }
+
+	// data_imu_t(vector3D_t acc, vector3D_t gyro, vector3D_t mag) : acc(acc), gyro(gyro), mag(mag)
+	// {
+	// }
 };
 
 class image_t 
@@ -157,13 +161,13 @@ public:
 	float 		heading;	// in Radians
 	MSGPACK_DEFINE_MAP(this->imu, this->vel, this->altitude, this->heading);
 
-	DroneState_t(data_imu_t &imu, vector3D_t &vel, float altitude, float heading) : imu(imu), vel(vel), altitude(altitude), heading(heading)
+	DroneState_t(const data_imu_t &imu, const vector3D_t &vel, float altitude, float heading) : imu(imu), vel(vel), altitude(altitude), heading(heading)
 	{
 	}
 
-	DroneState_t(data_imu_t imu, vector3D_t vel, float altitude, float heading) : imu(imu), vel(vel), altitude(altitude), heading(heading)
-	{
-	}
+	// DroneState_t(data_imu_t imu, vector3D_t vel, float altitude, float heading) : imu(imu), vel(vel), altitude(altitude), heading(heading)
+	// {
+	// }
 };
 
 /*
@@ -211,7 +215,7 @@ inline float circularToSignAngle(float angle)
     return angle;
 }
 
-inline vector3D_t eulerFromQuaternion(quaternion_t &orien)
+inline vector3D_t eulerFromQuaternion(const quaternion_t &orien)
 {
     try
     {
@@ -220,7 +224,7 @@ inline vector3D_t eulerFromQuaternion(quaternion_t &orien)
         Quaternion to Euler
     */
         //std::cout << ">>>" << orien << "<<<" << std::endl;
-        double heading = 0, roll, pitch, yaw;
+        double heading, roll, pitch, yaw;
         double ysqr = orien._y * orien._y;
 
         // roll (x-axis rotation)

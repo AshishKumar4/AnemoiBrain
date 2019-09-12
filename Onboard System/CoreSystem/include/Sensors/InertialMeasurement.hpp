@@ -13,7 +13,7 @@
 
 class InertialMeasurement_t 
 {
-    std::thread*        bufferWriterThread;
+    // std::thread*        bufferWriterThread;
     std::atomic<float>   rollBuffer;      
     std::atomic<float>   pitchBuffer;    
     std::atomic<float>   yawBuffer;    
@@ -22,7 +22,7 @@ class InertialMeasurement_t
     std::mutex      pitchLock;
     std::mutex      yawLock;
 
-    static void bufferWriter(InertialMeasurement_t* imu);
+    // static void bufferWriter(InertialMeasurement_t* imu);
 
 public:
     InertialMeasurement_t()

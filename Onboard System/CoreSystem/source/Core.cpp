@@ -571,7 +571,7 @@ image_t getCameraView()
 
 data_imu_t getIMU()
 {
-	return data_imu_t(getAcc(), getGyro(), getMag());
+	return data_imu_t(quaternion_t()); //(getAcc(), getGyro(), getMag());
 }
 
 DroneState_t getCompleteState()
@@ -760,7 +760,7 @@ int setHeading(float heading)
 	return 0;
 }
 
-int setVelocity(vector3D_t val)
+int setVelocity(const vector3D_t &val)
 {
 	try
 	{
@@ -879,14 +879,20 @@ void holdPosition(float x, float y, float z)
 
 GeoPoint_t lastDestination(0, 0, 0);
 
-int AutoNavigate(GeoPoint_t destination, GeoPoint_t start = lastDestination, float max_velocity, bool override)
+int AutoNavigate(const GeoPoint_t &destination, const GeoPoint_t &start = lastDestination, float max_velocity, bool override)
 {
 	try
 	{
 		printf("\n Got here!");
+		AutoNavigation::Path_t *path;
 		if (override)
-			start = getLocation();
-		AutoNavigation::Path_t *path = AutoNavigation::makeLinearPath(start, destination, max_velocity);
+		{
+			path = AutoNavigation::makeLinearPath(getLocation(), destination, max_velocity);
+		}
+		else
+		{
+			path = AutoNavigation::makeLinearPath(start, destination, max_velocity);
+		}
 		getCurrentTrajectory()->addPath(path, override);
 		printf("\nDone till here");
 		fflush(stdout);
@@ -926,11 +932,11 @@ int returnToHome()
     Some other Mechanisms
 */
 
-int unusedAPIhandler(std::vector<std::string> test)
-{
-	std::cout << "\nOops! Seems someone sent me some wrong code!";
-	return 1;
-}
+// int unusedAPIhandler(std::vector<std::string> test)
+// {
+// 	std::cout << "\nOops! Seems someone sent me some wrong code!";
+// 	return 1;
+// }
 int toggleFeedbackControllers(char type)
 {
 	try
@@ -1115,11 +1121,11 @@ int ControllerInterface_init(int argc, const char *argv[])
 
 #if defined(MODE_AIRSIM)
 
-// #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
-// #include "rpc/server.h"
+		// #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
+		// #include "rpc/server.h"
 		//auto client = (msr::airlib::MultirotorRpcLibClient *)MainFC->getDesc();
-		MainIMU = new AirSim_IMU_t();//(client);
-		MainLocator = new AirSim_Locator_t();//(client);
+		MainIMU = new AirSim_IMU_t();		  //(client);
+		MainLocator = new AirSim_Locator_t(); //(client);
 #elif defined(MODE_REALDRONE)
 		Sensor_Fusion_init(argc, (char **)argv);
 		MainLocator = new Real_Locator_t();

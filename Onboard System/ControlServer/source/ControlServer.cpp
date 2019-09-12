@@ -450,7 +450,7 @@ int ControlServer_init(int argc, const char *argv[])
 	catch (std::exception &e)
 	{
 		printf("\nError in Control Server Initialisation!");
-		fflush(stdin);
+		fflush(stdout);
 	}
 
 	return 0;

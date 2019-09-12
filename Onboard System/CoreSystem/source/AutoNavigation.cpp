@@ -86,7 +86,7 @@ int ArcPath_t::executePath()
 	return 0;
 }
 
-Path_t *makeLinearPath(GeoPoint_t &start, GeoPoint_t &destination, float max_velocity)
+Path_t *makeLinearPath(const GeoPoint_t &start, const GeoPoint_t &destination, float max_velocity)
 {
 	Path_t *path = new LinearPath_t(start, destination, max_velocity);
 	return path;

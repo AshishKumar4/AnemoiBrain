@@ -27,12 +27,13 @@ protected:
 
 	static int path_id_counter;
 
+	GeoPoint_t 	destination;
 public:
 	int id;
 
 	MSGPACK_DEFINE_MAP(this->id, this->end_style, this->final_velocity, this->cruise_velocity);
 
-	Path_t(float cruise_velocity, float final_velocity = 0, int end_style = 0) : cruise_velocity(cruise_velocity), final_velocity(final_velocity), end_style(end_style)
+	Path_t(const GeoPoint_t &destination, float cruise_velocity, float final_velocity = 0, int end_style = 0) : destination(destination), cruise_velocity(cruise_velocity), final_velocity(final_velocity), end_style(end_style)
 	{
 		this->id = path_id_counter++;
 		type = 0;
@@ -47,27 +48,27 @@ public:
 	virtual int executePath() = 0;
 
 	virtual void mergeIntoPath(Path_t* prev) = 0;
+
+	friend class LinearPath_t;
+	friend class ArcPath_t;
 };
 
 class LinearPath_t : public Path_t
 {
 	GeoPoint_t 	start;
-	GeoPoint_t 	destination;
 public:
 	MSGPACK_DEFINE_MAP(this->start, this->destination);
 
-	LinearPath_t(GeoPoint_t &start, GeoPoint_t &end, float max_velocity = 15, float final_velocity = 0, int end_style = 0) : Path_t(max_velocity, final_velocity, end_style)
+	LinearPath_t(const GeoPoint_t &start, const GeoPoint_t &end, float max_velocity = 15, float final_velocity = 0, int end_style = 0) : start(start), Path_t(end, max_velocity, final_velocity, end_style)
 	{
-		this->start.set(start.x, start.y, start.z);
-		this->destination.set(end.x, end.y, end.z);
 	}
 
 	int executePath();
-	friend Path_t *makeLinearPath(GeoPoint_t &start, GeoPoint_t &destination, float max_velocity);
+	friend Path_t *makeLinearPath(const GeoPoint_t &start, const GeoPoint_t &destination, float max_velocity);
 	
 	void mergeIntoPath(Path_t* prev)
 	{
-		this->start = ((LinearPath_t*)(prev))->destination;
+		this->start = prev->destination;
 	}
 };
 
@@ -79,7 +80,7 @@ class ArcPath_t : public Path_t
 public:
 	MSGPACK_DEFINE_MAP(this->focus, this->radius, this->arcLength);
 
-	ArcPath_t(GeoPoint_t focus, float arcLength, float radius, float max_velocity = 15, float final_velocity = 0, int end_style = 0) : Path_t(max_velocity, final_velocity, end_style), focus(focus), arcLength(arcLength), radius(radius)
+	ArcPath_t(const GeoPoint_t &destination, const GeoPoint_t &focus, float arcLength, float radius, float max_velocity = 15, float final_velocity = 0, int end_style = 0) : Path_t(destination, max_velocity, final_velocity, end_style), focus(focus), arcLength(arcLength), radius(radius)
 	{
 	}
 
@@ -108,7 +109,7 @@ public:
 	friend void addNextTrajectory(Trajectory_t* prev, Trajectory_t* next);
 };
 
-Path_t*		makeLinearPath(GeoPoint_t &start, GeoPoint_t &destination, float max_velocity = 15);
+Path_t*		makeLinearPath(const GeoPoint_t &start, const GeoPoint_t &destination, float max_velocity = 15);
 void 		addToPathQueue(Path_t *path);
 Path_t* 	popFromPathQueue();
 int 		removeFromPathQueue(std::list<Path_t *>::iterator pathIterator);

@@ -13,9 +13,9 @@
 
 class GlobalLocator_t
 {
-    static void bufferWriter(GlobalLocator_t* locator);
+    // static void bufferWriter(GlobalLocator_t* locator);
 
-    std::thread*        bufferWriterThread;
+    // std::thread*        bufferWriterThread;
     std::atomic<float> Xcoord;
     std::atomic<float> Ycoord;
     std::atomic<float> Zcoord;

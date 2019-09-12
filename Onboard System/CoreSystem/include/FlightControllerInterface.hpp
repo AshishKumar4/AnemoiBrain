@@ -16,7 +16,7 @@ class FlightController
 	uintptr_t desc;
 
 public:
-	FlightController(std::string name, std::string firmware, std::string variant, uintptr_t desc) : name(name), firmware(firmware), variant(variant), desc(desc)
+	FlightController(const std::string &name, const std::string &firmware, const std::string &variant, uintptr_t desc) : name(name), firmware(firmware), variant(variant), desc(desc)
 	{
 	}
 
@@ -88,13 +88,13 @@ struct ResponsePackets
     unsigned char checksum;
 };
 
-struct CommandPackets
-{
-    uint8_t magic;
-    uint8_t value;
-    uint8_t channel;
-    uint8_t checksum;
-};
+// struct CommandPackets
+// {
+//     uint8_t magic;
+//     uint8_t value;
+//     uint8_t channel;
+//     uint8_t checksum;
+// };
 
 ControlPackets defCp;
 ControlPackets oldDefCp;

@@ -87,13 +87,13 @@ public:
 	float CONTROLLER_P;
 	float CONTROLLER_I;
 	float CONTROLLER_D;
-	float CONTROLLER_E;
-	float CONTROLLER_E_RANGE;
-	float MAX_I_BOUNDARY;
+	float CONTROLLER_E = 0;
+	float CONTROLLER_E_RANGE = 0;
+	float MAX_I_BOUNDARY = 150;
 
-	float ACTUATION_HALT_VALUE;
-	float ACTUATION_MAX_VALUE;
-	float ACTUATION_MIN_VALUE;
+	float ACTUATION_HALT_VALUE = 0;
+	float ACTUATION_MAX_VALUE = 0;
+	float ACTUATION_MIN_VALUE = 0;
 
 	int RC_Channel;
 
@@ -105,22 +105,12 @@ public:
 	std::function<float(float)> ErrorProcessor;
 	std::function<int(float, float)> EscapeFunction;
 
-	FeedbackController_t(std::function<void(int)> actuatorSet, std::function<float(void)> actuatorGet, int rcChannel, float CONSTANT_P = 0.8, float CONSTANT_I = 1.0, float CONSTANT_D = 200)
+	FeedbackController_t(std::function<void(int)> actuatorSet, std::function<float(void)> actuatorGet, int rcChannel, float CONSTANT_P = 0.8, float CONSTANT_I = 1.0, float CONSTANT_D = 200) :
+			setActuation(actuatorSet), getCurrentStateValues(actuatorGet), IntendedActuation(0), 
+			CONTROLLER_P(CONSTANT_P), CONTROLLER_I(CONSTANT_I), CONTROLLER_D(CONSTANT_D),
+			intentionLock(new std::mutex()), actuationControllerlock(new std::mutex()),
+			RC_Channel(rcChannel), EscapeFunction(DefaultEscapeFunction)
 	{
-		setActuation = actuatorSet;
-		getCurrentStateValues = actuatorGet;
-		IntendedActuation = 0;
-		CONTROLLER_P = CONSTANT_P;
-		CONTROLLER_I = CONSTANT_I;
-		CONTROLLER_D = CONSTANT_D;
-		CONTROLLER_E = 0;
-
-		MAX_I_BOUNDARY = 150;
-		intentionLock = new std::mutex();
-		actuationControllerlock = new std::mutex();
-
-		RC_Channel = rcChannel;
-		EscapeFunction = DefaultEscapeFunction;
 	}
 
 	int setIntendedActuation(float intention)

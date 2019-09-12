@@ -17,36 +17,36 @@
 //#include "common.hpp"
 #include "Sensors/Location.hpp"
 
-void GlobalLocator_t::bufferWriter(GlobalLocator_t *locator)
-{
-	while (1)
-	{
-		try
-		{
-			/*locator->XLock.lock();
-            locator->YLock.lock();
-            locator->ZLock.lock();*/
+// void GlobalLocator_t::bufferWriter(GlobalLocator_t *locator)
+// {
+// 	while (1)
+// 	{
+// 		try
+// 		{
+// 			/*locator->XLock.lock();
+//             locator->YLock.lock();
+//             locator->ZLock.lock();*/
 
-			GeoPoint_t location = locator->getLocation();
-			locator->Xcoord = location.x;
-			locator->Ycoord = location.y;
-			locator->Zcoord = location.z;
+// 			GeoPoint_t location = locator->getLocation();
+// 			locator->Xcoord = location.x;
+// 			locator->Ycoord = location.y;
+// 			locator->Zcoord = location.z;
 
-			/*locator->XLock.unlock();
-            locator->YLock.unlock();
-            locator->ZLock.unlock();*/
-		}
-		catch (const std::future_error &e)
-		{
-			std::cout << "<GlobalLocator_t::bufferWriter>Caught a future_error with code \"" << e.code()
-					  << "\"\nMessage: \"" << e.what() << "\"\n";
-		}
-		catch (const std::exception &e)
-		{
-			std::cerr << e.what() << '\n';
-		}
-	}
-}
+// 			/*locator->XLock.unlock();
+//             locator->YLock.unlock();
+//             locator->ZLock.unlock();*/
+// 		}
+// 		catch (const std::future_error &e)
+// 		{
+// 			std::cout << "<GlobalLocator_t::bufferWriter>Caught a future_error with code \"" << e.code()
+// 					  << "\"\nMessage: \"" << e.what() << "\"\n";
+// 		}
+// 		catch (const std::exception &e)
+// 		{
+// 			std::cerr << e.what() << '\n';
+// 		}
+// 	}
+// }
 
 float GlobalLocator_t::get_X_Coordinate()
 {
