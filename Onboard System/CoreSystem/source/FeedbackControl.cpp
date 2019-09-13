@@ -697,7 +697,7 @@ std::thread *moveThread, *gazeThread, *holdPositionThread;
 float MAX_DESIRED_VELOCITY = 15;
 float CLAMP_FACTOR = 30;
 // For primary Path Following ==>
-#define TRANSITION_DISTANCE 3
+#define TRANSITION_DISTANCE 3 
 #define MAX_DEVIATION_ALLOWED 5
 
 // These parameters govern action if hover gets unstable ==>
@@ -708,6 +708,15 @@ float getDesiredVelocity()
 {
 	float val = getPathLength();
 	return tanh(val / CLAMP_FACTOR) * MAX_DESIRED_VELOCITY;
+}
+
+float getAbsForwardVelocity()
+{
+	// vector3D_t v = getVelocityAbs();			  //get_Y_VelocityRel();
+	// float theta = -degreesToRads(desiredHeading); //getHeading();;
+	// float _v = v.y * cos(theta) + v.x * sin(theta);
+	//printf("\t<<F: %f>>", _v);
+	return abs(ForwardVelocity);//(_v);
 }
 
 float getForwardVelocity()
@@ -896,6 +905,11 @@ inline void updateTargetDistanceDirection(GeoPoint_t currentLocation = getLocati
 
 	desiredHeading = headingDegrees;
 	currentDistance = lenXY;
+
+	vector3D_t v = getVelocityAbs();			  
+	float theta = -degreesToRads(desiredHeading);
+	ForwardVelocity = v.y * cos(theta) + v.x * sin(theta);
+	SidewaysVelocity = -v.y * sin(theta) + v.x * cos(theta);
 }
 
 inline void updateTargetStatus(GeoPoint_t currentLocation = getLocation())
@@ -907,11 +921,6 @@ inline void updateTargetStatus(GeoPoint_t currentLocation = getLocation())
 	float lenXY = currentDistance;
 	float desiredFvel = getDesiredVelocity();
 	float desiredSvel = getPathDeviation();
-
-	vector3D_t v = getVelocityAbs();			  
-	float theta = -degreesToRads(desiredHeading);
-	ForwardVelocity = v.y * cos(theta) + v.x * sin(theta);
-	SidewaysVelocity = -v.y * sin(theta) + v.x * cos(theta);
 
 	printf("\n{%f}\t{%f}\t[%f]\t<%f>", lenXY, dev, desiredFvel, desiredSvel);
 	currentDeviation = dev;
@@ -930,6 +939,8 @@ void holdPositionLoop()
 		if (shouldHoldPosition)
 		{
 			updateTargetDistanceDirection();
+			// printf("\t{{{%f}}}\t=>%f", getAbsForwardVelocity(), getDesiredVelocity());
+			// FeedbackControl::Distance_Actuator.setIntendedActuation(getDesiredVelocity());
 			float motion = FeedbackControl::Distance_Actuator.FeedbackController();
 			float len = currentDistance;
 			printf("\n{%f}", len);

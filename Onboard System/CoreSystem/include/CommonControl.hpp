@@ -11,6 +11,7 @@ int moveSavedPath();
 int setFeedbackAltitude(float altitude);
 int setFeedbackYaw(float heading);
 
+float getAbsForwardVelocity();
 float getForwardVelocity();
 float getSidewaysVelocity();
 float getDesiredVelocity();
