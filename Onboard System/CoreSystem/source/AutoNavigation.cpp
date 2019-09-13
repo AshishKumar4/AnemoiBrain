@@ -69,7 +69,7 @@ int LinearPath_t::executePath()
 	fflush(stdout);
 
 	setLinearPath(this->start, this->destination, this->cruise_velocity, this->final_velocity);
-	moveSavedPath();
+	moveSavedPath(this->preWait);
 
 	printf("\nPath completed, hovering...");
 	printf("\n%f", final_z);

@@ -47,22 +47,22 @@ namespace FeedbackControl
 vector3D_t *controlledPosition;
 vector3D_t *controlledOrientation;
 
-std::thread *YawControllerThread;
-std::thread *RollControllerThread;
-std::thread *PitchControllerThread;
-std::thread *AltitudeControllerThread;
+// std::thread *YawControllerThread;
+// std::thread *RollControllerThread;
+// std::thread *PitchControllerThread;
+// std::thread *AltitudeControllerThread;
 
-std::thread *X_Vheadfree_ControllerThread;
-std::thread *Y_Vheadfree_ControllerThread;
-std::thread *Z_Vheadfree_ControllerThread;
+// std::thread *X_Vheadfree_ControllerThread;
+// std::thread *Y_Vheadfree_ControllerThread;
+// std::thread *Z_Vheadfree_ControllerThread;
 
-std::thread *X_Vrel_ControllerThread;
-std::thread *Y_Vrel_ControllerThread;
-std::thread *Z_Vrel_ControllerThread;
+// std::thread *X_Vrel_ControllerThread;
+// std::thread *Y_Vrel_ControllerThread;
+// std::thread *Z_Vrel_ControllerThread;
 
-std::thread *X_Lateral_ControllerThread;
-std::thread *Y_Lateral_ControllerThread;
-std::thread *Z_Lateral_ControllerThread;
+// std::thread *X_Lateral_ControllerThread;
+// std::thread *Y_Lateral_ControllerThread;
+// std::thread *Z_Lateral_ControllerThread;
 
 int DefaultEscapeFunction(float error, float dval)
 {
@@ -82,6 +82,8 @@ protected:
 	double deltaTime;
 	float errorAccumulator;
 
+	std::atomic<bool>	actuatorTerminateFlag;
+	float status;
 public:
 	std::thread *actuatorThread;
 	float CONTROLLER_P;
@@ -108,7 +110,8 @@ public:
 	FeedbackController_t(std::function<void(int)> actuatorSet, std::function<float(void)> actuatorGet, int rcChannel, float CONSTANT_P = 0.8, float CONSTANT_I = 1.0, float CONSTANT_D = 200) :
 			setActuation(actuatorSet), getCurrentStateValues(actuatorGet), IntendedActuation(0), 
 			CONTROLLER_P(CONSTANT_P), CONTROLLER_I(CONSTANT_I), CONTROLLER_D(CONSTANT_D),
-			RC_Channel(rcChannel), EscapeFunction(DefaultEscapeFunction)
+			RC_Channel(rcChannel), EscapeFunction(DefaultEscapeFunction), actuatorTerminateFlag(false), status(0),
+			deltaTime(1)
 	{
 		intentionLock = new std::mutex();
 		actuationControllerlock = new std::mutex();
@@ -151,7 +154,7 @@ public:
 		return 0;
 	}
 
-	virtual void deployFeedbackControllers() = 0;
+	// virtual void deployFeedbackControllers() = 0;
 
 	float FeedbackController()
 	{
@@ -209,7 +212,6 @@ public:
 			oldError = newError;
 			//oldAbsError = absNewError;
 			//this->actuationControllerlock->unlock();
-			std::this_thread::sleep_for(std::chrono::microseconds(int(deltaTime * 1000)));
 
 			return D_term; // Useful to determine if the drone is stationary
 		}
@@ -226,6 +228,50 @@ public:
 		}
 		return -1;
 	}
+
+	static void controllerLoop(FeedbackController_t* obj)
+	{
+		while(1)
+		{
+			if(obj->actuatorTerminateFlag)
+			{
+				return;
+			}
+			obj->status = obj->FeedbackController();
+			std::this_thread::sleep_for(std::chrono::microseconds(int(obj->deltaTime * 1000)));
+		}
+	}
+
+	int launchController(double deltaT = 1)
+	{
+		this->deltaTime = deltaT;
+		this->actuatorTerminateFlag = false;
+		this->actuatorThread = new std::thread(FeedbackController_t::controllerLoop, this);
+		return 0;
+	}
+
+	void joinController()
+	{
+		this->actuatorThread->join();
+	}
+
+	int terminateWaitController(bool action = true)
+	{
+		if(!terminateAsyncController(action))
+			joinController();
+		return 1;
+	}
+
+	int terminateAsyncController(bool action = true)
+	{
+		if(action && this->actuatorTerminateFlag == false)
+		{
+			this->actuatorTerminateFlag = true;
+			return 0;
+		}
+		return 1;
+	}
+
 };
 
 volatile FeedbackController_t *FeedbackControllers[3][3];
@@ -256,7 +302,7 @@ public:
 		currentactuation = 127;
 		oldError = 1;
 		oldAbsError = 1;
-		deltaTime = 1;
+		// deltaTime = 1;
 
 		ACTUATION_HALT_VALUE = 127;
 		ACTUATION_MAX_VALUE = 255;
@@ -271,83 +317,11 @@ public:
 
 		ErrorProcessor = DegreeRoundclamp;
 	}
-
-	void deployFeedbackControllers()
-	{
-	}
-
-	/*void AutoRotationalController()
-    {
-        FeedbackController();
-    }*/
 };
 
 RotationController_t YawActuator(setYaw, getHeadingDegrees, YAW);
 RotationController_t RollActuator(setRoll, getRollDegrees, ROLL);
 RotationController_t PitchActuator(setPitch, getPitchDegrees, PITCH);
-
-void YawController()
-{
-	while (true)
-	{
-		try
-		{
-			YawActuator.FeedbackController();
-		}
-		catch (const std::future_error &e)
-		{
-			std::cout << "<YawController>Outermost<->Caught a future_error with code \"" << e.code()
-					  << "\"\nMessage: \"" << e.what() << "\"\n";
-			YawActuator.actuationControllerlock->unlock();
-		}
-		catch (std::exception &e)
-		{
-			std::cout << "Error in Outermost Yaw loop!" << e.what();
-		}
-	}
-}
-
-void RollController()
-{
-	while (true)
-	{
-		try
-		{
-			RollActuator.FeedbackController();
-		}
-		catch (const std::future_error &e)
-		{
-			std::cout << "<RollController>Outermost<->Caught a future_error with code \"" << e.code()
-					  << "\"\nMessage: \"" << e.what() << "\"\n";
-			RollActuator.actuationControllerlock->unlock();
-		}
-		catch (std::exception &e)
-		{
-			std::cout << "Error in Outermost Roll loop!" << e.what();
-		}
-	}
-}
-
-void PitchController()
-{
-	while (true)
-	{
-		try
-		{
-			PitchActuator.FeedbackController();
-		}
-		catch (const std::future_error &e)
-		{
-			std::cout << "<PitchController>Outermost<->Caught a future_error with code \"" << e.code()
-					  << "\"\nMessage: \"" << e.what() << "\"\n";
-			PitchActuator.actuationControllerlock->unlock();
-		}
-		catch (std::exception &e)
-		{
-			std::cout << "Error in Outermost Pitch loop!" << e.what();
-		}
-	}
-}
 
 /*
     APIs that can be built over these functions
@@ -359,7 +333,9 @@ int init_RotationalControllers()
 	YawActuator.CONTROLLER_I = 0.004; //(float(2/5)*ku)/tu;//0.0001;
 	YawActuator.CONTROLLER_D = 210;   //(ku*tu)/15.0;//1000;//190;
 	RollActuator.CONTROLLER_P = 1;
-	YawControllerThread = new std::thread(YawController);
+
+	YawActuator.launchController();
+	// YawControllerThread = new std::thread(YawController);
 	//RollControllerThread = new std::thread(RollController);
 	//PitchControllerThread = new std::thread(PitchController);
 	return 0;
@@ -367,7 +343,8 @@ int init_RotationalControllers()
 
 int join_RotationalControllers()
 {
-	YawControllerThread->join();
+	YawActuator.joinController();
+	// YawControllerThread->join();
 	// RollControllerThread->join();
 	// PitchControllerThread->join();
 	return 0;
@@ -406,7 +383,7 @@ public:
 
 		oldError = 1;
 		oldAbsError = 1;
-		deltaTime = 1;
+		// deltaTime = 1;
 
 		this->MAX_I_BOUNDARY = 100;
 		this->CONTROLLER_P = 15;
@@ -416,16 +393,6 @@ public:
 		this->CONTROLLER_E_RANGE = 0; //.08;
 
 		ErrorProcessor = IdentityErrorScaler;
-	}
-
-	void deployFeedbackControllers()
-	{
-		//actuatorThread = new std::thread(this->AutoLateralalActuator);
-	}
-
-	void AutoLateralalActuator()
-	{
-		FeedbackController();
 	}
 };
 
@@ -442,7 +409,7 @@ public:
 
 		oldError = 1;
 		oldAbsError = 1;
-		deltaTime = 1;
+		// deltaTime = 1;
 
 		this->MAX_I_BOUNDARY = 1000;
 		this->CONTROLLER_P = 15;
@@ -452,16 +419,6 @@ public:
 		this->CONTROLLER_E = 0;
 
 		ErrorProcessor = IdentityErrorScaler;
-	}
-
-	void deployFeedbackControllers()
-	{
-		//actuatorThread = new std::thread(this->AutoLateralalActuator);
-	}
-
-	void AutoLateralalActuator()
-	{
-		FeedbackController();
 	}
 };
 
@@ -478,27 +435,24 @@ public:
 
 		oldError = 1;
 		oldAbsError = 1;
-		deltaTime = 10;
+		// deltaTime = 10;
+
+		// this->MAX_I_BOUNDARY = 1000;
+		// this->CONTROLLER_P = 3;
+		// this->CONTROLLER_I = 0.1;
+		// this->CONTROLLER_D = 1000;
+		// this->CONTROLLER_E_RANGE = 0.20;
+		// this->CONTROLLER_E = 100000;
 
 		this->MAX_I_BOUNDARY = 1000;
-		this->CONTROLLER_P = 3;
-		this->CONTROLLER_I = 0.1;
-		this->CONTROLLER_D = 1000;
-		this->CONTROLLER_E_RANGE = 0.20;
-		E_VALUE = 10000;
-		//this->CONTROLLER_E = 100000;
+		this->CONTROLLER_P = 1;
+		this->CONTROLLER_I = 1;
+		this->CONTROLLER_D = 10;
+		this->CONTROLLER_E_RANGE = 0.0;
+		this->CONTROLLER_E = 0;
+
 
 		ErrorProcessor = IdentityErrorScaler;
-	}
-
-	void deployFeedbackControllers()
-	{
-		//actuatorThread = new std::thread(this->AutoLateralalActuator);
-	}
-
-	void AutoLateralalActuator()
-	{
-		FeedbackController();
 	}
 };
 
@@ -515,7 +469,7 @@ public:
 
 		oldError = 0;
 		oldAbsError = 0;
-		deltaTime = 1;
+		// deltaTime = 1;
 
 		this->MAX_I_BOUNDARY = 1000;
 		this->CONTROLLER_P = 40;
@@ -523,16 +477,6 @@ public:
 		this->CONTROLLER_D = 10000;
 
 		ErrorProcessor = InverseErrorScaler;
-	}
-
-	void deployFeedbackControllers()
-	{
-		//actuatorThread = new std::thread(this->AutoLateralalActuator);
-	}
-
-	void AutoLateralalActuator()
-	{
-		FeedbackController();
 	}
 };
 
@@ -545,41 +489,20 @@ Planner_X_Controller_t Xrel_Actuator(setForwardComponent, getForwardVelocity, RC
 Planner_Y_Controller_t Yrel_Actuator(setSidewaysComponent, getSidewaysVelocity, RC_Y_MOTION);
 AltitudeController_t Z_Actuator(setThrottle, getAltitude, THROTTLE);
 
-LateralController_t Distance_Actuator(HeadlessHover, getDesiredVelocity, RC_X_MOTION);
-
-void Z_Lateral_Controllers()
-{
-	while (true)
-	{
-		try
-		{
-			//printf(">_<");
-			Z_Actuator.FeedbackController();
-		}
-		catch (const std::future_error &e)
-		{
-			std::cout << "<Z_Lateral_Controllers>Caught a future_error with code \"" << e.code()
-					  << "\"\nMessage: \"" << e.what() << "\"\n";
-		}
-		catch (std::exception &e)
-		{
-			std::cout << "Error in Outermost Z_Actuator loop!" << e.what();
-		}
-	}
-}
+LateralController_t Distance_Actuator(HeadlessHover, getForwardVelocity, RC_X_MOTION);
 
 int init_LateralControllers()
 {
 	//Y_Actuator.ErrorProcessor = Planner_Y_ControllerErrorScaler;
-	Z_Lateral_ControllerThread = new std::thread(Z_Lateral_Controllers);
-
+	// Z_Lateral_ControllerThread = new std::thread(Z_Lateral_Controllers);
+	Z_Actuator.launchController();
 	return 0;
 }
 
 int join_LateralControllers()
 {
-	Z_Lateral_ControllerThread->join();
-
+	// Z_Lateral_ControllerThread->join();
+	Z_Actuator.joinController();
 	return 0;
 }
 
@@ -592,46 +515,6 @@ int destroy_LateralControllers()
 } // namespace FeedbackControl
 
 /* Our FeedbackControl Namespace ends here, Autonomous APIs Below */
-
-void X_Position_Hold()
-{
-	while (true)
-	{
-		try
-		{
-			//FeedbackControl::X_Actuator.FeedbackController();
-		}
-		catch (const std::future_error &e)
-		{
-			std::cout << "<X_Lateral_Controllers>Caught a future_error with code \"" << e.code()
-					  << "\"\nMessage: \"" << e.what() << "\"\n";
-		}
-		catch (std::exception &e)
-		{
-			std::cout << "Error in Outermost X_Actuator loop!" << e.what();
-		}
-	}
-}
-
-void Y_Position_Hold()
-{
-	while (true)
-	{
-		try
-		{
-			//FeedbackControl::Y_Actuator.FeedbackController();
-		}
-		catch (const std::future_error &e)
-		{
-			std::cout << "<Y_Lateral_Controllers>Caught a future_error with code \"" << e.code()
-					  << "\"\nMessage: \"" << e.what() << "\"\n";
-		}
-		catch (std::exception &e)
-		{
-			std::cout << "Error in Outermost Y_Actuator loop!" << e.what();
-		}
-	}
-}
 
 namespace
 {
@@ -697,7 +580,7 @@ std::thread *moveThread, *gazeThread, *holdPositionThread;
 float MAX_DESIRED_VELOCITY = 15;
 float CLAMP_FACTOR = 30;
 // For primary Path Following ==>
-#define TRANSITION_DISTANCE 3 
+#define TRANSITION_DISTANCE 3
 #define MAX_DEVIATION_ALLOWED 5
 
 // These parameters govern action if hover gets unstable ==>
@@ -708,15 +591,6 @@ float getDesiredVelocity()
 {
 	float val = getPathLength();
 	return tanh(val / CLAMP_FACTOR) * MAX_DESIRED_VELOCITY;
-}
-
-float getAbsForwardVelocity()
-{
-	// vector3D_t v = getVelocityAbs();			  //get_Y_VelocityRel();
-	// float theta = -degreesToRads(desiredHeading); //getHeading();;
-	// float _v = v.y * cos(theta) + v.x * sin(theta);
-	//printf("\t<<F: %f>>", _v);
-	return abs(ForwardVelocity);//(_v);
 }
 
 float getForwardVelocity()
@@ -836,45 +710,12 @@ int setLinearPath(GeoPoint_t &start, GeoPoint_t &destination, float cruise_veloc
 	return 0;
 }
 
-void distanceController()
-{
-	while (true)
-	{
-		try
-		{
-			if (exitCourseDistanceController)
-				return;
-			FeedbackControl::Xrel_Actuator.FeedbackController();
-		}
-		catch (std::exception &e)
-		{
-			std::cout << "Error in Outermost X_Actuator loop!" << e.what();
-		}
-	}
-}
-
-void deviationController()
-{
-	while (true)
-	{
-		try
-		{
-			if (exitCourseDeviationController)
-				return;
-			FeedbackControl::Yrel_Actuator.FeedbackController();
-		}
-		catch (std::exception &e)
-		{
-			std::cout << "Error in Outermost X_Actuator loop!" << e.what();
-		}
-	}
-}
-
 void HeadlessHover(float val)
 {
 	float dTheta = degreesToRads(desiredHeading) - (-getHeading());
-	float pitch = -cosf(dTheta) * val;
-	float roll = sinf(dTheta) * val;
+	
+	float pitch = cosf(dTheta) * val;
+	float roll = -sinf(dTheta) * val;
 	setAutoPitch(pitch);
 	setAutoRoll(roll);
 }
@@ -912,7 +753,7 @@ inline void updateTargetDistanceDirection(GeoPoint_t currentLocation = getLocati
 	SidewaysVelocity = -v.y * sin(theta) + v.x * cos(theta);
 }
 
-inline void updateTargetStatus(GeoPoint_t currentLocation = getLocation())
+inline void courseFollowingLogic(GeoPoint_t currentLocation = getLocation())
 {
 	updateTargetDistanceDirection(currentLocation);
 	// Using Distance of point from line for deviation -->
@@ -930,6 +771,29 @@ inline void updateTargetStatus(GeoPoint_t currentLocation = getLocation())
 	HeadlessMoveTowardsTarget();
 }
 
+inline float fineFollowingLogic(GeoPoint_t currentLocation = getLocation())
+{
+	updateTargetDistanceDirection(currentLocation);
+	// Using Distance of point from line for deviation -->
+	float dev = calcPathDeviation(currentLocation);
+
+	float lenXY = currentDistance;
+	float desiredFvel = getDesiredVelocity();
+	float desiredSvel = getPathDeviation();
+
+	printf("\n{%f}\t{%f}\t[%f]\t<%f>", lenXY, dev, desiredFvel, desiredSvel);
+	currentDeviation = dev;
+	// FeedbackControl::YawActuator.setIntendedActuation(desiredHeading);
+	FeedbackControl::Xrel_Actuator.setIntendedActuation(desiredFvel);
+	FeedbackControl::Yrel_Actuator.setIntendedActuation(-desiredSvel);
+
+	float val = FeedbackControl::Xrel_Actuator.FeedbackController() + FeedbackControl::Yrel_Actuator.FeedbackController();
+
+	HeadlessMoveTowardsTarget();
+
+	return val;
+}
+
 inline void PathFollowingLoop(float transition_distance = TRANSITION_DISTANCE);
 
 void holdPositionLoop()
@@ -938,10 +802,14 @@ void holdPositionLoop()
 	{
 		if (shouldHoldPosition)
 		{
-			updateTargetDistanceDirection();
-			// printf("\t{{{%f}}}\t=>%f", getAbsForwardVelocity(), getDesiredVelocity());
+			// updateTargetDistanceDirection();
+			// printf("\t{{{%f}}}\t=>%f", getForwardVelocity(), getDesiredVelocity());
 			// FeedbackControl::Distance_Actuator.setIntendedActuation(getDesiredVelocity());
-			float motion = FeedbackControl::Distance_Actuator.FeedbackController();
+			
+			// float motion = FeedbackControl::Distance_Actuator.FeedbackController();
+			
+			float motion = fineFollowingLogic();
+			
 			float len = currentDistance;
 			printf("\n{%f}", len);
 
@@ -966,31 +834,30 @@ inline void PathFollowingLoop(float transition_distance)
 	exitCourseDistanceController = 0;
 	exitCourseDeviationController = 0;
 
-	std::thread *distanceControllerThread = new std::thread(distanceController);
-	std::thread *deviationControllerThread = new std::thread(deviationController);
+	// std::thread *distanceControllerThread = new std::thread(distanceController);
+	// std::thread *deviationControllerThread = new std::thread(deviationController);
+	FeedbackControl::Xrel_Actuator.launchController();
+	FeedbackControl::Yrel_Actuator.launchController();
+
 	while (1)
 	{
-		updateTargetStatus();
+		courseFollowingLogic();
 		// If deviation is too much, stop and fix it first!
 		if (abs(currentDeviation) >= MAX_DEVIATION_ALLOWED)
 		{
 			printf("\n\nChanging Start Position");
-			exitCourseDeviationController = 1;
-			deviationControllerThread->join();
-			exitCourseDeviationController = 0;
+			FeedbackControl::Yrel_Actuator.terminateWaitController();
 			GeoPoint_t curr = getLocation();
 			set2DLinearPath(curr.x, curr.y, pathDestinationX, pathDestinationY);
-			deviationControllerThread = new std::thread(deviationController);
+			FeedbackControl::Yrel_Actuator.launchController();
 		}
 
 		// /printf("<<<<%d>>>>", (int)exitPathFollowingLoop);
 
 		if (currentDistance <= transition_distance || exitPathFollowingLoop)
 		{
-			exitCourseDistanceController = 1;
-			exitCourseDeviationController = 1;
-			distanceControllerThread->join();
-			deviationControllerThread->join();
+			FeedbackControl::Xrel_Actuator.terminateWaitController();
+			FeedbackControl::Yrel_Actuator.terminateWaitController();
 			std::cout << "\nWe are here";
 			fflush(stdout);
 			break;
@@ -1001,15 +868,15 @@ inline void PathFollowingLoop(float transition_distance)
 	PathFollowingLoopLock.unlock();
 }
 
-void executeLinearPathFollowing()
+void executeLinearPathFollowing(int preWait = 1500)
 {
 	shouldHoldPosition = false;
-	updateTargetStatus();
+	courseFollowingLogic();
 
 	terminateActiveFollowing();
 	exitPathFollowingLoop = false;
 
-	std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+	std::this_thread::sleep_for(std::chrono::milliseconds(preWait));
 
 	PathFollowingLoop(); // Wait for it to finish
 
@@ -1017,7 +884,7 @@ void executeLinearPathFollowing()
 	{
 		// If path following wasn't terminated intentionally!
 		printf("\nEngaging Position Hold System");
-		FeedbackControl::Distance_Actuator.CONTROLLER_E = E_VALUE;
+		// FeedbackControl::Distance_Actuator.CONTROLLER_E = E_VALUE;
 		shouldHoldPosition = true; // Give control over to Hold Position loop
 		hoverStableFlag = false;
 		while (!hoverStableFlag)
@@ -1066,17 +933,23 @@ int setFeedbackYaw(float heading)
 	return 0;
 }
 
-int moveSavedPath()
+int moveSavedPath(int preWait)
 {
 	// moveThread = new std::thread(executeLinearPathFollowing);
 	// moveThread->join();
-	executeLinearPathFollowing();
+	executeLinearPathFollowing(preWait);
 	return 0;
 }
 
 int terminateActiveFollowing()
 {
 	exitPathFollowingLoop = true;
+	return 0;
+}
+
+int terminatePositionHold()
+{
+	shouldHoldPosition = false;
 	return 0;
 }
 

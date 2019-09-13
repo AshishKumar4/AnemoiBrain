@@ -25,8 +25,8 @@ protected:
 
 	int 	type;
 
-	static int path_id_counter;
-
+	static int 	path_id_counter;
+	int 		preWait = 1500;
 	GeoPoint_t 	destination;
 public:
 	int id;
@@ -42,6 +42,15 @@ public:
 	void setType(int flag)
 	{
 		type = flag;
+		if(type == OVERRIDE)
+		{
+			setPreWait(0);
+		}
+	}
+
+	void setPreWait(int val)
+	{
+		this->preWait = val;
 	}
 
 	friend void moveOnPath(Path_t &path);
