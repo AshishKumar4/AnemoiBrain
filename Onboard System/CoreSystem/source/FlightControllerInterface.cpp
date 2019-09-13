@@ -123,12 +123,12 @@ void sendCommand(uint8_t val, uint8_t channel)
     Main_Mutex.lock();
     uint8_t *bv = new uint8_t;
     uint8_t *bc = new uint8_t;
-    int flg1 = 0, flg2 = 0;
     uint8_t *tmp1 = new uint8_t;
     uint8_t *tmp2 = new uint8_t;
-    int counter = 0;
     uint8_t *t1 = new uint8_t;
     uint8_t *t2 = new uint8_t;
+    int counter = 0;
+    int flg1 = 0, flg2 = 0;
 back:
     printf("\n[Attempting send %d to %d <%d, %d>", val, channel, flg1, flg2);
     *bv = val;
@@ -193,6 +193,8 @@ back:
         delete bc;
         delete tmp1;
         delete tmp2;
+		delete t1;
+		delete t2;
         Main_Mutex.unlock();
         return void;
     }
