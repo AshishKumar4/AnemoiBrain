@@ -307,6 +307,7 @@ fcu::FlightController *FlControllerRC;
 std::function<void()> channelUpdaterFunc;
 
 msp::FirmwareVariant FCvariant;
+std::atomic_bool exitFlag;
 
 int IssueCommand()
 {
@@ -327,15 +328,29 @@ void Sensors_Updater()
 	return;
 }
 
+void dependent_Channel_Updater();
+
 #if defined(MSP_DUAL_COM)
 void independent_Channel_Updater()
 {
-#if !defined(UNIFIED_UPDATER)
-	while (1)
-#endif
+	try
 	{
-		FlControllerRC->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), rcExpand(RC_DATA[AUX1]), rcExpand(RC_DATA[AUX2]), rcExpand(RC_DATA[AUX3]), rcExpand(RC_DATA[AUX4]));
-		std::this_thread::sleep_for(std::chrono::microseconds(1000));
+#if !defined(UNIFIED_UPDATER)
+		while (1)
+#endif
+		{
+			if (exitFlag)
+				return;
+			FlControllerRC->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), rcExpand(RC_DATA[AUX1]), rcExpand(RC_DATA[AUX2]), rcExpand(RC_DATA[AUX3]), rcExpand(RC_DATA[AUX4]));
+			std::this_thread::sleep_for(std::chrono::microseconds(1000));
+		}
+	}
+	catch (const std::exception &e)
+	{
+		printf("\nFalling back to primary MSP port...");
+		fflush(stdout);
+		FlControllerRC = FlController;
+		channelUpdaterFunc = &dependent_Channel_Updater;
 	}
 }
 #endif
@@ -346,6 +361,8 @@ void dependent_Channel_Updater()
 	while (1)
 #endif
 	{
+		if (exitFlag)
+			return;
 		Main_Mutex.lock();
 		FlController->setRc(rcExpand(RC_DATA[ROLL]), rcExpand(RC_DATA[PITCH]), rcExpand(RC_DATA[YAW]), rcExpand(RC_DATA[THROTTLE]), rcExpand(RC_DATA[AUX1]), rcExpand(RC_DATA[AUX2]), rcExpand(RC_DATA[AUX3]), rcExpand(RC_DATA[AUX4]));
 		Main_Mutex.unlock();
@@ -361,12 +378,6 @@ void Channel_Updater()
 	{
 		channelUpdaterFunc();
 	}
-	catch (const std::future_error &e)
-	{
-		std::cout << "<Channel_Updater>Caught a future_error with code \"" << e.code()
-				  << "\"\nMessage: \"" << e.what() << "\"\n";
-		//Main_Mutex.unlock();
-	}
 	catch (std::exception &e)
 	{
 		std::cout << "Error in Channel Updater " << e.what();
@@ -378,30 +389,39 @@ void Raw_Init(int argc, const char *argv[])
 {
 	const std::string device = (argc > 1) ? std::string(argv[1]) : "/dev/ttyUSB0";
 	const size_t baudrate = (argc > 2) ? std::stoul(argv[2]) : 115200;
-	/*
-        msp::MSP msp(device, baudrate);
-        msp.setWait(1);
-    */
+	exitFlag = true;
+
 	std::cout << "\n\tAttempting to connect to the Flight Controller...\n";
+
 	std::chrono::high_resolution_clock::time_point start, end;
 	fcu::FlightController *fcdesc = new fcu::FlightController();
 	// FlController.store(fcdesc);
 	FlController = fcdesc;
 
-	fcdesc->setLoggingLevel(msp::client::LoggingLevel::INFO);
+	auto logLevel = msp::client::LoggingLevel::INFO;
+	std::cout << logLevel;
+	fcdesc->setLoggingLevel(logLevel);
 
 	// wait until connection is established
 	// get unique box IDs
-	start = std::chrono::high_resolution_clock::now();
-	fcdesc->connect(device, baudrate, 1); //initialise();
-	end = std::chrono::high_resolution_clock::now();
-	if (!fcdesc->isConnected())
+	try
 	{
-		std::cout << "FC Not Connected, exiting\n";
-		exit(0);
+		start = std::chrono::high_resolution_clock::now();
+		fcdesc->connect(device, baudrate, 1, true); //initialise();
+		end = std::chrono::high_resolution_clock::now();
+		if (!fcdesc->isConnected())
+		{
+			std::cout << "FC Not Connected, exiting\n";
+			exit(0);
+		}
+		std::cout << "FC connected, ready after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
+		fflush(stdout);
 	}
-	std::cout << "FC connected, ready after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
-
+	catch (std::exception &e)
+	{
+		std::cout << "ERROR OCCURED! " << e.what();
+		fflush(stdout);
+	}
 	// on cleanflight, we need to enable the "RX_MSP" feature
 	FCvariant = fcdesc->getFwVariant();
 	std::string firmwareVariant = msp::firmwareVariantToString(FCvariant);
@@ -425,18 +445,18 @@ void Raw_Init(int argc, const char *argv[])
 
 	channelUpdaterFunc = &dependent_Channel_Updater;
 #if defined(MSP_DUAL_COM)
-	const std::string device2 = (argc > 4) ? std::string(argv[4]) : "/dev/ttyUSB0";
-	const size_t baudrate2 = (argc > 5) ? std::stoul(argv[5]) : 115200;
 	try
 	{
+		const std::string device2 = (argc > 4) ? std::string(argv[4]) : "/dev/ttyUSB0";
+		const size_t baudrate2 = (argc > 5) ? std::stoul(argv[5]) : 115200;
 		FlControllerRC = new fcu::FlightController();
 		if (device2 == device)
 		{
-			throw "Same devices";
+			throw std::runtime_error("Same devices");
 		}
 		else if (!FlControllerRC->connect(device2, baudrate2, 1))
 		{
-			throw "Could not connect to device";
+			throw std::runtime_error("Could not connect to device");
 		}
 		else
 		{
@@ -446,8 +466,8 @@ void Raw_Init(int argc, const char *argv[])
 	}
 	catch (std::exception &e)
 	{
-		printf("\nProblem connecting to RC serail port, Falling back to default...");
-		std::cout<<e.what();
+		printf("\nProblem connecting to RC serial port, Falling back to default...");
+		std::cout << e.what();
 		FlControllerRC = FlController; // Failed to bind to the other device
 	}
 #endif
@@ -462,6 +482,15 @@ void sendCommand(uint8_t val, uint8_t channel)
 
 void destroyFlightControllerObjs()
 {
+	exitFlag = true;
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	if (FlController != FlControllerRC)
+	{
+		FlControllerRC->disconnect();
+		delete FlControllerRC;
+	}
+	FlController->disconnect();
+	delete FlController;
 }
 
 #endif
