@@ -1105,6 +1105,65 @@ void FaultHandler()
 }
 
 /*
+    The Main FlightController Interfacing Loop
+*/
+
+#if defined(UNIFIED_UPDATER)
+
+void FCboard_InterfaceLoop()
+{
+	// This loop runs at a clock of once per every Milisecond.
+	uint counter = 0, c2 = 0;
+	std::chrono::high_resolution_clock::time_point start_time;
+	std::thread sensors(Sensors_Updater);
+	int loop_time;
+	try
+	{
+		while (1)
+		{
+			start_time = std::chrono::high_resolution_clock::now();
+			// ++c2;
+			// if(c2 == 100)
+			// {
+			// 	printf("\nTICK");
+			// 	fflush(stdout);
+			// 	c2 = 0;
+			// }
+
+			Main_Mutex.lock();
+			// if (counter%10 == 0)
+			Channel_Updater(); // Sends computed RC data to FC
+			if (counter >= CLI_UPDATE_RATE)
+			{
+				Channel_ViewRefresh(); // User Interface
+				counter = 0;
+			}
+			Main_Mutex.unlock();
+			++counter;
+			const auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start_time).count();
+
+			loop_time = 1000 - total_time;
+			// std::cout<<"\nLoopTime : "<<total_time<<" us";
+			if (loop_time < 0)
+			{
+				loop_time = 10;
+				// std::cout<<"\nLoopTime : "<<total_time<<" us";
+			}
+			std::this_thread::sleep_for(std::chrono::microseconds(loop_time));
+			// std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+	}
+	catch (std::exception &e)
+	{
+		std::cout << "\nError in FCboard_InterfaceLoop => " << e.what();
+		exit(0);
+	}
+	sensors.join();
+}
+
+#endif
+
+/*
     The Main Initializer Function
 */
 
@@ -1126,8 +1185,9 @@ int ControllerInterface_init(int argc, const char *argv[])
 		//auto client = (msr::airlib::MultirotorRpcLibClient *)MainFC->getDesc();
 		MainIMU = new AirSim_IMU_t();		  //(client);
 		MainLocator = new AirSim_Locator_t(); //(client);
+
 #elif defined(MODE_REALDRONE)
-		Sensor_Fusion_init(argc, (char **)argv);
+		// Sensor_Fusion_init(argc, (char **)argv);
 		MainLocator = new Real_Locator_t();
 		MainIMU = new Real_IMU_t();
 #endif
@@ -1156,7 +1216,10 @@ int ControllerInterface_init(int argc, const char *argv[])
 		setAltitude(0);
 
 #if defined(CLI_MONITOR)
-		chnl_refresh = new std::thread(Channel_ViewRefresh, 0);
+
+#if !defined(UNIFIED_UPDATER)
+		chnl_refresh = new std::thread(Channel_ViewRefresh);
+#endif
 		for (int i = 0; i < 256; i++)
 			KeyMap[i] = event_key_other;
 		KeyMap['q'] = event_key_q; // Show RC Values
@@ -1167,10 +1230,13 @@ int ControllerInterface_init(int argc, const char *argv[])
 		KeyMap['P'] = event_key_P; // show Position
 		KeyMap['V'] = event_key_V; // show Velocity
 		KeyMap['h'] = event_key_h; // set PIDs
+		KeyMap['s'] = event_key_s; // show Status
 		keyboard_handler = new std::thread(Keyboard_handler, 2);
 #endif
-#if defined(UPDATER_THREAD)
-		chnl_update = new std::thread(Channel_Updater, 1);
+#if defined(UNIFIED_UPDATER)
+		chnl_update = new std::thread(FCboard_InterfaceLoop);
+#elif defined(UPDATER_THREAD)
+		chnl_update = new std::thread(Channel_Updater);
 #endif
 
 		AutoNavigation::initialize_AutoNavigation();

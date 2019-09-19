@@ -551,8 +551,8 @@ std::atomic<bool> exitPathFollowingLoop;
 std::atomic<int> exitCourseDistanceController;
 std::atomic<int> exitCourseDeviationController;
 
-std::atomic<bool> shouldHoldPosition = false;
-std::atomic<bool> hoverStableFlag = false;
+std::atomic<bool> shouldHoldPosition;
+std::atomic<bool> hoverStableFlag;
 
 } // namespace
 

@@ -30,21 +30,27 @@
 #include <msp/FlightController.hpp>
 #include <msp/FirmwareVariants.hpp>
 
-extern fcu::FlightController *FlController;
+extern fcu::FlightController* FlController;
 extern msp::FirmwareVariant FCvariant; 
 
 #endif
 
-void Channel_ViewRefresh(int threadId)
+void Channel_ViewRefresh()
 {
+#if !defined(UNIFIED_UPDATER)
     while (1)
+#endif
     {
         try
         {
+			// printf("\nHERE!!");
+            // fflush(stdout);
             Main_Mutex.lock();
 #if defined(MSP_Serial_PROTOCOL)
             if (show_armed)
             {
+				// printf("\tarm cmd");
+            	// fflush(stdout);
                 if (FlController->isArmed())
                 {
                     std::cout << "Armed\t"; // after: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
@@ -54,13 +60,24 @@ void Channel_ViewRefresh(int threadId)
                     std::cout << "Disarmed\t";
                 }
             }
+            if (show_status)
+            {
+				// printf("\tarm cmd");
+            	// fflush(stdout);
+                msp::msg::Status status(FCvariant);
+                FlController->sendMessage(status, 1);
+				std::cout << status;
+            }
 #if defined(UPDATE_STATUS_RC)
             if (show_RC)
             {
+				// printf("\trc cmd");
+            	// fflush(stdout);
                 msp::msg::Rc rc(FCvariant);
-                FlController->sendMessage(rc);
+                FlController->sendMessage(rc, 1);
 #if defined(SHOW_STATUS_RC)
                 std::cout << rc;
+                printf("\n[%d]-[%d]-[%d]-[%d]", RC_DATA[PITCH], RC_DATA[ROLL], RC_DATA[THROTTLE], RC_DATA[YAW]);
 #endif
             }
 #endif
@@ -68,7 +85,7 @@ void Channel_ViewRefresh(int threadId)
             if (show_IMU)
             {
                 msp::msg::RawImu imu(FCvariant);
-                FlController->sendMessage(imu);
+                FlController->sendMessage(imu, 1);
                 for (int i = 0; i < 3; i++)
                     IMU_Raw[0][i] = (uint8_t)imu.gyro[i];
                 for (int i = 0; i < 3; i++)
@@ -84,7 +101,7 @@ void Channel_ViewRefresh(int threadId)
             if (show_PID)
             {
                 msp::msg::Pid pid(FCvariant);
-                FlController->sendMessage(pid);
+                FlController->sendMessage(pid, 1);
 #if defined(SHOW_STATUS_PID)
                 std::cout << pid;
 #endif
@@ -147,20 +164,23 @@ void Channel_ViewRefresh(int threadId)
             }
 #endif
 #endif
+			// printf("\tExiting");
             fflush(stdout);
             Main_Mutex.unlock();
-            std::this_thread::sleep_for(std::chrono::milliseconds(CLI_UPDATE_RATE));
+#if !defined(UNIFIED_UPDATER)
+			std::this_thread::sleep_for(std::chrono::milliseconds(CLI_UPDATE_RATE));
+#endif
         }
         catch (const std::future_error &e)
         {
             std::cout << "<Channel_ViewRefresh>Caught a future_error with code \"" << e.code()
                       << "\"\nMessage: \"" << e.what() << "\"\n";
-            Main_Mutex.unlock();
+            // Main_Mutex.unlock();
         }
         catch (std::exception &e)
         {
             std::cout << "Error in CLI Monitor " << e.what();
-            Main_Mutex.unlock();
+            // Main_Mutex.unlock();
         }
     }
 }
@@ -225,6 +245,15 @@ int event_key_V()
         show_VELOCITY = 1;
     else
         show_VELOCITY = 0;
+    return 0;
+}
+
+int event_key_s()
+{
+    if (!show_status)
+        show_status = 1;
+    else
+        show_status = 0;
     return 0;
 }
 

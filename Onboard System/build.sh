@@ -31,7 +31,7 @@ if [ ! -d "build" ]; then
     cd ..
 fi
 cd build
-make
+make -j4
 cd ..
 cp build/GardienOnboard GardienOnboard
 

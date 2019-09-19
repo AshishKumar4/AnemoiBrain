@@ -19,7 +19,7 @@ if [ ! -d "build" ]; then
     cd ..
 fi
 cd build
-make
+make -j4
 cd ..
 
 echo "Compilation Completed!"

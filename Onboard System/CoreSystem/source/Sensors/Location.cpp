@@ -340,6 +340,17 @@ vector3D_t Real_Locator_t::getVelocity() // CHANGE THIS
 	return REAL_velocity;
 }
 
+vector3D_t Real_Locator_t::getVelocityAbs() // CHANGE THIS
+{
+	return REAL_velocity;
+}
+
+vector3D_t Real_Locator_t::getVelocityRel() // CHANGE THIS
+{
+	return REAL_velocity;
+}
+
+
 GeoPoint_t Real_Locator_t::getLocation() // CHANGE THIS
 {
 	return REAL_location;

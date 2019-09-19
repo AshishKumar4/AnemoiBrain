@@ -55,6 +55,7 @@
 //#define NRF24L01_SPI_PROTOCOL
 //#define I2C_PROTOCOL
 #define MSP_Serial_PROTOCOL
+#define MSP_DUAL_COM
 #endif
 
 /*

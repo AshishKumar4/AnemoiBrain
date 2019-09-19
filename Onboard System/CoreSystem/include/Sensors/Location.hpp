@@ -83,6 +83,8 @@ class Real_Locator_t : public GlobalLocator_t
 	}
     vector3D_t getVelocity();
     GeoPoint_t getLocation();
+   	vector3D_t getVelocityAbs();
+    vector3D_t getVelocityRel();
 };
 
 #endif

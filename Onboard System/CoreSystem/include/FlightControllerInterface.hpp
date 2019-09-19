@@ -31,7 +31,8 @@ public:
 };
 
 int IssueCommand();
-void Channel_Updater(int threadId);
+void Sensors_Updater();
+void Channel_Updater();
 void Raw_Init(int argc, const char *argv[]);
 void sendCommand(uint8_t val, uint8_t channel);
 

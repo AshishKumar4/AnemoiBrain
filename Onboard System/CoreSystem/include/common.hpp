@@ -4,6 +4,7 @@
 #include "iostream"
 #include "vector"
 #include <cmath>
+#include <thread>
 #include <rpc/msgpack.hpp>
 
 using namespace std;
@@ -168,6 +169,24 @@ public:
 	// DroneState_t(data_imu_t imu, vector3D_t vel, float altitude, float heading) : imu(imu), vel(vel), altitude(altitude), heading(heading)
 	// {
 	// }
+};
+
+class SpinLock 
+{
+    std::atomic_flag locked;
+public:
+    void lock() 
+	{
+        while (locked.test_and_set(std::memory_order_acquire)) 
+		{ 
+        	//std::this_thread::yield(); //<- this is not in the source but might improve performance. 
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+        }
+    }
+    void unlock() 
+	{
+        locked.clear(std::memory_order_release);
+    }
 };
 
 /*
