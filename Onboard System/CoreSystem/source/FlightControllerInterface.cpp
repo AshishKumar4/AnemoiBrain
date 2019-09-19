@@ -389,7 +389,7 @@ void Raw_Init(int argc, const char *argv[])
 {
 	const std::string device = (argc > 1) ? std::string(argv[1]) : "/dev/ttyUSB0";
 	const size_t baudrate = (argc > 2) ? std::stoul(argv[2]) : 115200;
-	exitFlag = true;
+	exitFlag = false;
 
 	std::cout << "\n\tAttempting to connect to the Flight Controller...\n";
 
