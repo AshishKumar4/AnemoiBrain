@@ -1,29 +1,40 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(OnboardCore)
 set (ONBOARD_ROOT ./)
-set (CMAKE_CXX_STANDARD 14)
+set (AIRSIM_ROOT /opt/AirSim)
+
+# We need to compile in AIRSIM MODE
+add_definitions(-DMODE_AIRSIM)
+
+LIST(APPEND CMAKE_MODULE_PATH "cmake_templates") 
+INCLUDE("cmake_templates/CommonSetup.cmake")
+CommonSetup()
+set (CMAKE_CXX_STANDARD 17)
+#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_CONSOLE ")
+#message(${CMAKE_CXX_FLAGS})
 
 # Include the Necessary Headers
+# Set the path to AirLib directly correctly !!!
 include_directories(include
     include/LowLevel
+    ${AIRSIM_ROOT}/AirLib/include
+    ${RPC_LIB_INCLUDES}
+    ${AIRSIM_ROOT}/MavLinkCom/include
+    ${AIRSIM_ROOT}/MavLinkCom/common_utils
+    ${AIRSIM_ROOT}/AirLib/deps/eigen3
     )
 
 
 # Add the Linker Directories
+# Set the path to AirLib directly correctly !!!
 link_directories(lib/
     build/
+    ${AIRSIM_ROOT}/AirLib/lib/x64/Debug
     )
-
-# Initialize the Source Variables
-file(GLOB LOWLEVELS "source/*/*.cpp")
-#file(GLOB SOURCES "source/*.cpp")
 
 # Some global configurations
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-
-set(CMAKE_CXX_FLAGS "-O3")
-set(CMAKE_C_FLAGS "-O3")
 
 # Build our Library
 # Build our Abstract Server and Flight Controller Interface
@@ -34,10 +45,7 @@ set(SERVER_SOURCES "source/AbstractServer.cpp"
 	"source/Core.cpp")
 add_library(${PROJECT_NAME} SHARED ${SERVER_SOURCES})
 target_link_libraries(${PROJECT_NAME} Threads::Threads)
-target_link_libraries(${PROJECT_NAME} libmspclient.so)
-#target_link_libraries(${PROJECT_NAME} libmsp.so)
-target_link_libraries(${PROJECT_NAME} libmsp_fcu.so)
-#target_link_libraries(${PROJECT_NAME} libmsp_msg_print.so)
-
-target_link_libraries(${PROJECT_NAME} libRTIMULib.so)
+target_link_libraries(${PROJECT_NAME} AirLib)
+target_link_libraries(${PROJECT_NAME} rpc)
+target_link_libraries(${PROJECT_NAME} MavLinkCom)
 install(TARGETS ${PROJECT_NAME} DESTINATION lib/)

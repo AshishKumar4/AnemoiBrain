@@ -74,17 +74,17 @@ int ControlHandshake(int i, int fd)
 
 int ControlExceptionHandler()
 {
-	ControllerInterface::FaultHandler();
+	ControllerInterface::ConnectionFaultHandler();
 	return 1;
 }
 
 int ControlResumeHandler()
 {
-	ControllerInterface::ResumeHandler();
+	ControllerInterface::ConnectionFaultResume();
 	return 1;
 }
 
-std::atomic<bool> exceptionOccured; //
+std::atomic_bool exceptionOccured; //
 
 int ControlBeaconMonitor(int i, int fd)
 {
@@ -95,11 +95,12 @@ int ControlBeaconMonitor(int i, int fd)
 
 		ffd.fd = fd; // your socket handler
 		ffd.events = POLLIN;
-		ret = poll(&ffd, 1, 100); // 100ms for timeout
+		ret = poll(&ffd, 1, 1000); // 2000ms for timeout
 		switch (ret)
 		{
 		case -1:
 			// Error
+			return 1;
 			throw "Error!";
 			break;
 		case 0:
@@ -117,11 +118,11 @@ int ControlBeaconMonitor(int i, int fd)
 				exceptionOccured = false;
 				ControlResumeHandler();
 			}
-			memset(ControlChannelBuffer[i], 0, 4096);
+			// memset(ControlChannelBuffer[i], 0, 4096);
 			if(recv(fd, ControlChannelBuffer[i], 4096, 0) == -1) // get your data
 				return 1;
-			if (strcmp(ControlChannelBuffer[i], "still alive"))
-				return 1;
+			// if (strcmp(ControlChannelBuffer[i], "still alive"))
+				// return 1;
 			//printf("\n%s", ControlChannelBuffer[i]);
 			break;
 		}
@@ -139,6 +140,7 @@ int ControlBeaconMonitor(int i, int fd)
 	catch (...)
 	{
 		std::cout << "Some Other error in ControlBeaconMonitor!";
+		return 1;
 	}
 	return 0;
 }

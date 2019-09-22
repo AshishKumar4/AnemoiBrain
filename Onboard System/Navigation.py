@@ -86,3 +86,4 @@ class Navigator:
         g = list()
         # Each element in this list should have 1. targetVector, 2. InitialVector 3. Distance
         return g
+

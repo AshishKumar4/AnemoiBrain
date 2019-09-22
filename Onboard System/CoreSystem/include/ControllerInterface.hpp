@@ -52,6 +52,11 @@ uint8_t checksum(uint8_t *buf, int len);
 #define HEADING_YAW_DAMPING_2 0.8
 
 
+std::thread *FailSafeThread;
+
+std::atomic_bool FaultManaged;
+std::atomic_bool FailSafeTrigger;
+
 namespace ControllerInterface
 {
 int WriteToPort(int portnum, char *buff, int size);
@@ -158,8 +163,8 @@ int returnToHome();
 int toggleFeedbackControllers(char type);
 
 int launch_ActuationControllers();
-void ResumeHandler();
-void FaultHandler();
+void ConnectionFaultResume();
+void ConnectionFaultHandler();
 
 int ControllerInterface_init(int argc, const char *argv[]);
 } // namespace ControllerInterface

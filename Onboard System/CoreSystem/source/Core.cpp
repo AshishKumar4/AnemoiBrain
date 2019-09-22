@@ -1001,7 +1001,7 @@ int toggleFeedbackControllers(char type)
 	return 0;
 }
 
-void FailSafeMechanism()
+void MajorFailSafeMechanism()
 {
 	try
 	{
@@ -1025,7 +1025,7 @@ void FailSafeMechanism()
 			failsafe.unlock();
 			std::this_thread::sleep_for(std::chrono::milliseconds(FAILSAFE_LANDING_RATE));
 		}
-		for (int i = 0; i < 50; i++) // 2 Seconds
+		for (int i = 100; i > 30; i--) // 2 Seconds
 		{
 			failsafe.lock();
 			if (FaultManaged)
@@ -1055,20 +1055,60 @@ void FailSafeMechanism()
 	}
 }
 
-void ResumeHandler()
+void FailSafePositionHold()
+{
+	// Change the code to use actual position hold!
+	setYaw(127);
+	setRoll(127);
+	setPitch(127);
+	setYaw(127);
+
+	setThrottle(100);
+}
+
+void ConnectionFailSafeMechanism()
+{
+	try
+	{
+		// Decrease the throttle at constant rate to land
+		std::cout << "\nInitiating FailSafe...";
+		// Disarm and send FailSafe!
+		FailSafePositionHold();
+		while (!FaultManaged)
+		{
+			std::cout << "\nWaiting for connection...";
+			std::this_thread::sleep_for(std::chrono::milliseconds(FAILSAFE_LANDING_RATE));
+		}
+		std::cout << "\nFailsafe Managed!";
+		// std::cout << "\nFailSafe Locked!";
+		// Main_Mutex.lock(); // Grab the lock and don't release until the fault is fixed
+	}
+	catch (const std::future_error &e)
+	{
+		std::cout << "<ConnectionFailSafeMechanism>Caught a future_error with code \"" << e.code()
+				  << "\"\nMessage: \"" << e.what() << "\"\n";
+	}
+	catch (std::exception &e)
+	{
+		std::cout << "Some More Error 2!" << e.what();
+	}
+}
+
+void ConnectionFaultResume()
 {
 	//#if defined(MSP_Serial_PROTOCOL)
 	try
 	{
-		failsafe.lock();
+		// failsafe.lock();
 		FaultManaged = true;
-		failsafe.unlock();
+		// failsafe.unlock();
 		FailSafeThread->join();
-		if (FailSafeTrigger)
-		{
-			Main_Mutex.unlock();
-			FailSafeTrigger = false;
-		}
+		FailSafeTrigger = false;
+		// if (FailSafeTrigger)
+		// {
+		// 	// Main_Mutex.unlock();
+		// 	FailSafeTrigger = false;
+		// }
 		std::cout << "Fault Resumed and Managed!\n";
 	}
 	catch (const std::future_error &e)
@@ -1083,14 +1123,16 @@ void ResumeHandler()
 	//#endif
 }
 
-void FaultHandler()
+void ConnectionFaultHandler()
 {
 	//#if defined(MSP_Serial_PROTOCOL)
 	try
 	{
+		if(FailSafeTrigger) return;
 		std::cout << "Fault Occured!\nTriggering FailSafe!!!";
 		FaultManaged = false;
-		FailSafeThread = new std::thread(FailSafeMechanism);
+		FailSafeTrigger = true;
+		FailSafeThread = new std::thread(ConnectionFailSafeMechanism);
 	}
 	catch (const std::future_error &e)
 	{
@@ -1172,11 +1214,12 @@ int ControllerInterface_init(int argc, const char *argv[])
 	try
 	{
 		printf("\n Initializing Flight Controller Interface...");
-		switchApparentRCstream((uint8_t *)RC_DATA);
 		//int fd = wiringPiSPISetup(0, SPI_IOC_WR_MAX_SPEED_HZ);//SPI_init("/dev/spidev0.0");
 		Raw_Init(argc, argv);
 
-		IntentionOverride = false;
+		// IntentionOverride = false;
+		disableAutoNav(); // By default, Auto navigation is disabled
+		switchApparentRCstream((uint8_t *)RC_DATA);
 
 #if defined(MODE_AIRSIM)
 

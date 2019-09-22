@@ -1,3 +1,3 @@
 #!/bin/bash
 
-/bin/bash /opt/LandscapeMountains/run.sh & sleep 5;./GardienOnboard && fg
+/bin/bash /opt/LandscapeMountains/run.sh & sleep 7;./GardienOnboard && fg

@@ -3,6 +3,7 @@
 #include "common.hpp"
 #include <mutex>
 #include <thread>
+#include <atomic>
 
 typedef int (*func_i_t)(int);						// function pointer
 typedef int (*func_vs_t)(std::vector<std::string>); // function pointer
@@ -54,11 +55,6 @@ std::mutex failsafe;
 
 uint8_t RC_MASTER_DATA[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 uint8_t RC_DATA[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-
-std::thread *FailSafeThread;
-
-bool FaultManaged = false;
-bool FailSafeTrigger = false;
 
 #if defined(ONBOARD_SPI_PROTOCOL) || defined(NRF24L01_SPI_PROTOCOL) || defined(I2C_PROTOCOL)
 struct ControlPackets
@@ -115,5 +111,5 @@ uint8_t IMU_Raw[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 uint8_t PID_Raw[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 uint8_t Current_PID_Var = 0;
 
-bool IntentionOverride;
+std::atomic_bool IntentionOverride;
 

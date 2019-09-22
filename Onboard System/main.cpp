@@ -14,7 +14,7 @@
 #include "AutoNavigation.hpp"
 
 #include "ControlServer.hpp"
-#include "SensorsServer.hpp"
+// #include "SensorsServer.hpp"
 
 #include "FlightControllerInterface.hpp"
 

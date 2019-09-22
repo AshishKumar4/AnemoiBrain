@@ -34,6 +34,7 @@ void AbstractServer::AddChannels(int index, func_iii_t maincode, func_iii_t init
 		// vec.push_back(function);
 		ChannelOperators.push_back(maincode); // (vec)
 		ChannelInitializers.push_back(initializer);
+		logicStatus.push_back(NOT_READY);
 		server_fd.push_back(0);
 		addresses.push_back(NULL);
 	}
@@ -47,6 +48,7 @@ void AbstractServer::AddChannels(int index, func_iii_t maincode, func_iii_t init
 		// {
 		// 	ChannelOperators[index][subchannel] = function;
 		// }
+		logicStatus[index] = NOT_READY;
 		ChannelInitializers[index] = initializer;
 		ChannelOperators[index] = maincode;
 	}
@@ -101,13 +103,23 @@ AbstractServer::~AbstractServer()
 	// TODO: Release all the sockets here
 }
 
+namespace
+{
+
+std::atomic_bool faultOccured = false;
+std::mutex FaultTrigger;
+
+} // Anonymous namespace
+
+
 void AbstractServer::ChannelLogic(int i, int fd, AbstractServer *thisObj)
 {
+	thisObj->logicStatus[i] = WORKING;
 	while (1)
 	{
 		try
 		{
-			if (thisObj->ChannelOperators[i](i, fd))
+			if (faultOccured || thisObj->ChannelOperators[i](i, fd))
 			{
 				printf("\nGOT Connection Break [%d]!!! EXITING....", i);
 				return;
@@ -118,22 +130,15 @@ void AbstractServer::ChannelLogic(int i, int fd, AbstractServer *thisObj)
 			std::cout << "Error in Channel Logic loop!" << e.what();
 		}
 	}
+	thisObj->logicStatus[i] = EXITED;
 }
-
-namespace
-{
-
-int faultOccured = false;
-std::mutex FaultTrigger;
-
-} // Anonymous namespace
 
 void AbstractServer::triggerFault()
 {
+	if (faultOccured) return;
 	FaultTrigger.lock();
-	if (!faultOccured)
-		this->ExceptionHandler();
 	faultOccured = true;
+	this->ExceptionHandler();
 	FaultTrigger.unlock();
 }
 
@@ -146,6 +151,18 @@ void AbstractServer::manageFault()
 	FaultTrigger.unlock();
 }
 
+void AbstractServer::logicSynchronize()
+{
+	// Wait until all threads are ready!
+	for(int i = 0; i < logicStatus.size(); i++)
+	{
+		while(logicStatus[i] != READY)
+		{
+			std::this_thread::sleep_for(std::chrono::microseconds(10));
+		}
+	}
+}
+
 void AbstractServer::ChannelListener(int i, AbstractServer *thisObj)
 {
 	int addrlen = sizeof(struct sockaddr);
@@ -153,11 +170,11 @@ void AbstractServer::ChannelListener(int i, AbstractServer *thisObj)
 	//thisObj->SetupChannel(PORT, i);
 	int new_socket;
 	ssize_t valread = 0;
+	// char *buff = new char[4096];
 back:
 	thisObj->smtx.lock();
 	int sfd = thisObj->server_fd[i];
 	struct sockaddr_in *address = thisObj->addresses[i];
-	char *buff = new char[4096];
 
 	std::cout << "\n\nServer Started at port " << PORT << " Successfully...";
 	fflush(stdout);
@@ -175,6 +192,8 @@ back:
 		{
 			try
 			{
+				thisObj->logicStatus[i] = READY;
+				thisObj->logicSynchronize();
 				// Listen for incoming connection...
 				if ((new_socket = accept(sfd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
 				{

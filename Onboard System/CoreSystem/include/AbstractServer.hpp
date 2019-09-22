@@ -10,6 +10,7 @@
 #include <thread> // std::thread
 #include <mutex>
 #include <functional>
+#include <atomic>
 
 namespace Onboard
 {
@@ -43,6 +44,14 @@ namespace Onboard
  typedef int (*func_iii_t)(int, int); //void function pointer
 // typedef void (*func_vi_t)(int); //void function pointer
 
+enum SERVER_STATUS
+{
+	NOT_READY,
+	READY,
+	WORKING,
+	EXITED
+};
+
 class AbstractServer
 {
     std::vector<std::thread *> ListenerThreads;
@@ -64,6 +73,8 @@ class AbstractServer
 
     std::vector<func_iii_t> ChannelOperators;
     std::vector<func_iii_t> ChannelInitializers;
+
+	std::vector<int> 		logicStatus;
     //std::vector<std::function<void(int)>> ChannelListeners;
 
     explicit AbstractServer(int portBase = 8400);
@@ -78,5 +89,7 @@ class AbstractServer
     
     int LaunchThreads(bool initPort = true);
     int JoinThreads();
+
+	void logicSynchronize();
 };
 } // namespace Onboard

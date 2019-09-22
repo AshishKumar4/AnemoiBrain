@@ -4,8 +4,8 @@ cd CoreSystem
 ./build.sh $1 $2
 cd ../ControlServer
 ./build.sh $1
-cd ../SensorServer
-./build.sh $1
+#cd ../SensorServer
+#./build.sh $1
 cd ..
 
 ExtraArgs="-D COMPILE_MODE:STRING="$2
