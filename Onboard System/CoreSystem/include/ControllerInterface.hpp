@@ -14,8 +14,6 @@
 #include "common.hpp"
 
 #include "Sensors/Sensors.hpp"
-#include "Sensors/InertialMeasurement.hpp"
-#include "Sensors/Location.hpp"
 
 /* ------------------------------------------------------------------------------------------------------------------------ */
 /* ---------------------------------------------------Some Definitions----------------------------------------------------- */
@@ -70,9 +68,7 @@ uint8_t getRC_Buffered(int channel);
 void switchApparentRCstream();
 void switchApparentRCstream(uint8_t* stream);
 
-InertialMeasurement_t* getMainIMU();
-GlobalLocator_t* getMainLocator();
-GlobalState_t* getMainState();
+StateEstimator_t* getMainStateEstimator();
 
 void _setPitch(int pitch);
 void _setRoll(int roll);

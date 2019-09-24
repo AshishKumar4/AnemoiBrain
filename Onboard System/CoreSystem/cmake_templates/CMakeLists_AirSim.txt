@@ -40,7 +40,8 @@ find_package(Threads REQUIRED)
 # Build our Abstract Server and Flight Controller Interface
 set(SERVER_SOURCES "source/AbstractServer.cpp"
 	"source/AutoNavigation.cpp" 
-    "source/Sensors/InertialMeasurement.cpp" "source/Sensors/Location.cpp" "source/Sensors/SensorFusion.cpp"
+    "source/Sensors/drivers/GeoEstimator.cpp" "source/Sensors/drivers/InertialEstimator.cpp"
+	"source/Sensors/InertialSensorFusion.cpp" "source/Sensors/NavSensorFusion.cpp" 
     "source/Sensors/Sensors.cpp"
 	"source/Core.cpp")
 add_library(${PROJECT_NAME} SHARED ${SERVER_SOURCES})

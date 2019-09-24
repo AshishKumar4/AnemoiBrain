@@ -15,8 +15,6 @@
 #include <map>
 
 #include "Sensors/Sensors.hpp"
-#include "Sensors/InertialMeasurement.hpp"
-#include "Sensors/Location.hpp"
 
 #include "CommonControl.hpp"
 #include "AutoNavigation.hpp"

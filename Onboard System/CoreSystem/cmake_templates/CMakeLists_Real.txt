@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(OnboardCore)
 set (ONBOARD_ROOT ./)
-set (CMAKE_CXX_STANDARD 14)
 
 # Include the Necessary Headers
 include_directories(include
@@ -24,12 +23,14 @@ find_package(Threads REQUIRED)
 
 set(CMAKE_CXX_FLAGS "-O3")
 set(CMAKE_C_FLAGS "-O3")
+set (CMAKE_CXX_STANDARD 17)
 
 # Build our Library
 # Build our Abstract Server and Flight Controller Interface
 set(SERVER_SOURCES "source/AbstractServer.cpp"
 	"source/AutoNavigation.cpp" 
-    "source/Sensors/InertialMeasurement.cpp" "source/Sensors/Location.cpp" "source/Sensors/SensorFusion.cpp"
+    "source/Sensors/drivers/GeoEstimator.cpp" "source/Sensors/drivers/InertialEstimator.cpp"
+	"source/Sensors/InertialSensorFusion.cpp" "source/Sensors/NavSensorFusion.cpp" 
     "source/Sensors/Sensors.cpp"
 	"source/Core.cpp")
 add_library(${PROJECT_NAME} SHARED ${SERVER_SOURCES})

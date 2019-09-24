@@ -15,8 +15,6 @@
 #include <atomic>
 
 #include "Sensors/Sensors.hpp"
-#include "Sensors/InertialMeasurement.hpp"
-#include "Sensors/Location.hpp"
 
 #include "ControllerInterface.hpp"
 #include "CommonControl.hpp"

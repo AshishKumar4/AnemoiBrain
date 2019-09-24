@@ -10,346 +10,102 @@
 #include <future>
 
 #include "Sensors/Sensors.hpp"
-#include "Sensors/Location.hpp"
-#include "Sensors/InertialMeasurement.hpp"
+// #include "Sensors/Location.hpp"
+// #include "Sensors/InertialMeasurement.hpp"
 
-//#include "common.hpp"
+#include "common.hpp"
 
-float GlobalState_t::get_X_Coordinate()
+#if defined(MODE_AIRSIM)
+
+namespace
 {
-    try
-    {
-        return locator->get_X_Coordinate();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::get_X_Coordinate>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return 0;
+quaternion_t tmporien;
+vector3D_t tmpVelocity;
+GeoPoint_t tmpLocation;
+} // namespace
+
+extern GeoPoint_t AIRSIM_location;
+extern vector3D_t AIRSIM_velocity;
+extern vector3D_t AIRSIM_velocityAbs;
+extern vector3D_t AIRSIM_velocityRel;
+extern vector3D_t AIRSIM_euleroritentation;
+
+extern quaternion_t AIRSIM_oritentation;
+extern vector3D_t AIRSIM_euleroritentation;
+
+GeoPoint_t AirSim_StateEstimator_t::getLocalCoordinates()
+{
+	return AIRSIM_location;
 }
 
-float GlobalState_t::get_Y_Coordinate()
+vector3D_t AirSim_StateEstimator_t::getVelocityRel()
 {
-    try
-    {
-        return locator->get_Y_Coordinate();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::get_Y_Coordinate>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return 0;
+	return AIRSIM_velocityRel;
 }
 
-float GlobalState_t::get_Z_Coordinate()
+vector3D_t AirSim_StateEstimator_t::getVelocityAbs()
 {
-    try
-    {
-        return locator->get_Z_Coordinate();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::get_Z_Coordinate>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return 0;
+	return AIRSIM_velocityAbs;
 }
 
-float GlobalState_t::get_X_VelocityRel()
+vector3D_t AirSim_StateEstimator_t::getVelocity()
 {
-    try
-    {
-        return locator->get_X_VelocityRel();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::get_X_VelocityRel>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return 0;
+	return AIRSIM_velocity;
 }
 
-float GlobalState_t::get_Y_VelocityRel()
+vector3D_t AirSim_StateEstimator_t::getOrientationEuler()
 {
-    try
-    {
-        return locator->get_Y_VelocityRel();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::get_X_VelocityRel>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return 0;
+	return AIRSIM_euleroritentation;
 }
 
-float GlobalState_t::get_Z_VelocityRel()
+quaternion_t AirSim_StateEstimator_t::getOrientation()
 {
-    return locator->get_Z_VelocityRel();
+	return AIRSIM_oritentation;
 }
 
-float GlobalState_t::get_X_VelocityAbs()
+vector3D_t AirSim_StateEstimator_t::getAcceleration()
 {
-    return locator->get_X_VelocityAbs();
+	return vector3D_t(0, 0, 0);
 }
 
-float GlobalState_t::get_Y_VelocityAbs()
+#elif defined(MODE_REALDRONE)
+
+#include "Sensors/InertialSensorFusion.hpp"
+#include "Sensors/NavSensorFusion.hpp"
+
+GeoPoint_t Real_StateEstimator_t::getLocalCoordinates()
 {
-    return locator->get_Y_VelocityAbs();
+	return NavSensorFusion::getLocalCoordinates();
 }
 
-float GlobalState_t::get_Z_VelocityAbs()
+vector3D_t Real_StateEstimator_t::getVelocityRel()
 {
-    return locator->get_Z_VelocityAbs();
+	return NavSensorFusion::getVelocityRel();
 }
 
-float GlobalState_t::getAltitude()
+vector3D_t Real_StateEstimator_t::getVelocityAbs()
 {
-    try
-    {
-        return locator->get_Z_Coordinate();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::getAltitude>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return 0;
+	return NavSensorFusion::getVelocityAbs();
 }
 
-float GlobalState_t::getHeadingDegrees() // Gives in Degrees
+vector3D_t Real_StateEstimator_t::getVelocity()	// By default, GetVelocity gives relative velocity
 {
-    try
-    {
-        return this->getYawDegrees();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::getHeadingDegrees>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return 0;
+	return NavSensorFusion::getVelocityRel();
 }
 
-float GlobalState_t::getHeading()
+// vector3D_t Real_StateEstimator_t::getOrientationEuler()
+// {
+
+// }
+
+quaternion_t Real_StateEstimator_t::getOrientation()
 {
-    try
-    {
-        return this->getYaw();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::getHeading>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return 0;
+	return InertialSensorFusion::getOrientation();
 }
 
-/* ------------------------------------------------------------------------------------------------------------------------ */
-/*------------------------------------------------- Rotation related stuff -------------------------------------------------*/
-/* ------------------------------------------------------------------------------------------------------------------------ */
-
-float GlobalState_t::getYaw()
+vector3D_t Real_StateEstimator_t::getAcceleration()
 {
-    try
-    {
-        return imu->getYaw();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::getYaw>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return 0;
+	return InertialSensorFusion::getAcceleration();
 }
 
-float GlobalState_t::getRoll()
-{
-    try
-    {
-        return imu->getRoll();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::getRoll>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return 0;
-}
-
-float GlobalState_t::getPitch()
-{
-    try
-    {
-        return imu->getPitch();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::getPitch>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return 0;
-}
-
-float GlobalState_t::getYawDegrees()
-{
-    try
-    {
-        return imu->getYawDegrees();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::getYawDegrees>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return 0;
-}
-
-float GlobalState_t::getRollDegrees()
-{
-    try
-    {
-        return imu->getRollDegrees();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::getRollDegrees>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return 0;
-}
-
-float GlobalState_t::getPitchDegrees()
-{
-    try
-    {
-        return imu->getPitchDegrees();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::getPitchDegrees>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return 0;
-}
-
-/***********************************************************************************************/
-/******************************* A Little Higher Level Get APIs ********************************/
-/***********************************************************************************************/
-
-vector3D_t GlobalState_t::getVelocityAbs()
-{
-    return this->locator->getVelocityAbs(); // CHANGE THIS
-}
-
-vector3D_t GlobalState_t::getVelocityRel()
-{
-    try
-    {
-        return this->locator->getVelocityRel(); // CHANGE THIS
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::getVelocityRel>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return vector3D_t(0,0,0);
-}
-
-vector3D_t GlobalState_t::getVelocity() // CHANGE THIS
-{
-    try
-    {
-        return this->locator->getVelocity();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::getVelocity>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return vector3D_t(0,0,0);
-}
-
-GeoPoint_t GlobalState_t::getLocation() // CHANGE THIS
-{
-    try
-    {
-        return this->locator->getLocation();
-    }
-    catch (const std::future_error &e)
-    {
-        std::cout << "<GlobalState_t::getLocation>Caught a future_error with code \"" << e.code()
-                  << "\"\nMessage: \"" << e.what() << "\"\n";
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    return GeoPoint_t(0, 0, 0);
-}
+#endif

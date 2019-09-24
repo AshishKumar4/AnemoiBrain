@@ -15,8 +15,6 @@
 #include <math.h>
 
 #include "Sensors/Sensors.hpp"
-#include "Sensors/InertialMeasurement.hpp"
-#include "Sensors/Location.hpp"
 #include "ControllerInterface.hpp"
 // #include "specificDefs.h"
 #include "CommonControl.hpp"
@@ -38,9 +36,7 @@ volatile std::thread *chnl_refresh;
 volatile std::thread *keyboard_handler;
 volatile std::thread *chnl_update;
 
-InertialMeasurement_t *MainIMU;
-GlobalLocator_t *MainLocator;
-GlobalState_t *MainState;
+StateEstimator_t *MainState;
 
 uint8_t *RC_APPARENT_DATA;
 
@@ -64,17 +60,7 @@ uint8_t getRC_Buffered(int channel)
 	return RC_MASTER_DATA[channel];
 }
 
-InertialMeasurement_t *getMainIMU()
-{
-	return MainIMU;
-}
-
-GlobalLocator_t *getMainLocator()
-{
-	return MainLocator;
-}
-
-GlobalState_t *getMainState()
+StateEstimator_t *getMainStateEstimator()
 {
 	return MainState;
 }
@@ -550,7 +536,7 @@ GeoPoint_t getLocation() // CHANGE THIS
 {
 	try
 	{
-		return MainState->getLocation();
+		return MainState->getLocalCoordinates();
 	}
 	catch (const std::future_error &e)
 	{
@@ -1226,16 +1212,13 @@ int ControllerInterface_init(int argc, const char *argv[])
 		// #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
 		// #include "rpc/server.h"
 		//auto client = (msr::airlib::MultirotorRpcLibClient *)MainFC->getDesc();
-		MainIMU = new AirSim_IMU_t();		  //(client);
-		MainLocator = new AirSim_Locator_t(); //(client);
+		MainState = new AirSim_StateEstimator_t();
 
 #elif defined(MODE_REALDRONE)
 		// Sensor_Fusion_init(argc, (char **)argv);
-		MainLocator = new Real_Locator_t();
-		MainIMU = new Real_IMU_t();
+		MainState = new Real_StateEstimator_t();
 #endif
 
-		MainState = new GlobalState_t(MainLocator, MainIMU);
 
 #if defined(MSP_SERIAL_FORWARDING)
 		Port_Forwarding_Init(argc, argv);
