@@ -46,6 +46,8 @@ quaternion_t 	orientation_estimate;
 vector3D_t 		orientationEuler_estimate;
 vector3D_t 		acceleration_estimate;
 float		 	altitude_estimate;
+
+std::thread* 	inertialFusionThread;
 } // namespace
 
 int sampleCount = 0;
@@ -54,7 +56,7 @@ uint64_t rateTimer;
 uint64_t displayTimer;
 uint64_t now;
 
-void Sensor_Fusion_worker()
+void InertialSensor_Fusion_worker()
 {
 	while (1)
 	{
@@ -113,7 +115,7 @@ void Sensor_Fusion_worker()
 	}
 }
 
-int Sensor_Fusion_init(int argc, char **argv)
+int InertialSensor_Fusion_init(int argc, char **argv)
 {
 	char *settingsFile = (argc > 2) ? argv[2] : (char *)"RTIMULib";
 
@@ -165,6 +167,7 @@ int Sensor_Fusion_init(int argc, char **argv)
 	accelCal->accelCalInit();
 
 	rateTimer = displayTimer = RTMath::currentUSecsSinceEpoch();
+	inertialFusionThread = new std::thread(InertialSensor_Fusion_worker);
 	return 0;
 }
 

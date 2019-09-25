@@ -14,6 +14,7 @@
 #include <functional>
 #include <math.h>
 
+#include "Sensors/InertialSensorFusion.hpp"
 #include "Sensors/Sensors.hpp"
 #include "ControllerInterface.hpp"
 // #include "specificDefs.h"
@@ -1215,7 +1216,7 @@ int ControllerInterface_init(int argc, const char *argv[])
 		MainState = new AirSim_StateEstimator_t();
 
 #elif defined(MODE_REALDRONE)
-		// Sensor_Fusion_init(argc, (char **)argv);
+		InertialSensorFusion::InertialSensor_Fusion_init(argc, (char **)argv);
 		MainState = new Real_StateEstimator_t();
 #endif
 
