@@ -60,7 +60,7 @@ void InertialSensor_Fusion_worker()
 {
 	while (1)
 	{
-		usleep(imu->IMUGetPollInterval() * 1000);
+		// usleep(imu->IMUGetPollInterval() * 1000);
 		// auto
 		while (imu->IMURead())
 		{
