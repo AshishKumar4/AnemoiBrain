@@ -7,7 +7,7 @@
 #include <thread>
 #include <rpc/msgpack.hpp>
 
-using namespace std;
+// using namespace std;
 
 class vector3D_t
 {
@@ -396,7 +396,7 @@ public:
 class image_t
 {
 public:
-	vector<uint8_t> buff;
+	std::vector<uint8_t> buff;
 	MSGPACK_DEFINE_MAP(buff);
 };
 

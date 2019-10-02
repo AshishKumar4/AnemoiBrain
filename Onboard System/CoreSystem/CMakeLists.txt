@@ -39,6 +39,7 @@ target_link_libraries(${PROJECT_NAME} libmspclient.so)
 #target_link_libraries(${PROJECT_NAME} libmsp.so)
 target_link_libraries(${PROJECT_NAME} libmsp_fcu.so)
 #target_link_libraries(${PROJECT_NAME} libmsp_msg_print.so)
+target_link_libraries(${PROJECT_NAME} boost_system)
 
 target_link_libraries(${PROJECT_NAME} libRTIMULib.so)
 install(TARGETS ${PROJECT_NAME} DESTINATION lib/)

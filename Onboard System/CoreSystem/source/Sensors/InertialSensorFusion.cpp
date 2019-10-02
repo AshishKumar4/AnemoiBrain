@@ -20,21 +20,27 @@
 
 #if defined(MODE_REALDRONE)
 
+#include "chrono"
+
+#if defined(USE_EXTERNAL_SENSORBOARD)
+
+#include <boost/asio.hpp>
+#include <boost/asio/serial_port.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
+#include <boost/asio/read_until.hpp>
+
+#else
+
 #include "RTIMULib.h"
 #include "RTIMUMagCal.h"
 #include "RTIMUAccelCal.h"
 
+#endif 
 //  global variables
 
 namespace InertialSensorFusion
 {
-
-static RTIMUSettings *settings;
-static RTPressure *pressure;
-static RTIMU_DATA imuData;
-static RTIMU *imu;
-static RTIMUMagCal *magCal;
-static RTIMUAccelCal *accelCal;
 
 static bool magMinMaxDone;
 static bool accelEnables[3];
@@ -42,12 +48,12 @@ static int accelCurrentAxis;
 
 namespace
 {
-quaternion_t 	orientation_estimate;
-vector3D_t 		orientationEuler_estimate;
-vector3D_t 		acceleration_estimate;
-float		 	altitude_estimate;
+quaternion_t orientation_estimate;
+vector3D_t orientationEuler_estimate;
+vector3D_t acceleration_estimate;
+float altitude_estimate;
 
-std::thread* 	inertialFusionThread;
+std::thread *inertialFusionThread;
 } // namespace
 
 int sampleCount = 0;
@@ -56,11 +62,96 @@ uint64_t rateTimer;
 uint64_t displayTimer;
 uint64_t now;
 
+#if defined(USE_EXTERNAL_SENSORBOARD)
+
+#pragma pack(1)
+typedef struct imuDataPack_s
+{
+	// char 			signature[4];	// 0-4
+	// quaternion_t 	orient;			// 4-20
+	vector3D_t eulerOrient; // 20-32
+	// vector3D_t 		linAcc;			// 32-44
+	// uint32_t 		padding1;		// 44-48
+	// vector3D_t 		velocity; 		// 48-60	// Absolute Velocity
+	// uint16_t 		checksum;		// 60-62
+	// uint8_t 		delimiter1;		// 62-63
+	uint8_t delimiter2; // 63-64
+} imuDataPack_t;
+
+static imuDataPack_t imu;
+static boost::asio::serial_port* mport;
+static boost::asio::io_service m_io;
+
+void syncPort(boost::asio::serial_port &mport, int timeout = 0)
+{
+	char c = '\0';
+	while (c != '\n')
+	{
+		boost::asio::read(mport, boost::asio::buffer(&c, 1));
+	}
+}
+
+int serialImuRead(boost::asio::serial_port &mport, imuDataPack_t &imu)
+{
+	boost::asio::read(mport, boost::asio::buffer(&imu, sizeof(imuDataPack_t)));
+	if (imu.delimiter2 != '\n')
+	{
+		syncPort(mport);
+		boost::asio::read(mport, boost::asio::buffer(&imu, sizeof(imuDataPack_t)));
+	}
+	return 0;
+}
+
+void InertialSensor_Fusion_worker()
+{
+	auto s = std::chrono::high_resolution_clock::now();
+	while (1)
+	{
+		s = std::chrono::high_resolution_clock::now();
+		for (int i = 0; i < 1000; i++)
+		{
+			serialImuRead(*mport, imu);
+			orientationEuler_estimate.set(imu.eulerOrient.x, imu.eulerOrient.y, imu.eulerOrient.z);
+		}
+		printf("\n[%f %f %f, %x]", imu.eulerOrient.x, imu.eulerOrient.y, imu.eulerOrient.z, imu.delimiter2);
+		const auto total_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - s).count();
+		printf("\n%f Hz", (1000.0 * 1000.0) / (float)(total_time));
+	}
+}
+
+int InertialSensor_Fusion_init(int argc, char **argv)
+{
+	char *device = (argc > 2) ? argv[2] : (char *)"/dev/ttyUSB0";
+	int baudrate = (argc > 3) ? atoi(argv[3]) : 115200;
+
+	mport = new boost::asio::serial_port(m_io, device);
+	boost::asio::serial_port_base::baud_rate baud_rate1(baudrate);
+	mport->set_option(baud_rate1);
+
+	printf("\nReading some initial garbage data...");
+	printf("\n[%d]\n\n", sizeof(imuDataPack_t));
+
+	syncPort(*mport);
+
+	inertialFusionThread = new std::thread(InertialSensor_Fusion_worker);
+	return 0;
+}
+
+#else
+
+
+static RTIMUSettings *settings;
+static RTPressure *pressure;
+static RTIMU_DATA imuData;
+static RTIMU *imu;
+static RTIMUMagCal *magCal;
+static RTIMUAccelCal *accelCal;
+
 void InertialSensor_Fusion_worker()
 {
 	while (1)
 	{
-		// usleep(imu->IMUGetPollInterval() * 1000);
+		usleep(imu->IMUGetPollInterval() * 1000);
 		// auto
 		while (imu->IMURead())
 		{
@@ -78,11 +169,11 @@ void InertialSensor_Fusion_worker()
 			orientationEuler_estimate.set(pose.x(), pose.y(), pose.z());
 
 			const auto qpose = imuData.fusionQPose;
-			orientation_estimate.set(qpose.scalar(), qpose.x(), qpose.y(), qpose.z());			
+			orientation_estimate.set(qpose.scalar(), qpose.x(), qpose.y(), qpose.z());
 
 			const auto accel = imuData.accel;
-			acceleration_estimate.set(accel.x(), accel.y(), accel.z());	
-			
+			acceleration_estimate.set(accel.x(), accel.y(), accel.z());
+
 			sampleCount++;
 
 			now = RTMath::currentUSecsSinceEpoch();
@@ -145,7 +236,7 @@ int InertialSensor_Fusion_init(int argc, char **argv)
 	imu->setSlerpPower(0.02);
 	imu->setGyroEnable(true);
 	imu->setAccelEnable(true);
-	imu->setCompassEnable(true);
+	imu->setCompassEnable(false);
 
 	if (pressure != NULL)
 	{
@@ -170,6 +261,8 @@ int InertialSensor_Fusion_init(int argc, char **argv)
 	inertialFusionThread = new std::thread(InertialSensor_Fusion_worker);
 	return 0;
 }
+
+#endif
 
 quaternion_t getOrientation()
 {
