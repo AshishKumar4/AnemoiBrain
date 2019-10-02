@@ -121,8 +121,8 @@ void InertialSensor_Fusion_worker()
 
 int InertialSensor_Fusion_init(int argc, char **argv)
 {
-	char *device = (argc > 2) ? argv[2] : (char *)"/dev/ttyUSB0";
-	int baudrate = (argc > 3) ? atoi(argv[3]) : 115200;
+	char *device = (argc > 6) ? argv[6] : (char *)"/dev/ttyUSB0";
+	int baudrate = (argc > 7) ? atoi(argv[7]) : 115200;
 
 	mport = new boost::asio::serial_port(m_io, device);
 	boost::asio::serial_port_base::baud_rate baud_rate1(baudrate);
@@ -208,7 +208,7 @@ void InertialSensor_Fusion_worker()
 
 int InertialSensor_Fusion_init(int argc, char **argv)
 {
-	char *settingsFile = (argc > 2) ? argv[2] : (char *)"RTIMULib";
+	char *settingsFile = (argc > 6) ? argv[6] : (char *)"RTIMULib";
 
 	printf("RTIMULibCal - using %s.ini\n", settingsFile);
 
